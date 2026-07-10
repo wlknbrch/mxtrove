@@ -1,0 +1,235 @@
+import { NavLink, Outlet, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import {
+  ArrowRight,
+  Bell,
+  CircleDot,
+  Compass,
+  FolderKanban,
+  House,
+  MessageCircleMore,
+  Music4,
+  Plus,
+  Settings,
+} from "lucide-react";
+
+import { GlobalPlayer } from "@/components/audio/global-player";
+import { Avatar } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { getAssetById } from "@/features/drive/api";
+import { getCurrentProfile } from "@/features/profile/api";
+import { useAuth } from "@/hooks/use-auth";
+import { useAppViewer } from "@/hooks/use-app-viewer";
+import { getAvatarAssetUrls } from "@/lib/asset-urls";
+import { envState } from "@/lib/env";
+import { cn } from "@/lib/utils";
+
+const navigation = [
+  { to: "/", label: "Home", icon: House },
+  { to: "/explore", label: "Explore", icon: Compass },
+  { to: "/library", label: "Library", icon: FolderKanban },
+  { to: "/messages", label: "Messages", icon: MessageCircleMore },
+  { to: "/notifications", label: "Notifications", icon: Bell },
+  { to: "/settings", label: "Settings", icon: Settings },
+];
+
+export function AppShell() {
+  const { user, signOut } = useAuth();
+  const viewer = useAppViewer();
+
+  const profileQuery = useQuery({
+    queryKey: ["profile", viewer.userId],
+    queryFn: () => getCurrentProfile(viewer.userId),
+    enabled: Boolean(viewer.userId),
+  });
+
+  const avatarAssetQuery = useQuery({
+    queryKey: ["asset", profileQuery.data?.avatar_asset_id],
+    queryFn: () => getAssetById(profileQuery.data!.avatar_asset_id!),
+    enabled: Boolean(profileQuery.data?.avatar_asset_id),
+  });
+
+  const currentProfile = profileQuery.data ?? null;
+  const avatarUrl = getAvatarAssetUrls(avatarAssetQuery.data);
+  const publicProfilePath = currentProfile?.username ? `/@${currentProfile.username}` : null;
+
+  return (
+    <div className="page-shell min-h-screen pb-32">
+      <div className="mx-auto grid min-h-screen max-w-[1720px] gap-8 px-4 py-4 md:px-6 xl:grid-cols-[292px_minmax(0,1fr)] xl:py-6">
+        <aside className="glass-panel hidden min-h-[calc(100vh-3rem)] rounded-[34px] border border-border px-5 py-6 xl:flex xl:flex-col">
+          <div className="flex items-start gap-4 pb-7">
+            <div className="flex size-15 items-center justify-center rounded-[24px] border border-accent/35 bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.4),rgba(157,92,255,0.08)_58%,rgba(255,255,255,0.02))] text-accent-secondary shadow-[0_18px_46px_rgba(82,39,163,0.34)]">
+              <Music4 className="size-6" />
+            </div>
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-accent/18 bg-accent/10 px-2.5 py-1 text-[0.65rem] uppercase tracking-[0.28em] text-accent-secondary/82">
+                <CircleDot className="size-3 fill-current stroke-none" />
+                Velvet Signal
+              </div>
+              <p className="font-body text-[2rem] font-semibold tracking-[-0.04em]">MxShare</p>
+              <p className="max-w-[11rem] text-sm leading-6 text-muted-foreground">
+                Share music. Share versions.
+              </p>
+            </div>
+          </div>
+
+          <nav className="space-y-1.5">
+            {navigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    cn(
+                      "group flex items-center gap-3 rounded-[20px] border px-4 py-3.5 text-sm transition-[background-color,border-color,color,box-shadow]",
+                      isActive
+                        ? "border-accent/24 bg-[linear-gradient(90deg,rgba(157,92,255,0.34),rgba(157,92,255,0.13)_58%,rgba(255,255,255,0.01))] text-foreground shadow-[0_18px_40px_rgba(15,6,34,0.32)]"
+                        : "border-transparent text-muted-foreground hover:border-white/6 hover:bg-white/[0.03] hover:text-foreground",
+                    )
+                  }
+                >
+                  <Icon className="size-4 text-accent-secondary/90 transition-transform group-hover:scale-105" />
+                  <span>{item.label}</span>
+                </NavLink>
+              );
+            })}
+          </nav>
+
+          <div className="mt-7">
+            <NavLink to="/create">
+              <Button
+                fullWidth
+                size="lg"
+                className="min-h-14 rounded-[22px] text-base shadow-[0_18px_44px_rgba(110,58,225,0.34)]"
+              >
+                <Plus className="size-4" />
+                Create
+              </Button>
+            </NavLink>
+          </div>
+
+          <div className="mt-7 rounded-[30px] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] p-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-medium">Google Drive</p>
+              <span
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[0.65rem] uppercase tracking-[0.24em]",
+                  envState.hasGoogleDrive
+                    ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-200"
+                    : "border-white/10 bg-white/5 text-muted-foreground",
+                )}
+              >
+                <CircleDot className="size-3 fill-current stroke-none" />
+                {envState.hasGoogleDrive ? "Connected" : "Setup"}
+              </span>
+            </div>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+              {envState.hasGoogleDrive
+                ? "Connected once, then future audio, artwork, and avatars flow into the MxShare folder structure."
+                : "Connect your Drive once in Settings and keep every upload routed into your private MxShare structure."}
+            </p>
+            <div className="mt-5">
+              <Link to="/settings/storage">
+                <Button variant="secondary" size="sm" fullWidth className="justify-between">
+                  {envState.hasGoogleDrive ? "Open Drive setup" : "Connect Google Drive"}
+                  <ArrowRight className="size-4" />
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          <div className="mt-auto rounded-[30px] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.02))] px-4 py-4">
+            <div className="flex flex-col gap-4">
+              {publicProfilePath ? (
+                <Link
+                  to={publicProfilePath}
+                  className="flex min-w-0 items-center gap-3 rounded-[24px] border border-transparent px-2 py-2 transition-colors hover:border-white/8 hover:bg-white/[0.03]"
+                >
+                  <Avatar
+                    alt={currentProfile?.display_name ?? user?.email ?? "Current user"}
+                    src={avatarUrl}
+                    initials={(currentProfile?.display_name ?? user?.email ?? "MX")
+                      .slice(0, 2)
+                      .toUpperCase()}
+                    className="size-12"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
+                      {currentProfile?.display_name ?? user?.email ?? viewer.email ?? "Guest"}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {currentProfile
+                        ? `@${currentProfile.username}`
+                        : envState.hasSupabase
+                          ? "Authenticated shell"
+                          : "Setup pending"}
+                    </p>
+                  </div>
+                </Link>
+              ) : (
+                <div className="flex min-w-0 items-center gap-3 px-2 py-2">
+                  <Avatar
+                    alt={currentProfile?.display_name ?? user?.email ?? "Current user"}
+                    src={avatarUrl}
+                    initials={(currentProfile?.display_name ?? user?.email ?? "MX")
+                      .slice(0, 2)
+                      .toUpperCase()}
+                    className="size-12"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
+                      {currentProfile?.display_name ?? user?.email ?? viewer.email ?? "Guest"}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {envState.hasSupabase ? "Authenticated shell" : "Setup pending"}
+                    </p>
+                  </div>
+                </div>
+              )}
+              {user ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-center rounded-[18px] border border-white/6"
+                  onClick={() => void signOut()}
+                >
+                  Logout
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        </aside>
+
+        <main className="flex min-w-0 flex-col">
+          <Outlet />
+        </main>
+      </div>
+
+      <nav className="fixed inset-x-4 bottom-24 z-30 flex rounded-full border border-border bg-[rgba(9,7,20,0.94)] p-2 shadow-[0_20px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl xl:hidden">
+        {navigation.slice(0, 5).map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                cn(
+                  "flex flex-1 flex-col items-center gap-1 rounded-full px-3 py-2 text-[11px] transition-colors",
+                  isActive
+                    ? "bg-[linear-gradient(90deg,rgba(157,92,255,0.9),rgba(183,120,255,0.92))] text-white"
+                    : "text-muted-foreground",
+                )
+              }
+            >
+              <Icon className="size-4" />
+              <span>{item.label}</span>
+            </NavLink>
+          );
+        })}
+      </nav>
+
+      <GlobalPlayer />
+    </div>
+  );
+}

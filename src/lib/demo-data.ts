@@ -1,0 +1,365 @@
+import { createArtworkDataUri, createAvatarDataUri, silentPreviewDataUri } from "@/lib/demo-art";
+import type {
+  Asset,
+  CloudConnection,
+  Comment,
+  Conversation,
+  FeedEvent,
+  Message,
+  Notification,
+  Post,
+  Profile,
+  ReleaseTrack,
+  SinglePost,
+  Song,
+  SongVersion,
+} from "@/types/domain";
+
+export const demoViewerProfile: Profile = {
+  id: "00000000-0000-0000-0000-000000000001",
+  username: "kai_orion",
+  display_name: "Kai Orion",
+  bio: "Producer and late-night sketch collector.",
+  location: "Berlin, Germany",
+  website_url: "https://mxshare.example.com",
+  instagram_url: "https://instagram.com/kaiorion",
+  spotify_url: "https://open.spotify.com/artist/demo",
+  youtube_url: "https://youtube.com/@kaiorion",
+  support_url: "https://ko-fi.com/kaiorion",
+  avatar_asset_id: null,
+  pinned_post_id: null,
+  onboarding_completed: true,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
+export const demoProfiles: Profile[] = [
+  demoViewerProfile,
+  {
+    id: "00000000-0000-0000-0000-000000000002",
+    username: "luna_park",
+    display_name: "Luna Park",
+    bio: "Electronic songwriter collecting versions in public.",
+    location: "Copenhagen, Denmark",
+    website_url: "https://lunapark.example.com",
+    instagram_url: "https://instagram.com/lunapark",
+    spotify_url: null,
+    youtube_url: null,
+    support_url: null,
+    avatar_asset_id: null,
+    pinned_post_id: null,
+    onboarding_completed: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "00000000-0000-0000-0000-000000000003",
+    username: "jules_w",
+    display_name: "Jules W.",
+    bio: "Alt-pop demos and small rooms with loud speakers.",
+    location: "Lyon, France",
+    website_url: null,
+    instagram_url: null,
+    spotify_url: null,
+    youtube_url: null,
+    support_url: null,
+    avatar_asset_id: null,
+    pinned_post_id: null,
+    onboarding_completed: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
+export const demoAssets: Asset[] = [
+  {
+    id: "10000000-0000-0000-0000-000000000001",
+    owner_id: demoViewerProfile.id,
+    provider: "google_drive",
+    remote_file_id: "demo-artwork-eternal",
+    remote_parent_folder_id: "demo-artwork",
+    filename: "eternal-light-cover.png",
+    display_name: "Eternal Light Cover",
+    mime_type: "image/png",
+    file_extension: ".png",
+    bytes: 240_000,
+    duration_seconds: null,
+    checksum: null,
+    asset_type: "cover_artwork",
+    access_mode: "public",
+    share_url: createArtworkDataUri("Eternal Light", "#ff6b5d"),
+    view_url: createArtworkDataUri("Eternal Light", "#ff6b5d"),
+    thumbnail_url: createArtworkDataUri("Eternal Light", "#ff6b5d"),
+    waveform_peaks: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "10000000-0000-0000-0000-000000000002",
+    owner_id: demoViewerProfile.id,
+    provider: "google_drive",
+    remote_file_id: "demo-preview-eternal-mix2",
+    remote_parent_folder_id: "demo-previews",
+    filename: "eternal-light-mix2.mp3",
+    display_name: "Eternal Light Mix 2 Preview",
+    mime_type: "audio/mpeg",
+    file_extension: ".mp3",
+    bytes: 3_900_000,
+    duration_seconds: 222,
+    checksum: null,
+    asset_type: "audio_preview",
+    access_mode: "public",
+    share_url: silentPreviewDataUri,
+    view_url: null,
+    thumbnail_url: null,
+    waveform_peaks: [14, 22, 40, 72, 54, 80, 62, 36, 28, 44, 33, 22],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "10000000-0000-0000-0000-000000000003",
+    owner_id: demoViewerProfile.id,
+    provider: "google_drive",
+    remote_file_id: "demo-original-eternal-mix2",
+    remote_parent_folder_id: "demo-originals",
+    filename: "eternal-light-mix2.wav",
+    display_name: "Eternal Light Mix 2 Original",
+    mime_type: "audio/wav",
+    file_extension: ".wav",
+    bytes: 52_000_000,
+    duration_seconds: 222,
+    checksum: null,
+    asset_type: "audio_original",
+    access_mode: "private",
+    share_url: null,
+    view_url: silentPreviewDataUri,
+    thumbnail_url: null,
+    waveform_peaks: [14, 22, 40, 72, 54, 80, 62, 36, 28, 44, 33, 22],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
+export const demoSongs: Song[] = [
+  {
+    id: "20000000-0000-0000-0000-000000000001",
+    owner_id: demoViewerProfile.id,
+    title: "Eternal Light",
+    notes: "Need a lighter chorus lift and tighter outro.",
+    default_artwork_asset_id: demoAssets[0].id,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
+export const demoSongVersions: SongVersion[] = [
+  {
+    id: "30000000-0000-0000-0000-000000000001",
+    song_id: demoSongs[0].id,
+    source_asset_id: demoAssets[2].id,
+    preview_asset_id: demoAssets[1].id,
+    version_number: 1,
+    version_label: "Demo",
+    production_stage: "Demo",
+    changelog: "First workable topline and intro drums.",
+    is_published: true,
+    published_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "30000000-0000-0000-0000-000000000002",
+    song_id: demoSongs[0].id,
+    source_asset_id: demoAssets[2].id,
+    preview_asset_id: demoAssets[1].id,
+    version_number: 2,
+    version_label: "Mix 1",
+    production_stage: "Mix 1",
+    changelog: "Verse vocal rides and wider synth field.",
+    is_published: true,
+    published_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "30000000-0000-0000-0000-000000000003",
+    song_id: demoSongs[0].id,
+    source_asset_id: demoAssets[2].id,
+    preview_asset_id: demoAssets[1].id,
+    version_number: 3,
+    version_label: "Mix 2",
+    production_stage: "Mix 2",
+    changelog: "New pre-chorus bass movement and brighter hats.",
+    is_published: true,
+    published_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
+export const demoPosts: Post[] = [
+  {
+    id: "40000000-0000-0000-0000-000000000001",
+    owner_id: demoProfiles[1].id,
+    post_type: "single",
+    title: "Eternal Light",
+    description: "New mix for the second single. Would love your thoughts!",
+    visibility: "public",
+    artwork_asset_id: demoAssets[0].id,
+    release_url: null,
+    is_published: true,
+    published_at: new Date().toISOString(),
+    activity_at: new Date().toISOString(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "40000000-0000-0000-0000-000000000002",
+    owner_id: demoProfiles[2].id,
+    post_type: "album",
+    title: "Backseat Thoughts",
+    description: "Late-night alt-pop sketches arranged into a longer-form release.",
+    visibility: "public",
+    artwork_asset_id: demoAssets[0].id,
+    release_url: "https://example.com/backseat-thoughts",
+    is_published: true,
+    published_at: new Date(Date.now() - 86_400_000).toISOString(),
+    activity_at: new Date(Date.now() - 86_400_000).toISOString(),
+    created_at: new Date(Date.now() - 86_400_000).toISOString(),
+    updated_at: new Date(Date.now() - 86_400_000).toISOString(),
+  },
+];
+
+export const demoSinglePosts: SinglePost[] = [
+  {
+    post_id: demoPosts[0].id,
+    song_id: demoSongs[0].id,
+    featured_version_id: demoSongVersions[2].id,
+  },
+];
+
+export const demoReleaseTracks: ReleaseTrack[] = [
+  {
+    id: "50000000-0000-0000-0000-000000000001",
+    post_id: demoPosts[1].id,
+    song_id: demoSongs[0].id,
+    song_version_id: demoSongVersions[1].id,
+    track_title: "Falling Lines",
+    track_number: 1,
+    preview_asset_id: demoAssets[1].id,
+    production_stage: "Mix 1",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
+export const demoComments: Comment[] = [
+  {
+    id: "60000000-0000-0000-0000-000000000001",
+    post_id: demoPosts[0].id,
+    author_id: demoViewerProfile.id,
+    body: "The chorus lift lands better now. The last vocal stack feels cleaner too.",
+    parent_comment_id: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    deleted_at: null,
+  },
+  {
+    id: "60000000-0000-0000-0000-000000000002",
+    post_id: demoPosts[0].id,
+    author_id: demoProfiles[2].id,
+    body: "Loving the extra space in the breakdown.",
+    parent_comment_id: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    deleted_at: null,
+  },
+];
+
+export const demoFeedEvents: FeedEvent[] = [
+  {
+    id: "70000000-0000-0000-0000-000000000001",
+    actor_id: demoProfiles[1].id,
+    post_id: demoPosts[0].id,
+    song_version_id: demoSongVersions[2].id,
+    event_type: "single_update",
+    created_at: new Date().toISOString(),
+  },
+];
+
+export const demoNotifications: Notification[] = [
+  {
+    id: "80000000-0000-0000-0000-000000000001",
+    recipient_id: demoViewerProfile.id,
+    actor_id: demoProfiles[1].id,
+    type: "single_version",
+    post_id: demoPosts[0].id,
+    song_version_id: demoSongVersions[2].id,
+    comment_id: null,
+    conversation_id: null,
+    is_read: false,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "80000000-0000-0000-0000-000000000002",
+    recipient_id: demoViewerProfile.id,
+    actor_id: demoProfiles[2].id,
+    type: "comment",
+    post_id: demoPosts[0].id,
+    song_version_id: null,
+    comment_id: demoComments[1].id,
+    conversation_id: null,
+    is_read: true,
+    created_at: new Date(Date.now() - 18_000_000).toISOString(),
+  },
+];
+
+export const demoConversation: Conversation = {
+  id: "90000000-0000-0000-0000-000000000001",
+  kind: "direct",
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
+export const demoMessages: Message[] = [
+  {
+    id: "91000000-0000-0000-0000-000000000001",
+    conversation_id: demoConversation.id,
+    sender_id: demoViewerProfile.id,
+    body: "I’m into the new drums. Want me to send a note on the bridge tomorrow?",
+    created_at: new Date(Date.now() - 6_600_000).toISOString(),
+    edited_at: null,
+    deleted_at: null,
+  },
+  {
+    id: "91000000-0000-0000-0000-000000000002",
+    conversation_id: demoConversation.id,
+    sender_id: demoProfiles[1].id,
+    body: "Yes please. Especially the transition into the chorus.",
+    created_at: new Date(Date.now() - 5_400_000).toISOString(),
+    edited_at: null,
+    deleted_at: null,
+  },
+];
+
+export const demoCloudConnection: CloudConnection = {
+  id: "a0000000-0000-0000-0000-000000000001",
+  profile_id: demoViewerProfile.id,
+  provider: "google_drive",
+  provider_account_email: "kai.orion@example.com",
+  root_folder_id: "demo-root",
+  audio_originals_folder_id: "demo-audio-originals",
+  audio_previews_folder_id: "demo-audio-previews",
+  artwork_folder_id: "demo-artwork",
+  avatars_folder_id: "demo-avatars",
+  connected_at: new Date().toISOString(),
+  last_verified_at: new Date().toISOString(),
+};
+
+export function getDemoProfileById(id: string) {
+  return demoProfiles.find((profile) => profile.id === id) ?? null;
+}
+
+export function getDemoProfileByUsername(username: string) {
+  return demoProfiles.find((profile) => profile.username === username) ?? null;
+}

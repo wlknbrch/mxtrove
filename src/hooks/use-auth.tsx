@@ -1,0 +1,81 @@
+import type { Session, User } from "@supabase/supabase-js";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type PropsWithChildren,
+} from "react";
+
+import { getCurrentSession, getSupabaseBrowserClient, onAuthSessionChange } from "@/lib/supabase";
+
+interface AuthContextValue {
+  loading: boolean;
+  session: Session | null;
+  user: User | null;
+  signOut: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+export function AuthProvider({ children }: PropsWithChildren) {
+  const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState<Session | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    getCurrentSession()
+      .then((initialSession) => {
+        if (!active) {
+          return;
+        }
+
+        setSession(initialSession);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (active) {
+          setLoading(false);
+        }
+      });
+
+    const unsubscribe = onAuthSessionChange((nextSession) => {
+      setSession(nextSession);
+      setLoading(false);
+    });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      loading,
+      session,
+      user: session?.user ?? null,
+      signOut: async () => {
+        const client = getSupabaseBrowserClient();
+        if (client) {
+          await client.auth.signOut();
+        }
+      },
+    }),
+    [loading, session],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const value = useContext(AuthContext);
+
+  if (!value) {
+    throw new Error("useAuth must be used within AuthProvider.");
+  }
+
+  return value;
+}

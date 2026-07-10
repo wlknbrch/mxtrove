@@ -1,0 +1,98 @@
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react-swc";
+import tailwindcss from "@tailwindcss/vite";
+import path from "node:path";
+import { Readable } from "node:stream";
+
+function buildDriveProxyUrl(fileId: string, kind: "audio" | "image", size: string | null) {
+  const encodedFileId = encodeURIComponent(fileId);
+
+  if (kind === "image") {
+    const requestedSize = size?.trim() || "w1200";
+    return `https://drive.google.com/thumbnail?id=${encodedFileId}&sz=${encodeURIComponent(requestedSize)}`;
+  }
+
+  return `https://drive.google.com/uc?export=download&id=${encodedFileId}`;
+}
+
+function copyProxyHeaders(response: Response, target: import("node:http").ServerResponse) {
+  const headerNames = [
+    "accept-ranges",
+    "cache-control",
+    "content-length",
+    "content-range",
+    "content-type",
+    "etag",
+    "last-modified",
+  ];
+
+  for (const headerName of headerNames) {
+    const headerValue = response.headers.get(headerName);
+    if (headerValue) {
+      target.setHeader(headerName, headerValue);
+    }
+  }
+}
+
+function driveMediaProxyPlugin() {
+  return {
+    name: "mxshare-drive-media-proxy",
+    configureServer(server: import("vite").ViteDevServer) {
+      server.middlewares.use("/api/drive-media", async (request, response, next) => {
+        try {
+          if (!request.url) {
+            next();
+            return;
+          }
+
+          const url = new URL(request.url, "http://localhost");
+          const fileId = url.searchParams.get("fileId")?.trim();
+          const kind = url.searchParams.get("kind") === "audio" ? "audio" : "image";
+          const size = url.searchParams.get("size");
+
+          if (!fileId) {
+            response.statusCode = 400;
+            response.setHeader("content-type", "application/json; charset=utf-8");
+            response.end(JSON.stringify({ error: "Missing fileId query parameter." }));
+            return;
+          }
+
+          const headers = new Headers();
+          const rangeHeader = request.headers.range;
+
+          if (rangeHeader) {
+            headers.set("Range", rangeHeader);
+          }
+
+          const upstreamResponse = await fetch(buildDriveProxyUrl(fileId, kind, size), {
+            headers,
+            redirect: "follow",
+          });
+
+          response.statusCode = upstreamResponse.status;
+          copyProxyHeaders(upstreamResponse, response);
+
+          if (!upstreamResponse.body) {
+            response.end(await upstreamResponse.text());
+            return;
+          }
+
+          Readable.fromWeb(
+            upstreamResponse.body as import("node:stream/web").ReadableStream,
+          ).pipe(response);
+        } catch (error) {
+          next(error);
+        }
+      });
+    },
+  };
+}
+
+export default defineConfig({
+  plugins: [driveMediaProxyPlugin(), react(), tailwindcss()],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
+});

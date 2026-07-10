@@ -1,0 +1,247 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  --background: #05040d;
+  --background-elevated: #0c0918;
+  --background-muted: #151126;
+  --surface: rgba(17, 13, 34, 0.9);
+  --surface-strong: rgba(12, 8, 25, 0.96);
+  --surface-soft: rgba(255, 255, 255, 0.035);
+  --border: rgba(186, 161, 255, 0.13);
+  --border-strong: rgba(213, 194, 255, 0.26);
+  --foreground: #f6efff;
+  --muted-foreground: rgba(226, 214, 248, 0.7);
+  --subtle-foreground: rgba(184, 168, 214, 0.6);
+  --accent: #9d5cff;
+  --accent-strong: #b778ff;
+  --accent-secondary: #e0b9ff;
+  --success: #3ed39a;
+  --warning: #ffca66;
+  --danger: #ff7d90;
+  --shadow-soft: 0 24px 90px rgba(1, 0, 12, 0.56);
+  --shadow-card: 0 28px 80px rgba(4, 0, 22, 0.44);
+  --radius-lg: 1.875rem;
+  --radius-md: 1.125rem;
+  --radius-sm: 0.875rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-background-elevated: var(--background-elevated);
+  --color-background-muted: var(--background-muted);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-surface-soft: var(--surface-soft);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --radius-lg: var(--radius-lg);
+  --radius-md: var(--radius-md);
+  --radius-sm: var(--radius-sm);
+  --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --font-body: "Instrument Sans", "Avenir Next", "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", monospace;
+}
+
+html {
+  background:
+    radial-gradient(circle at 14% 6%, rgba(157, 92, 255, 0.18), transparent 24%),
+    radial-gradient(circle at 72% 0%, rgba(225, 185, 255, 0.14), transparent 18%),
+    radial-gradient(circle at 84% 16%, rgba(88, 42, 173, 0.18), transparent 20%),
+    linear-gradient(180deg, #090713 0%, #05040d 34%, #04030b 100%);
+  min-height: 100%;
+}
+
+body {
+  position: relative;
+  margin: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 48% -16%, rgba(173, 119, 255, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.01), rgba(255, 255, 255, 0)),
+    transparent;
+  color: var(--foreground);
+  font-family: var(--font-body);
+  letter-spacing: -0.01em;
+  text-rendering: optimizeLegibility;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: -8rem 8% auto auto;
+  width: 54rem;
+  height: 30rem;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 50%, rgba(180, 118, 255, 0.24), transparent 28%),
+    linear-gradient(128deg, transparent 14%, rgba(255, 255, 255, 0.08) 45%, rgba(203, 153, 255, 0.18) 52%, transparent 68%);
+  filter: blur(18px);
+  opacity: 0.55;
+  transform: rotate(-12deg);
+  z-index: -1;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 65% 2%, rgba(135, 78, 255, 0.14), transparent 20%),
+    linear-gradient(180deg, transparent 0%, transparent 72%, rgba(6, 4, 15, 0.45) 100%);
+  z-index: -1;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+::selection {
+  background: rgba(157, 92, 255, 0.28);
+}
+
+.glass-panel {
+  background: linear-gradient(
+    180deg,
+    rgba(15, 11, 31, 0.95) 0%,
+    rgba(9, 7, 21, 0.94) 100%
+  );
+  backdrop-filter: blur(22px);
+  box-shadow:
+    var(--shadow-card),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at top right, rgba(172, 113, 255, 0.14), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 34%);
+}
+
+.glass-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.page-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.page-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 16% 0%, rgba(157, 92, 255, 0.12), transparent 24%),
+    radial-gradient(circle at 84% 10%, rgba(224, 185, 255, 0.12), transparent 18%),
+    linear-gradient(122deg, transparent 28%, rgba(255, 255, 255, 0.04) 48%, rgba(208, 168, 255, 0.08) 52%, transparent 66%);
+  opacity: 0.9;
+}
+
+.page-shell::after {
+  content: "";
+  position: fixed;
+  inset: auto 0 0 0;
+  height: 22rem;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(8, 5, 18, 0.88));
+}
+
+.velvet-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.velvet-hero::before {
+  content: "";
+  position: absolute;
+  inset: -12% 26% 42% -10%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 24% 42%, rgba(166, 103, 255, 0.2), transparent 26%),
+    linear-gradient(132deg, transparent 16%, rgba(255, 255, 255, 0.08) 48%, rgba(205, 153, 255, 0.14) 54%, transparent 70%);
+  filter: blur(2px);
+  opacity: 0.92;
+}
+
+.velvet-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -10% -18% 24%;
+  height: 18rem;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(112, 56, 216, 0.26), transparent 62%);
+  filter: blur(18px);
+}
+
+.velvet-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.waveform {
+  position: relative;
+  overflow: hidden;
+}
+
+.waveform::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(157, 92, 255, 0.24), transparent 24%, transparent 74%, rgba(224, 185, 255, 0.14)),
+    linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+  pointer-events: none;
+}
+
+.velvet-divider {
+  position: relative;
+}
+
+.velvet-divider::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(194, 164, 255, 0.22), transparent);
+}
