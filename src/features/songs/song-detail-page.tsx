@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { FolderOpen, ImagePlus, Play } from "lucide-react";
-import { useEffect, useId, useMemo, useRef, type KeyboardEvent } from "react";
+import { FolderOpen, ImagePlus, Play, Trash2 } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -24,15 +24,28 @@ import {
 } from "@/features/drive/api";
 import { buildCloudConnectionUpsert, getStoredDriveFolders } from "@/features/drive/google-drive-connection";
 import { useGoogleDriveProvider } from "@/features/drive/use-google-drive-provider";
-import { createSongVersion, getSongDetail, updateSong } from "@/features/library/api";
+import {
+  createSongVersion,
+  deleteSongVersion,
+  getSongDetail,
+  updateSong,
+  updateSongVersionPreview,
+} from "@/features/library/api";
+import { MediaProcessingStatusCard } from "@/features/media-processing/media-processing-status-card";
+import {
+  generateAutomaticPreviewFromSourceAsset,
+  uploadOriginalWithAutomaticPreview,
+} from "@/features/media-processing/automatic-preview";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { getArtworkAssetUrls, getPreviewPlaybackUrl, getPreviewPlaybackUrls } from "@/lib/asset-urls";
 import { productionStages } from "@/lib/constants";
+import { hasUsablePreviewAsset, needsVersionPlaybackRepair } from "@/lib/playback-health";
 import { queryClient } from "@/lib/query-client";
 import { isDemoModeEnabled } from "@/lib/service-utils";
+import { getAssetWaveform } from "@/lib/waveform";
 import { songSchema, type SongFormValues, versionSchema, type VersionFormValues } from "@/lib/validators";
 import { cn } from "@/lib/utils";
-import type { Asset } from "@/types/domain";
+import type { Asset, MediaProcessingJob } from "@/types/domain";
 
 const privatePlaybackUrlCache = new Map<string, string>();
 
@@ -43,6 +56,8 @@ export function SongDetailPage() {
   const enqueue = usePlayerStore((state) => state.enqueue);
   const artworkInputId = useId();
   const artworkInputRef = useRef<HTMLInputElement | null>(null);
+  const [mediaProcessingJob, setMediaProcessingJob] = useState<MediaProcessingJob | null>(null);
+  const [mediaProcessingError, setMediaProcessingError] = useState<string | null>(null);
 
   const songQuery = useQuery({
     queryKey: ["song-detail", songId],
@@ -100,6 +115,20 @@ export function SongDetailPage() {
   const artworkAssets = useMemo(
     () => assets.filter((asset) => asset.asset_type === "cover_artwork"),
     [assets],
+  );
+  const selectedSourceAssetId =
+    versionForm.watch("source_asset_id") || versions[0]?.source_asset_id || originalAssets[0]?.id || "";
+  const selectedSourceAsset = selectedSourceAssetId
+    ? assetsById.get(selectedSourceAssetId) ?? null
+    : null;
+  const repairableVersions = useMemo(
+    () =>
+      versions.filter(
+        (version) =>
+          version.source_asset_id === selectedSourceAssetId &&
+          needsVersionPlaybackRepair(version, assetsById),
+      ),
+    [assetsById, selectedSourceAssetId, versions],
   );
 
   useEffect(() => {
@@ -191,52 +220,108 @@ export function SongDetailPage() {
       toast.error(error instanceof Error ? error.message : "Could not create version.");
     },
   });
+  const deleteVersionMutation = useMutation({
+    mutationFn: async (versionId: string) => deleteSongVersion(versionId),
+    onSuccess: async () => {
+      await Promise.all([
+        refreshSongQueries(),
+        queryClient.invalidateQueries({ queryKey: ["home-feed"] }),
+        queryClient.invalidateQueries({ queryKey: ["explore-feed"] }),
+        queryClient.invalidateQueries({ queryKey: ["profile-posts"] }),
+        queryClient.invalidateQueries({ queryKey: ["post"] }),
+      ]);
+      toast.success("Version deleted.");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Could not delete this version.");
+    },
+  });
 
-  async function createUploadedAsset(target: "originals" | "previews", file: File) {
+  async function uploadOriginalWithAutomation(file: File, signal?: AbortSignal, onProgress?: (progress: number) => void) {
     if (!viewer.userId) {
       throw new Error("Please sign in first.");
     }
 
-    const parentFolderId = await resolveDriveFolder(target);
-    const upload =
-      file.size > 20 * 1024 * 1024
-        ? await provider.uploadResumable({ file, parentFolderId })
-        : await provider.uploadFile({ file, parentFolderId });
+    setMediaProcessingError(null);
+    setMediaProcessingJob(null);
+    const originalsFolderId = await resolveDriveFolder("originals");
+    const previewsFolderId = await resolveDriveFolder("previews");
+    const result = await uploadOriginalWithAutomaticPreview({
+      ownerId: viewer.userId,
+      provider,
+      originalFile: file,
+      originalsFolderId,
+      previewsFolderId,
+      signal,
+      onProgress,
+      onJobChange: setMediaProcessingJob,
+    });
 
-    if (target === "originals") {
-      const asset = await createAssetRecord({
-        ownerId: viewer.userId,
-        assetType: "audio_original",
-        accessMode: "private",
-        upload,
-      });
-      versionForm.setValue("source_asset_id", asset.id, { shouldDirty: true, shouldValidate: true });
-      await refreshSongQueries();
-      toast.success("Private source uploaded.");
-      return upload;
+    versionForm.setValue("source_asset_id", result.originalAsset.id, { shouldDirty: true, shouldValidate: true });
+    if (result.previewAsset) {
+      versionForm.setValue("preview_asset_id", result.previewAsset.id, { shouldDirty: true, shouldValidate: true });
     }
 
-    const publicPlayback = await provider.makePublicPreview(upload.fileId);
-    const asset = await createAssetRecord({
-      ownerId: viewer.userId,
-      assetType: "audio_preview",
-      accessMode: "public",
-      upload: {
-        ...upload,
-        shareUrl: publicPlayback.shareUrl,
-        viewUrl: publicPlayback.viewUrl,
-      },
-    });
-    await updateAssetPublicLinks({
-      assetId: asset.id,
-      accessMode: "public",
-      shareUrl: publicPlayback.shareUrl,
-      viewUrl: publicPlayback.viewUrl,
-    });
-    versionForm.setValue("preview_asset_id", asset.id, { shouldDirty: true, shouldValidate: true });
     await refreshSongQueries();
-    toast.success("Shared playback file uploaded.");
-    return upload;
+
+    if (result.automationError) {
+      setMediaProcessingError(result.automationError);
+      toast.warning("Private source uploaded. Automatic preview generation needs attention.");
+    } else if (result.previewAsset) {
+      toast.success("Private source uploaded and playback preview generated automatically.");
+    } else {
+      toast.success("Private source uploaded.");
+    }
+
+    return {
+      fileId: result.originalAsset.remote_file_id,
+      filename: result.originalAsset.filename,
+      mimeType: result.originalAsset.mime_type,
+      bytes: result.originalAsset.bytes ?? file.size,
+      parentFolderId: result.originalAsset.remote_parent_folder_id ?? originalsFolderId,
+      shareUrl: result.originalAsset.share_url,
+      viewUrl: result.originalAsset.view_url,
+      thumbnailUrl: result.originalAsset.thumbnail_url,
+    };
+  }
+
+  async function generatePreviewFromSourceAsset(sourceAsset: Asset) {
+    if (!viewer.userId) {
+      throw new Error("Please sign in first.");
+    }
+
+    setMediaProcessingError(null);
+    setMediaProcessingJob(null);
+    const previewFolderId = await resolveDriveFolder("previews");
+    const result = await generateAutomaticPreviewFromSourceAsset({
+      ownerId: viewer.userId,
+      provider,
+      sourceAsset,
+      previewFolderId,
+      onJobChange: setMediaProcessingJob,
+    });
+
+    versionForm.setValue("source_asset_id", sourceAsset.id, { shouldDirty: true, shouldValidate: true });
+    versionForm.setValue("preview_asset_id", result.previewAsset.id, { shouldDirty: true, shouldValidate: true });
+    const impactedVersions = versions.filter(
+      (version) => version.source_asset_id === sourceAsset.id && needsVersionPlaybackRepair(version, assetsById),
+    );
+    if (impactedVersions.length > 0) {
+      await Promise.all(
+        impactedVersions.map((version) =>
+          updateSongVersionPreview({
+            versionId: version.id,
+            previewAssetId: result.previewAsset.id,
+          }),
+        ),
+      );
+    }
+    await refreshSongQueries();
+    toast.success(
+      impactedVersions.length > 0
+        ? `Playback repaired for ${impactedVersions.length} version${impactedVersions.length === 1 ? "" : "s"}.`
+        : "Playback preview and waveform generated from the selected source.",
+    );
   }
 
   const artworkUploadMutation = useMutation({
@@ -329,7 +414,7 @@ export function SongDetailPage() {
 
     const targetAssetId = mode === "source" ? version.source_asset_id : version.preview_asset_id;
     if (!targetAssetId) {
-      throw new Error(mode === "source" ? "No source asset is linked to this version." : "No shared playback file is linked to this version.");
+      throw new Error(mode === "source" ? "No source asset is linked to this version." : "No public playback file is linked to this version.");
     }
 
     const targetAsset = assetsById.get(targetAssetId);
@@ -340,7 +425,9 @@ export function SongDetailPage() {
     const src =
       mode === "source"
         ? await getPrivatePlaybackUrl(targetAssetId)
-        : getPreviewPlaybackUrl(targetAsset);
+        : hasUsablePreviewAsset(targetAsset)
+          ? getPreviewPlaybackUrl(targetAsset)
+          : null;
 
     if (!src) {
       throw new Error("This asset is not browser-playable right now.");
@@ -356,7 +443,8 @@ export function SongDetailPage() {
           src,
           srcCandidates: mode === "playback" ? getPreviewPlaybackUrls(targetAsset) : [src],
           durationSeconds: targetAsset.duration_seconds ?? null,
-          versionLabel: `${version.version_label} • ${mode === "source" ? "Private source" : "Shared playback"}`,
+          waveform: mode === "playback" ? getAssetWaveform(targetAsset) : null,
+          versionLabel: `${version.version_label} • ${mode === "source" ? "Private source" : "Public playback"}`,
         },
       ],
       `${version.id}-${mode}`,
@@ -379,7 +467,7 @@ export function SongDetailPage() {
       <PageHeader
         eyebrow="Song workspace"
         title={song.title}
-        description={song.notes ?? "Upload the private source, add the shared playback file, and keep artwork attached to the same song."}
+        description={song.notes ?? "Upload the private source, generate the public playback file, and keep artwork attached to the same song."}
         actions={
           <Link to="/library">
             <Button variant="secondary">
@@ -507,7 +595,7 @@ export function SongDetailPage() {
             <div>
               <CardTitle>Asset uploads</CardTitle>
               <CardDescription className="mt-2">
-                A quick-added song becomes usable here: add the private source, then the shared playback file you want listeners to hear.
+                A quick-added song becomes usable here: add the private source once and let MxShare generate the browser-safe public playback file for you.
               </CardDescription>
             </div>
           </CardHeader>
@@ -532,19 +620,56 @@ export function SongDetailPage() {
 
             <UploadDropzone
               title="Private source upload"
-              description="Keep the original private in Drive. This is the version you can still audition yourself from the workspace."
+              description="Keep the original private in Drive. MxShare will also generate the public MP3 preview automatically for the current workspace."
               parentFolderId={storedFolders?.audioOriginalsFolderId ?? ""}
               disabled={!storedFolders}
-              onUpload={(input) => createUploadedAsset("originals", input.file)}
+              onUpload={(input) => uploadOriginalWithAutomation(input.file, input.signal, input.onProgress)}
             />
 
-            <UploadDropzone
-              title="Shared playback upload"
-              description="Use the browser-safe file listeners will actually hear in feed cards, releases, and public profiles."
-              parentFolderId={storedFolders?.audioPreviewsFolderId ?? ""}
-              disabled={!storedFolders}
-              recommendedPublicPreview
-              onUpload={(input) => createUploadedAsset("previews", input.file)}
+              <div className="rounded-[22px] border border-white/[0.08] bg-white/[0.03] px-4 py-4">
+                <p className="font-medium">Generated public playback</p>
+                <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                  Manual preview uploads are disabled. MxShare always generates the public MP3 preview and waveform from the selected private source.
+                </p>
+                {repairableVersions.length > 0 ? (
+                  <p className="mt-2 text-sm leading-7 text-accent-secondary">
+                    {repairableVersions.length} version{repairableVersions.length === 1 ? "" : "s"} linked to this source still need a repaired playback file or waveform.
+                  </p>
+                ) : null}
+                <div className="mt-4 flex flex-wrap gap-3">
+                <Button
+                  variant="secondary"
+                  disabled={!storedFolders || !selectedSourceAsset}
+                  onClick={() => {
+                    if (!selectedSourceAsset) {
+                      return;
+                    }
+
+                    void generatePreviewFromSourceAsset(selectedSourceAsset).catch((error) => {
+                      const message =
+                        error instanceof Error
+                          ? error.message
+                          : "Could not generate the playback preview from this source.";
+                      setMediaProcessingError(message);
+                      toast.error(message);
+                    });
+                  }}
+                >
+                  {playbackAssets.length ? "Regenerate playback file" : "Generate playback file"}
+                </Button>
+                {selectedSourceAsset ? (
+                  <Badge variant="neutral" className="max-w-full truncate" title={selectedSourceAsset.id}>
+                    Source: {selectedSourceAsset.display_name ?? selectedSourceAsset.filename}
+                  </Badge>
+                ) : null}
+              </div>
+            </div>
+
+            <MediaProcessingStatusCard
+              job={mediaProcessingJob}
+              error={mediaProcessingError}
+              title="Automatic playback preview"
+              emptyMessage="Upload a private source here and the worker will generate the public MP3 preview plus waveform for you."
             />
 
             <div className="grid gap-3 sm:grid-cols-3">
@@ -571,7 +696,7 @@ export function SongDetailPage() {
             <div>
               <CardTitle>Versions</CardTitle>
               <CardDescription className="mt-2">
-                Each version keeps its own label, production stage, changelog, private source, and optional shared playback file.
+                Each version keeps its own label, production stage, changelog, private source, and optional public playback file.
               </CardDescription>
             </div>
           </CardHeader>
@@ -580,7 +705,8 @@ export function SongDetailPage() {
               versions.map((version) => {
                 const sourceAsset = assetsById.get(version.source_asset_id) ?? null;
                 const playbackAsset = version.preview_asset_id ? assetsById.get(version.preview_asset_id) ?? null : null;
-                const playbackReady = Boolean(getPreviewPlaybackUrl(playbackAsset));
+                const playbackReady = hasUsablePreviewAsset(playbackAsset);
+                const playbackNeedsRepair = needsVersionPlaybackRepair(version, assetsById);
 
                 return (
                   <div key={version.id} className="rounded-[22px] border border-border bg-white/3 p-4">
@@ -590,15 +716,15 @@ export function SongDetailPage() {
                         {version.is_published ? "Published" : "Private"}
                       </Badge>
                       <Badge variant="cyan">{version.production_stage}</Badge>
-                      <Badge variant={playbackReady ? "success" : "warning"}>
-                        {playbackReady ? "Playback ready" : "Source only"}
+                      <Badge variant={!playbackNeedsRepair && playbackReady ? "success" : "warning"}>
+                        {!playbackNeedsRepair && playbackReady ? "Playback ready" : "Needs playback repair"}
                       </Badge>
                     </div>
                     <p className="mt-3 text-sm text-muted-foreground">{version.changelog || "No changelog yet."}</p>
                     <div className="mt-3 grid gap-2 text-sm text-subtle-foreground">
                       <p>Private source: {sourceAsset?.display_name ?? sourceAsset?.filename ?? version.source_asset_id}</p>
                       <p>
-                        Shared playback: {playbackAsset?.display_name ?? playbackAsset?.filename ?? "No playback file yet"}
+                        Public playback: {playbackAsset?.display_name ?? playbackAsset?.filename ?? "No playback file yet"}
                       </p>
                     </div>
                     <div className="mt-4 flex flex-wrap gap-3">
@@ -615,15 +741,29 @@ export function SongDetailPage() {
                       </Button>
                       <Button
                         variant="ghost"
-                        disabled={!version.preview_asset_id}
+                        disabled={!hasUsablePreviewAsset(playbackAsset)}
                         onClick={() => {
                           void playVersion(version.id, "playback").catch((error) => {
-                            toast.error(error instanceof Error ? error.message : "Could not play this shared playback file.");
+                            toast.error(error instanceof Error ? error.message : "Could not play this public playback file.");
                           });
                         }}
                       >
                         <Play className="size-4" />
-                        Play shared file
+                        Play public file
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          if (!window.confirm(`Delete the version "${version.version_label}"?`)) {
+                            return;
+                          }
+
+                          void deleteVersionMutation.mutateAsync(version.id);
+                        }}
+                        disabled={deleteVersionMutation.isPending}
+                      >
+                        <Trash2 className="size-4" />
+                        Delete version
                       </Button>
                     </div>
                   </div>
@@ -642,7 +782,7 @@ export function SongDetailPage() {
             <div>
               <CardTitle>Add a version</CardTitle>
               <CardDescription className="mt-2">
-                Pick from the assets you already uploaded in this workspace. The shared playback file is optional for private work and recommended before public release.
+                Pick from the assets you already uploaded in this workspace. The public playback file is optional for private work and recommended before public release.
               </CardDescription>
             </div>
           </CardHeader>
@@ -691,7 +831,7 @@ export function SongDetailPage() {
             </label>
 
             <label className="grid gap-2">
-              <span className="text-sm font-medium">Shared playback file</span>
+              <span className="text-sm font-medium">Public playback file</span>
               <Select
                 value={versionForm.watch("preview_asset_id") ?? ""}
                 onChange={(event) =>
@@ -701,7 +841,7 @@ export function SongDetailPage() {
                   })
                 }
               >
-                <option value="">No playback file attached yet</option>
+                <option value="">No public playback file attached yet</option>
                 {playbackAssets.map((asset) => (
                   <option key={asset.id} value={asset.id}>
                     {asset.display_name ?? asset.filename}

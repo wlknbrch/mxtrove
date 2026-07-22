@@ -8,15 +8,17 @@ import {
   FolderKanban,
   House,
   MessageCircleMore,
-  Music4,
   Plus,
   Settings,
 } from "lucide-react";
 
 import { GlobalPlayer } from "@/components/audio/global-player";
+import { MxShareMark } from "@/components/layout/mxshare-mark";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { getAssetById } from "@/features/drive/api";
+import { getUnreadConversationSummary } from "@/features/messages/api";
+import { getUnreadNotificationCount } from "@/features/notifications/api";
 import { getCurrentProfile } from "@/features/profile/api";
 import { useAuth } from "@/hooks/use-auth";
 import { useAppViewer } from "@/hooks/use-app-viewer";
@@ -33,6 +35,10 @@ const navigation = [
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
+function formatBadgeCount(value: number) {
+  return value > 99 ? "99+" : String(value);
+}
+
 export function AppShell() {
   const { user, signOut } = useAuth();
   const viewer = useAppViewer();
@@ -48,23 +54,35 @@ export function AppShell() {
     queryFn: () => getAssetById(profileQuery.data!.avatar_asset_id!),
     enabled: Boolean(profileQuery.data?.avatar_asset_id),
   });
+  const unreadNotificationsQuery = useQuery({
+    queryKey: ["notifications-unread", viewer.userId],
+    queryFn: () => getUnreadNotificationCount(viewer.userId!),
+    enabled: Boolean(viewer.userId),
+  });
+  const unreadMessagesQuery = useQuery({
+    queryKey: ["messages-unread", viewer.userId],
+    queryFn: () => getUnreadConversationSummary(viewer.userId!),
+    enabled: Boolean(viewer.userId),
+  });
 
   const currentProfile = profileQuery.data ?? null;
   const avatarUrl = getAvatarAssetUrls(avatarAssetQuery.data);
   const publicProfilePath = currentProfile?.username ? `/@${currentProfile.username}` : null;
+  const unreadNavigationCounts = new Map<string, number>([
+    ["/messages", unreadMessagesQuery.data?.unreadConversations ?? 0],
+    ["/notifications", unreadNotificationsQuery.data ?? 0],
+  ]);
 
   return (
     <div className="page-shell min-h-screen pb-32">
       <div className="mx-auto grid min-h-screen max-w-[1720px] gap-8 px-4 py-4 md:px-6 xl:grid-cols-[292px_minmax(0,1fr)] xl:py-6">
         <aside className="glass-panel hidden min-h-[calc(100vh-3rem)] rounded-[34px] border border-border px-5 py-6 xl:flex xl:flex-col">
           <div className="flex items-start gap-4 pb-7">
-            <div className="flex size-15 items-center justify-center rounded-[24px] border border-accent/35 bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.4),rgba(157,92,255,0.08)_58%,rgba(255,255,255,0.02))] text-accent-secondary shadow-[0_18px_46px_rgba(82,39,163,0.34)]">
-              <Music4 className="size-6" />
-            </div>
+            <MxShareMark className="size-15 shadow-[0_18px_46px_rgba(82,39,163,0.34)]" />
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 rounded-full border border-accent/18 bg-accent/10 px-2.5 py-1 text-[0.65rem] uppercase tracking-[0.28em] text-accent-secondary/82">
                 <CircleDot className="size-3 fill-current stroke-none" />
-                Velvet Signal
+                Early Access
               </div>
               <p className="font-body text-[2rem] font-semibold tracking-[-0.04em]">MxShare</p>
               <p className="max-w-[11rem] text-sm leading-6 text-muted-foreground">
@@ -76,6 +94,7 @@ export function AppShell() {
           <nav className="space-y-1.5">
             {navigation.map((item) => {
               const Icon = item.icon;
+              const badgeCount = unreadNavigationCounts.get(item.to) ?? 0;
               return (
                 <NavLink
                   key={item.to}
@@ -91,6 +110,11 @@ export function AppShell() {
                 >
                   <Icon className="size-4 text-accent-secondary/90 transition-transform group-hover:scale-105" />
                   <span>{item.label}</span>
+                  {badgeCount > 0 ? (
+                    <span className="ml-auto rounded-full border border-accent/18 bg-accent/14 px-2 py-0.5 text-[11px] font-medium text-accent-secondary">
+                      {formatBadgeCount(badgeCount)}
+                    </span>
+                  ) : null}
                 </NavLink>
               );
             })}
@@ -209,6 +233,7 @@ export function AppShell() {
       <nav className="fixed inset-x-4 bottom-24 z-30 flex rounded-full border border-border bg-[rgba(9,7,20,0.94)] p-2 shadow-[0_20px_60px_rgba(0,0,0,0.42)] backdrop-blur-xl xl:hidden">
         {navigation.slice(0, 5).map((item) => {
           const Icon = item.icon;
+          const badgeCount = unreadNavigationCounts.get(item.to) ?? 0;
           return (
             <NavLink
               key={item.to}
@@ -223,7 +248,14 @@ export function AppShell() {
               }
             >
               <Icon className="size-4" />
-              <span>{item.label}</span>
+              <span className="inline-flex items-center gap-1.5">
+                {item.label}
+                {badgeCount > 0 ? (
+                  <span className="rounded-full bg-white/18 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                    {formatBadgeCount(badgeCount)}
+                  </span>
+                ) : null}
+              </span>
             </NavLink>
           );
         })}

@@ -23,6 +23,11 @@ import {
 import { buildCloudConnectionUpsert, getStoredDriveFolders } from "@/features/drive/google-drive-connection";
 import { useGoogleDriveProvider } from "@/features/drive/use-google-drive-provider";
 import { createSong, getLibraryDashboard, createSongVersion } from "@/features/library/api";
+import { MediaProcessingStatusCard } from "@/features/media-processing/media-processing-status-card";
+import {
+  generateAutomaticPreviewFromSourceAsset,
+  uploadOriginalWithAutomaticPreview,
+} from "@/features/media-processing/automatic-preview";
 import {
   createSinglePost,
   findSinglePostBySongId,
@@ -33,7 +38,7 @@ import { getArtworkAssetUrls } from "@/lib/asset-urls";
 import { productionStages } from "@/lib/constants";
 import { queryClient } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
-import type { Asset, Song } from "@/types/domain";
+import type { Asset, MediaProcessingJob, Song } from "@/types/domain";
 
 const steps = [
   { id: 1, label: "Single info" },
@@ -60,6 +65,8 @@ export function CreateSinglePage() {
   const [uploadedOriginal, setUploadedOriginal] = useState<Asset | null>(null);
   const [uploadedPreview, setUploadedPreview] = useState<Asset | null>(null);
   const [uploadedArtwork, setUploadedArtwork] = useState<Asset | null>(null);
+  const [mediaProcessingJob, setMediaProcessingJob] = useState<MediaProcessingJob | null>(null);
+  const [mediaProcessingError, setMediaProcessingError] = useState<string | null>(null);
 
   const libraryQuery = useQuery({
     queryKey: ["library", viewer.userId],
@@ -84,6 +91,28 @@ export function CreateSinglePage() {
     () => (libraryQuery.data?.assets ?? []).filter((asset) => asset.asset_type === "cover_artwork"),
     [libraryQuery.data?.assets],
   );
+  const selectedSong = useMemo(
+    () => libraryQuery.data?.songs.find((entry) => entry.id === existingSongId) ?? null,
+    [existingSongId, libraryQuery.data?.songs],
+  );
+  const selectedSongVersions = useMemo(
+    () =>
+      (libraryQuery.data?.versions ?? [])
+        .filter((version) => version.song_id === existingSongId)
+        .slice()
+        .sort((left, right) => right.version_number - left.version_number),
+    [existingSongId, libraryQuery.data?.versions],
+  );
+  const latestSelectedVersion = selectedSongVersions[0] ?? null;
+  const latestSelectedOriginalAsset = latestSelectedVersion?.source_asset_id
+    ? libraryQuery.data?.assets.find((asset) => asset.id === latestSelectedVersion.source_asset_id) ?? null
+    : null;
+  const latestSelectedPreviewAsset = latestSelectedVersion?.preview_asset_id
+    ? libraryQuery.data?.assets.find((asset) => asset.id === latestSelectedVersion.preview_asset_id) ?? null
+    : null;
+  const selectedSongArtworkAsset = selectedSong?.default_artwork_asset_id
+    ? libraryQuery.data?.assets.find((asset) => asset.id === selectedSong.default_artwork_asset_id) ?? null
+    : null;
 
   async function refreshDriveSetup() {
     if (!viewer.userId) {
@@ -124,25 +153,54 @@ export function CreateSinglePage() {
     artworkInputRef.current?.click();
   }
 
+  useEffect(() => {
+    setMediaProcessingError(null);
+    setMediaProcessingJob(null);
+
+    if (!existingSongId) {
+      setUploadedOriginal(null);
+      setUploadedPreview(null);
+      setUploadedArtwork(null);
+      return;
+    }
+
+    setUploadedOriginal(latestSelectedOriginalAsset);
+    setUploadedPreview(latestSelectedPreviewAsset);
+    setUploadedArtwork(selectedSongArtworkAsset);
+
+    if (!postTitle.trim() && selectedSong?.title) {
+      setPostTitle(selectedSong.title);
+    }
+  }, [
+    existingSongId,
+    latestSelectedOriginalAsset,
+    latestSelectedPreviewAsset,
+    postTitle,
+    selectedSong?.title,
+    selectedSongArtworkAsset,
+  ]);
+
   const publishMutation = useMutation({
     mutationFn: async () => {
       if (!viewer.userId) {
         throw new Error("Please sign in first.");
       }
-      if (!uploadedOriginal) {
+      const selectedOriginalAsset = uploadedOriginal ?? latestSelectedOriginalAsset;
+      const selectedPreviewAsset = uploadedPreview ?? latestSelectedPreviewAsset;
+
+      if (!selectedOriginalAsset) {
         throw new Error("Upload a private original first.");
       }
-      if (visibility === "public" && !uploadedPreview) {
-        throw new Error("Public singles need a browser-playable preview file.");
+      if (visibility === "public" && !selectedPreviewAsset) {
+        throw new Error("Generate the public preview from the original before publishing.");
       }
 
       let song: Song;
       if (existingSongId) {
-        const fromLibrary = libraryQuery.data?.songs.find((entry) => entry.id === existingSongId);
-        if (!fromLibrary) {
+        if (!selectedSong) {
           throw new Error("Selected song could not be found.");
         }
-        song = fromLibrary;
+        song = selectedSong;
       } else {
         song = await createSong(viewer.userId, {
           title: newSongTitle.trim(),
@@ -151,17 +209,32 @@ export function CreateSinglePage() {
         });
       }
 
-      const version = await createSongVersion(song.id, {
-        version_label: versionLabel.trim(),
-        production_stage: productionStage,
-        changelog: description.trim(),
-        source_asset_id: uploadedOriginal.id,
-        preview_asset_id: uploadedPreview?.id ?? null,
-      });
+      const nextVersionLabel = versionLabel.trim();
+      const nextChangelog = description.trim();
+      const shouldReuseLatestVersion = Boolean(
+        latestSelectedVersion &&
+          existingSongId &&
+          latestSelectedVersion.source_asset_id === selectedOriginalAsset.id &&
+          (latestSelectedVersion.preview_asset_id ?? null) === (selectedPreviewAsset?.id ?? null) &&
+          latestSelectedVersion.version_label.trim() === nextVersionLabel &&
+          latestSelectedVersion.production_stage === productionStage &&
+          (latestSelectedVersion.changelog ?? "") === nextChangelog,
+      );
+
+      const version = shouldReuseLatestVersion && latestSelectedVersion
+        ? latestSelectedVersion
+        : await createSongVersion(song.id, {
+            version_label: nextVersionLabel,
+            production_stage: productionStage,
+            changelog: nextChangelog,
+            source_asset_id: selectedOriginalAsset.id,
+            preview_asset_id: selectedPreviewAsset?.id ?? null,
+          });
 
       const existingPost = await findSinglePostBySongId(song.id);
-      if (!existingPost) {
-        await createSinglePost({
+      const post =
+        existingPost ??
+        (await createSinglePost({
           ownerId: viewer.userId,
           songId: song.id,
           featuredVersionId: version.id,
@@ -171,20 +244,28 @@ export function CreateSinglePage() {
             visibility,
             artwork_asset_id: uploadedArtwork?.id ?? null,
           },
-        });
+        }));
+
+      if (!existingPost) {
+        await queryClient.invalidateQueries({ queryKey: ["post", post.id] });
       }
 
       if (visibility === "public") {
         await publishSingleVersion({ versionId: version.id });
       }
+
+      return post;
     },
-    onSuccess: async () => {
+    onSuccess: async (post) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["library", viewer.userId] }),
+        queryClient.invalidateQueries({ queryKey: ["library-posts", viewer.userId] }),
         queryClient.invalidateQueries({ queryKey: ["home-feed"] }),
         queryClient.invalidateQueries({ queryKey: ["explore-feed"] }),
+        queryClient.invalidateQueries({ queryKey: ["profile-posts"] }),
       ]);
       toast.success("Single flow completed.");
+      navigate(`/post/${post.id}`);
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Could not publish this single.");
@@ -223,7 +304,7 @@ export function CreateSinglePage() {
   };
 
   const selectedSongTitle =
-    libraryQuery.data?.songs.find((song) => song.id === existingSongId)?.title ??
+    selectedSong?.title ??
     newSongTitle.trim() ??
     "";
   const releaseHeadline = postTitle.trim() || selectedSongTitle || "Untitled single";
@@ -374,59 +455,117 @@ export function CreateSinglePage() {
                     if (!viewer.userId) {
                       throw new Error("Please sign in first.");
                     }
-                    const parentFolderId = await resolveDriveFolder("originals");
-                    const upload =
-                      input.file.size > 20 * 1024 * 1024
-                        ? await provider.uploadResumable({ ...input, parentFolderId })
-                        : await provider.uploadFile({ ...input, parentFolderId });
-                    const asset = await createAssetRecord({
+                    setMediaProcessingError(null);
+                    setMediaProcessingJob(null);
+                    const originalsFolderId = await resolveDriveFolder("originals");
+                    const previewsFolderId = await resolveDriveFolder("previews");
+                    const result = await uploadOriginalWithAutomaticPreview({
                       ownerId: viewer.userId,
-                      assetType: "audio_original",
-                      accessMode: "private",
-                      upload,
+                      provider,
+                      originalFile: input.file,
+                      originalsFolderId,
+                      previewsFolderId,
+                      signal: input.signal,
+                      onProgress: input.onProgress,
+                      onJobChange: setMediaProcessingJob,
                     });
-                    setUploadedOriginal(asset);
-                    return upload;
+                    setUploadedOriginal(result.originalAsset);
+                    if (result.previewAsset) {
+                      setUploadedPreview(result.previewAsset);
+                    }
+                    if (result.automationError) {
+                      setMediaProcessingError(result.automationError);
+                      toast.warning("Original uploaded. Automatic preview generation needs attention.");
+                    } else if (result.previewAsset) {
+                      toast.success("Original uploaded and preview generated automatically.");
+                    } else {
+                      toast.success("Original uploaded.");
+                    }
+                    return {
+                      fileId: result.originalAsset.remote_file_id,
+                      filename: result.originalAsset.filename,
+                      mimeType: result.originalAsset.mime_type,
+                      bytes: result.originalAsset.bytes ?? input.file.size,
+                      parentFolderId: result.originalAsset.remote_parent_folder_id ?? originalsFolderId,
+                      shareUrl: result.originalAsset.share_url,
+                      viewUrl: result.originalAsset.view_url,
+                      thumbnailUrl: result.originalAsset.thumbnail_url,
+                    };
                   }}
                 />
 
-                <UploadDropzone
-                  title="Public preview upload"
-                  description="Public feed playback should use MP3, M4A, AAC, or OGG. MxShare does not auto-convert in V1."
-                  parentFolderId={storedDriveFolders?.audioPreviewsFolderId ?? ""}
-                  disabled={!storedDriveFolders}
-                  recommendedPublicPreview
-                  onUpload={async (input) => {
-                    if (!viewer.userId) {
-                      throw new Error("Please sign in first.");
-                    }
-                    const parentFolderId = await resolveDriveFolder("previews");
-                    const upload =
-                      input.file.size > 20 * 1024 * 1024
-                        ? await provider.uploadResumable({ ...input, parentFolderId })
-                        : await provider.uploadFile({ ...input, parentFolderId });
-                    const publicPreview = await provider.makePublicPreview(upload.fileId);
-                    const asset = await createAssetRecord({
-                      ownerId: viewer.userId,
-                      assetType: "audio_preview",
-                      accessMode: "public",
-                      upload: {
-                        ...upload,
-                        shareUrl: publicPreview.shareUrl,
-                        viewUrl: publicPreview.viewUrl,
-                      },
-                    });
-                    await updateAssetPublicLinks({
-                      assetId: asset.id,
-                      accessMode: "public",
-                      shareUrl: publicPreview.shareUrl,
-                      viewUrl: publicPreview.viewUrl,
-                    });
-                    setUploadedPreview(asset);
-                    return upload;
-                  }}
-                />
+                <Card className="space-y-4 p-5">
+                  <div className="space-y-2">
+                    <CardTitle>Generated public preview</CardTitle>
+                    <CardDescription className="text-base leading-7">
+                      Manual preview uploads are disabled. MxShare always derives the public MP3 and waveform from the private original.
+                    </CardDescription>
+                  </div>
+
+                  <div className="rounded-[20px] border border-white/[0.08] bg-white/[0.03] px-4 py-4 text-sm leading-7 text-muted-foreground">
+                    {uploadedPreview
+                      ? "A generated preview is already attached to this single flow."
+                      : uploadedOriginal
+                        ? "Use the current original to generate or refresh the public preview."
+                        : "Upload or select a private original first, then generate the public preview from it."}
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      variant="secondary"
+                      disabled={!storedDriveFolders || !uploadedOriginal || !viewer.userId}
+                      onClick={() => {
+                        const ownerId = viewer.userId;
+                        const sourceAsset = uploadedOriginal;
+
+                        if (!ownerId || !sourceAsset) {
+                          return;
+                        }
+
+                        void (async () => {
+                          setMediaProcessingError(null);
+                          setMediaProcessingJob(null);
+
+                          try {
+                            const previewFolderId = await resolveDriveFolder("previews");
+                            const result = await generateAutomaticPreviewFromSourceAsset({
+                              ownerId,
+                              provider,
+                              sourceAsset,
+                              previewFolderId,
+                              onJobChange: setMediaProcessingJob,
+                            });
+                            setUploadedPreview(result.previewAsset);
+                            toast.success("Preview and waveform generated from the current original.");
+                          } catch (error) {
+                            const message =
+                              error instanceof Error
+                                ? error.message
+                                : "Could not generate the public preview from this original.";
+                            setMediaProcessingError(message);
+                            toast.error(message);
+                          }
+                        })();
+                      }}
+                    >
+                      {uploadedPreview ? "Regenerate preview" : "Generate preview"}
+                    </Button>
+                  </div>
+
+                  {latestSelectedVersion ? (
+                    <div className="rounded-[20px] border border-white/[0.08] bg-white/[0.03] px-4 py-4 text-sm text-muted-foreground">
+                      Latest library version: <span className="text-foreground">{latestSelectedVersion.version_label}</span>
+                    </div>
+                  ) : null}
+                </Card>
               </div>
+
+              <MediaProcessingStatusCard
+                job={mediaProcessingJob}
+                error={mediaProcessingError}
+                title="Generated playback preview"
+                emptyMessage="Upload or select a private original once. MxShare will create the public MP3 preview and waveform automatically."
+              />
 
               <Card>
                 <CardHeader>
@@ -554,9 +693,9 @@ export function CreateSinglePage() {
                   <p className="text-sm text-muted-foreground">
                     {visibility === "public"
                       ? uploadedPreview
-                        ? "A public preview asset is attached."
-                        : "A public preview asset is still required."
-                      : "Private release: preview can be added later."}
+                        ? "A generated public preview asset is attached."
+                        : "Generate the public preview from the private original before publishing."
+                      : "Private release: the generated preview can be attached later."}
                   </p>
                 </div>
               </div>
@@ -661,8 +800,8 @@ export function CreateSinglePage() {
                   {visibility === "public"
                     ? uploadedPreview
                       ? "Public playback is ready."
-                      : "A preview upload is still needed for public playback."
-                    : "Private release selected. Preview can be added later."}
+                      : "Generate the preview from the private original for public playback."
+                    : "Private release selected. The public preview can be generated later."}
                 </div>
               </div>
             </div>

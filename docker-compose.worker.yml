@@ -1,0 +1,10 @@
+services:
+  media-worker:
+    build:
+      context: .
+      dockerfile: services/media-worker/Dockerfile
+    env_file:
+      - services/media-worker/.env
+    ports:
+      - "8080:8080"
+    restart: unless-stopped

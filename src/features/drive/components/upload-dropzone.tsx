@@ -152,7 +152,7 @@ export function UploadDropzone({
                   {fileLabel ? <p className="text-sm text-accent-secondary">{fileLabel}</p> : null}
                 </div>
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3 md:max-w-[15rem] md:justify-end">
                 <input
                   id={inputId}
                   ref={inputRef}

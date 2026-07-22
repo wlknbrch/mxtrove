@@ -110,6 +110,13 @@ export function ConversationRail({
                     <p className="mt-2 truncate text-sm text-muted-foreground">
                       {item.lastMessage?.body ?? "Start the conversation"}
                     </p>
+                    {item.unreadCount > 0 ? (
+                      <div className="mt-3">
+                        <Badge variant="accent">
+                          {item.unreadCount} unread
+                        </Badge>
+                      </div>
+                    ) : null}
                   </div>
                 </Link>
               );

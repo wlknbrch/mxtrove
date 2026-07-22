@@ -115,7 +115,6 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
       .from("comments")
       .select("*, author:profiles!comments_author_id_fkey(*)")
       .eq("post_id", post.id)
-      .is("deleted_at", null)
       .order("created_at", { ascending: true }),
     client
       .from("release_tracks")
@@ -453,6 +452,41 @@ export async function createReleasePost(input: {
   return post;
 }
 
+export async function updateReleasePost(input: {
+  postId: string;
+  title: string;
+  description?: string;
+  releaseUrl?: string;
+  artworkAssetId?: string | null;
+  tracks: Array<{
+    song_id: string;
+    song_version_id: string | null;
+    preview_asset_id: string | null;
+    track_title: string;
+    track_number: number;
+    production_stage: string | null;
+  }>;
+}) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay(220);
+    return;
+  }
+
+  const client = requireSupabase();
+  const { error } = await client.rpc("update_release_post", {
+    target_post_id: input.postId,
+    next_title: input.title,
+    next_description: input.description ?? "",
+    next_release_url: input.releaseUrl ?? "",
+    next_artwork_asset_id: input.artworkAssetId ?? null,
+    next_tracks: input.tracks,
+  });
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function addCommentToPost(input: {
   postId: string;
   authorId: string;
@@ -470,6 +504,55 @@ export async function addCommentToPost(input: {
     body: input.values.body,
     parent_comment_id: input.values.parent_comment_id ?? null,
   });
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function updateCommentOnPost(input: {
+  commentId: string;
+  authorId: string;
+  body: string;
+}) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay(160);
+    return;
+  }
+
+  const client = requireSupabase();
+  const { error } = await client
+    .from("comments")
+    .update({
+      body: input.body,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.commentId)
+    .eq("author_id", input.authorId);
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function deleteCommentOnPost(input: {
+  commentId: string;
+  authorId: string;
+}) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay(140);
+    return;
+  }
+
+  const client = requireSupabase();
+  const { error } = await client
+    .from("comments")
+    .update({
+      deleted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.commentId)
+    .eq("author_id", input.authorId);
 
   if (error) {
     throw error;
@@ -585,6 +668,20 @@ export async function reportPost(input: {
     details: input.details || null,
     status: "open",
   });
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function deletePost(postId: string) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay(150);
+    return;
+  }
+
+  const client = requireSupabase();
+  const { error } = await client.from("posts").delete().eq("id", postId);
 
   if (error) {
     throw error;

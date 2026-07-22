@@ -8,7 +8,7 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 const createOptions = [
   {
     title: "Single",
-    description: "Publish one track, add a public preview, and keep version history attached to the same post.",
+    description: "Publish one track, generate the public preview from the original, and keep version history attached to the same post.",
     to: "/create/single",
     icon: Radio,
   },

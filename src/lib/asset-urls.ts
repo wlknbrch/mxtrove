@@ -173,9 +173,9 @@ export function getPreviewPlaybackUrls(asset: Asset | null | undefined) {
   if (shouldDeriveGoogleDriveUrl(asset)) {
     return uniqueUrls([
       buildDriveMediaProxyUrl(asset.remote_file_id, "audio"),
-      asset.share_url,
       buildGoogleDriveUserContentUrl(asset.remote_file_id, "download"),
       buildGoogleDrivePublicDownloadUrl(asset.remote_file_id),
+      asset.share_url,
       asset.view_url,
     ]);
   }

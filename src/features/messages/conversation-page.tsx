@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { MessageCircleMore, SendHorizonal, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -16,7 +16,7 @@ import { useAppViewer } from "@/hooks/use-app-viewer";
 import { queryClient } from "@/lib/query-client";
 import { formatRelativeTime } from "@/lib/utils";
 
-import { getConversation, listConversations, sendMessage } from "@/features/messages/api";
+import { getConversation, listConversations, markConversationRead, sendMessage } from "@/features/messages/api";
 import { ConversationRail } from "@/features/messages/messages-shell";
 import { getMessageErrorMessage } from "@/features/messages/ui";
 
@@ -59,15 +59,25 @@ export function ConversationPage() {
       form.reset();
       await queryClient.invalidateQueries({ queryKey: ["conversation", conversationId] });
       await queryClient.invalidateQueries({ queryKey: ["conversations", viewer.userId] });
+      await queryClient.invalidateQueries({ queryKey: ["messages-unread", viewer.userId] });
       toast.success("Message sent.");
     },
     onError: (error) => {
       toast.error(getMessageErrorMessage(error));
     },
   });
+  const markReadMutation = useMutation({
+    mutationFn: () => markConversationRead(conversationId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["conversations", viewer.userId] });
+      await queryClient.invalidateQueries({ queryKey: ["messages-unread", viewer.userId] });
+    },
+  });
 
   const data = conversationQuery.data;
   const counterpart = data?.members.find((member) => member.id !== viewer.userId) ?? null;
+  const lastMessageId = data?.messages.at(-1)?.id ?? null;
+  const lastMarkedMessageIdRef = useRef<string | null>(null);
   const draft = form.watch("body");
   const queryErrorMessage = conversationQuery.error
     ? getMessageErrorMessage(conversationQuery.error)
@@ -82,8 +92,21 @@ export function ConversationPage() {
   const description = queryErrorMessage
     ? "The conversation could not be loaded correctly. The technical cause is shown below."
     : counterpart
-      ? `Direct conversation with @${counterpart.username}. Realtime is optional, but sending and reading should still work reliably.`
+      ? `Direct conversation with @${counterpart.username}. Read state stays in sync so the inbox can tell you what still needs attention.`
       : "Realtime is additive here. The conversation still works correctly without an active subscription.";
+
+  useEffect(() => {
+    if (!viewer.userId || !conversationId || !lastMessageId || conversationQuery.isError) {
+      return;
+    }
+
+    if (lastMarkedMessageIdRef.current === lastMessageId) {
+      return;
+    }
+
+    lastMarkedMessageIdRef.current = lastMessageId;
+    void markReadMutation.mutateAsync();
+  }, [conversationId, conversationQuery.isError, lastMessageId, markReadMutation, viewer.userId]);
 
   return (
     <div className="space-y-8">

@@ -87,7 +87,7 @@ export function ProfileSettingsPage() {
       />
 
       <div className="grid gap-6 xl:grid-cols-[310px_minmax(0,1fr)_360px]">
-        <SettingsSidebar driveReady={driveReady} publicProfilePath={publicProfilePath} />
+        <SettingsSidebar driveReady={driveReady} />
 
         <ProfileFormPanel
           title="Public profile"

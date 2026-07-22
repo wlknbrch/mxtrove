@@ -9,6 +9,7 @@ export interface PlaybackTrack {
   src: string;
   srcCandidates?: string[] | null;
   durationSeconds?: number | null;
+  waveform?: import("@/types/domain").WaveformDataV1 | null;
   versionLabel?: string | null;
   queueGroupLabel?: string | null;
 }

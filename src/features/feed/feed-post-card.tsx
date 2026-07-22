@@ -15,6 +15,7 @@ import { getArtworkAssetUrls, getAvatarAssetUrls } from "@/lib/asset-urls";
 import { queryClient } from "@/lib/query-client";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import { usePlayerStore } from "@/components/audio/player-store";
+import { Waveform } from "@/components/audio/waveform";
 import { buildPostPlaybackTracks } from "@/features/posts/post-playback";
 import { togglePostHeart } from "@/features/posts/api";
 
@@ -269,8 +270,8 @@ export function FeedPostCard({
 
                   <div
                     className={cn(
-                      "waveform rounded-[24px] border border-white/8 bg-white/[0.035] px-4 py-4",
-                      isSpotlight ? "h-24" : "h-16",
+                      "waveform rounded-[26px] border border-white/10 bg-[linear-gradient(90deg,rgba(112,58,214,0.18),rgba(255,255,255,0.04),rgba(112,58,214,0.1))] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
+                      isSpotlight ? "h-28" : "h-20",
                     )}
                   >
                     <div className="flex h-full items-center gap-3">
@@ -280,19 +281,18 @@ export function FeedPostCard({
                           fallbackDurationSeconds={playbackTracks[0]?.durationSeconds ?? null}
                         />
                       </span>
-                      <div className="flex flex-1 items-center gap-1.5">
-                        {Array.from({ length: isSpotlight ? 54 : 36 }).map((_, index) => (
-                          <span
-                            key={index}
-                            className="w-1 rounded-full bg-white/10"
-                            style={{
-                              height: `${(isSpotlight ? 22 : 18) + ((index * 7) % (isSpotlight ? 40 : 26))}px`,
-                            }}
-                          />
-                        ))}
-                      </div>
-                      <span className="hidden shrink-0 text-xs uppercase tracking-[0.22em] text-muted-foreground md:inline">
-                        Listen
+                      <Waveform
+                        waveform={playbackTracks[0]?.waveform ?? null}
+                        durationSeconds={playbackTracks[0]?.durationSeconds ?? null}
+                        barCount={isSpotlight ? 96 : 80}
+                        variant="preview"
+                        className="min-w-0 h-full flex-1"
+                        trackClassName="h-full w-full"
+                        showFallbackLine={false}
+                        disabled
+                      />
+                      <span className="hidden shrink-0 text-[11px] uppercase tracking-[0.26em] text-accent-secondary/80 md:inline">
+                        Preview
                       </span>
                     </div>
                   </div>

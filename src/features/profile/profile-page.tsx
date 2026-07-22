@@ -21,6 +21,8 @@ import { PlaybackDuration } from "@/components/ui/playback-duration";
 import { ResolvedImage } from "@/components/ui/resolved-image";
 import { Tabs } from "@/components/ui/tabs";
 import { getAssetById } from "@/features/drive/api";
+import { FollowButton } from "@/features/follows/follow-button";
+import { getFollowState, getProfileMetrics } from "@/features/follows/api";
 import { createDirectConversation } from "@/features/messages/api";
 import { buildPostPlaybackTracks } from "@/features/posts/post-playback";
 import { getAvatarAssetUrls, getArtworkAssetUrls } from "@/lib/asset-urls";
@@ -59,15 +61,27 @@ function getReleaseMeta(item: ResolvedPostCard) {
 function ProfileStat({
   label,
   value,
+  to,
 }: {
   label: string;
   value: string | number;
+  to?: string;
 }) {
-  return (
+  const content = (
     <div className="rounded-[22px] border border-white/[0.06] bg-white/[0.02] px-4 py-4">
       <p className="font-display text-3xl tracking-[-0.03em] md:text-[2.3rem]">{value}</p>
       <p className="mt-2 text-sm text-muted-foreground">{label}</p>
     </div>
+  );
+
+  if (!to) {
+    return content;
+  }
+
+  return (
+    <Link to={to} className="transition-transform hover:-translate-y-0.5">
+      {content}
+    </Link>
   );
 }
 
@@ -172,6 +186,16 @@ export function ProfilePage() {
     queryFn: () => getAssetById(profileQuery.data!.avatar_asset_id!),
     enabled: Boolean(profileQuery.data?.avatar_asset_id),
   });
+  const metricsQuery = useQuery({
+    queryKey: ["profile-metrics", profileQuery.data?.id],
+    queryFn: () => getProfileMetrics(profileQuery.data!.id),
+    enabled: Boolean(profileQuery.data?.id),
+  });
+  const followStateQuery = useQuery({
+    queryKey: ["follow-state", viewer.userId, profileQuery.data?.id],
+    queryFn: () => getFollowState({ viewerId: viewer.userId, profileId: profileQuery.data!.id }),
+    enabled: Boolean(viewer.userId && profileQuery.data?.id && viewer.userId !== profileQuery.data.id),
+  });
 
   const profile = profileQuery.data;
   const posts = postsQuery.data ?? [];
@@ -181,11 +205,27 @@ export function ProfilePage() {
     posts[0] ??
     null;
   const filteredPosts = posts.filter((item) => postFilter === "all" || item.post.post_type === postFilter);
-  const singleCount = posts.filter((item) => item.post.post_type === "single").length;
-  const epCount = posts.filter((item) => item.post.post_type === "ep").length;
-  const albumCount = posts.filter((item) => item.post.post_type === "album").length;
+  const metrics = metricsQuery.data ?? {
+    profile_id: profile?.id ?? "",
+    followers_count: 0,
+    following_count: 0,
+    public_posts_count: posts.length,
+    single_count: posts.filter((item) => item.post.post_type === "single").length,
+    ep_count: posts.filter((item) => item.post.post_type === "ep").length,
+    album_count: posts.filter((item) => item.post.post_type === "album").length,
+    last_public_activity_at: featuredPost?.post.activity_at ?? null,
+  };
+  const followState = followStateQuery.data ?? {
+    viewerFollowsProfile: false,
+    profileFollowsViewer: false,
+  };
   const heartCount = posts.reduce((sum, item) => sum + item.heartCount, 0);
   const commentCount = posts.reduce((sum, item) => sum + item.commentCount, 0);
+  const featuredArtworkUrls = getArtworkAssetUrls(featuredPost?.artwork);
+  const hasFeaturedArtwork = featuredArtworkUrls.length > 0;
+  const publicProfilePath = profile?.username ? `/@${profile.username}` : null;
+  const followersPath = publicProfilePath ? `${publicProfilePath}/followers` : null;
+  const followingPath = publicProfilePath ? `${publicProfilePath}/following` : null;
 
   const createConversationMutation = useMutation({
     mutationFn: async () => {
@@ -252,14 +292,19 @@ export function ProfilePage() {
     <div className="space-y-8">
       <Card className="relative overflow-hidden p-0">
         <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(157,92,255,0.12),transparent_36%,rgba(255,255,255,0.02)_100%)]" />
-        {featuredPost?.artwork ? (
+        {hasFeaturedArtwork ? (
           <>
-            <ResolvedImage
-              src={getArtworkAssetUrls(featuredPost.artwork)}
-              alt={featuredPost.post.title}
-              className="absolute inset-0 h-full w-full object-cover opacity-30"
-            />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(157,92,255,0.42),transparent_26%),linear-gradient(90deg,rgba(7,5,17,0.84)_12%,rgba(7,5,17,0.6)_48%,rgba(7,5,17,0.92)_100%)]" />
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-[72%] overflow-hidden">
+              <ResolvedImage
+                src={featuredArtworkUrls}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 h-full w-full scale-[1.08] object-cover opacity-18 blur-[1px]"
+              />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,7,19,0.18)_0%,rgba(9,7,19,0.48)_48%,rgba(9,7,19,0.92)_100%)]" />
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,5,17,0.84)_10%,rgba(7,5,17,0.56)_44%,rgba(7,5,17,0.82)_100%)]" />
+            </div>
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(157,92,255,0.34),transparent_28%),radial-gradient(circle_at_top_right,rgba(224,185,255,0.12),transparent_24%),linear-gradient(180deg,rgba(9,7,19,0.18),rgba(9,7,19,0.94)_82%)]" />
           </>
         ) : (
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(157,92,255,0.28),transparent_26%),radial-gradient(circle_at_top_right,rgba(224,185,255,0.14),transparent_22%),linear-gradient(180deg,rgba(9,7,19,0.82),rgba(9,7,19,0.96))]" />
@@ -273,14 +318,21 @@ export function ProfilePage() {
                 <Button variant="secondary">Edit profile</Button>
               </Link>
             ) : (
-              <Button
-                variant="secondary"
-                onClick={() => void createConversationMutation.mutateAsync()}
-                disabled={createConversationMutation.isPending}
-              >
-                <MessageCircleMore className="size-4" />
-                Message artist
-              </Button>
+              <div className="flex flex-wrap gap-3">
+                <FollowButton
+                  profileId={profile.id}
+                  isFollowing={followState.viewerFollowsProfile}
+                  size="sm"
+                />
+                <Button
+                  variant="secondary"
+                  onClick={() => void createConversationMutation.mutateAsync()}
+                  disabled={createConversationMutation.isPending}
+                >
+                  <MessageCircleMore className="size-4" />
+                  Message artist
+                </Button>
+              </div>
             )}
           </div>
 
@@ -303,6 +355,7 @@ export function ProfilePage() {
                       <h1 className="font-display text-5xl tracking-[-0.05em] md:text-7xl">{profile.display_name}</h1>
                       <Badge variant="accent">Artist</Badge>
                       {isOwnProfile ? <Badge variant="neutral">You</Badge> : null}
+                      {!isOwnProfile && followState.profileFollowsViewer ? <Badge variant="accent">Follows you</Badge> : null}
                     </div>
                     <p className="text-lg text-muted-foreground">@{profile.username}</p>
                   </div>
@@ -366,12 +419,13 @@ export function ProfilePage() {
         </div>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-5">
-        <ProfileStat label="Public releases" value={posts.length} />
-        <ProfileStat label="Singles" value={singleCount} />
-        <ProfileStat label="EPs" value={epCount} />
-        <ProfileStat label="Albums" value={albumCount} />
-        <ProfileStat label="Total hearts" value={heartCount} />
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+        <ProfileStat label="Followers" value={metrics.followers_count} to={followersPath ?? undefined} />
+        <ProfileStat label="Following" value={metrics.following_count} to={followingPath ?? undefined} />
+        <ProfileStat label="Public releases" value={metrics.public_posts_count} />
+        <ProfileStat label="Singles" value={metrics.single_count} />
+        <ProfileStat label="EPs" value={metrics.ep_count} />
+        <ProfileStat label="Albums" value={metrics.album_count} />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
@@ -392,6 +446,10 @@ export function ProfilePage() {
             <p className="font-medium">Profile summary</p>
           </div>
           <div className="space-y-3">
+            <div className="rounded-[22px] border border-white/[0.06] bg-white/[0.02] px-4 py-4">
+              <p className="text-sm text-muted-foreground">Total hearts</p>
+              <p className="mt-2 font-display text-3xl tracking-[-0.03em]">{heartCount}</p>
+            </div>
             <div className="rounded-[22px] border border-white/[0.06] bg-white/[0.02] px-4 py-4">
               <p className="text-sm text-muted-foreground">Total comments</p>
               <p className="mt-2 font-display text-3xl tracking-[-0.03em]">{commentCount}</p>

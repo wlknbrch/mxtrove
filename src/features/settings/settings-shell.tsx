@@ -1,4 +1,4 @@
-import { Bell, Cloud, ExternalLink, Palette, Shield, UserRound } from "lucide-react";
+import { Bell, Cloud, Palette, Shield, UserRound } from "lucide-react";
 import { Link, NavLink } from "react-router-dom";
 
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
-type ImplementedSection = "overview" | "profile" | "storage";
+type ImplementedSection = "overview" | "profile" | "storage" | "notifications";
 
 const implementedSections: Array<{
   id: ImplementedSection;
@@ -36,6 +36,13 @@ const implementedSections: Array<{
     to: "/settings/storage",
     icon: Cloud,
   },
+  {
+    id: "notifications",
+    title: "Notifications",
+    description: "In-app rules, browser push, and delivery.",
+    to: "/settings/notifications",
+    icon: Bell,
+  },
 ];
 
 const upcomingSections: Array<{
@@ -43,11 +50,6 @@ const upcomingSections: Array<{
   description: string;
   icon: typeof Bell;
 }> = [
-  {
-    title: "Notifications",
-    description: "Delivery rules and message alerts.",
-    icon: Bell,
-  },
   {
     title: "Appearance",
     description: "Theme, density, and playback chrome.",
@@ -62,10 +64,8 @@ const upcomingSections: Array<{
 
 export function SettingsSidebar({
   driveReady,
-  publicProfilePath,
 }: {
   driveReady: boolean;
-  publicProfilePath?: string | null;
 }) {
   return (
     <Card className="space-y-6 p-4 md:p-5">
@@ -143,19 +143,13 @@ export function SettingsSidebar({
           <Link to="/create/single">
             <Button variant="primary" size="sm">New single</Button>
           </Link>
-          <Link to="/settings/storage">
-            <Button variant="secondary" size="sm">Manage storage</Button>
+          <Link to="/create/ep">
+            <Button variant="secondary" size="sm">New EP</Button>
+          </Link>
+          <Link to="/create/album">
+            <Button variant="secondary" size="sm">New album</Button>
           </Link>
         </div>
-        {publicProfilePath ? (
-          <Link
-            to={publicProfilePath}
-            className="inline-flex items-center gap-2 text-sm text-accent-secondary transition-colors hover:text-white"
-          >
-            View public profile
-            <ExternalLink className="size-4" />
-          </Link>
-        ) : null}
       </div>
     </Card>
   );

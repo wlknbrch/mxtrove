@@ -20,13 +20,15 @@ export function MessagesPage() {
     queryFn: () => listConversations(viewer.userId!),
     enabled: Boolean(viewer.userId),
   });
+  const unreadThreads = (conversationsQuery.data ?? []).filter((item) => item.unreadCount > 0).length;
+  const unreadMessages = (conversationsQuery.data ?? []).reduce((sum, item) => sum + item.unreadCount, 0);
 
   return (
     <div className="space-y-8">
       <PageHeader
         eyebrow="Direct messages"
         title="Inbox"
-        description="Keep the conversation focused on releases, feedback, and quick file-sharing follow-ups. Messaging stays intentionally lean in V1."
+        description="Keep release feedback, collaborator notes, and artist follow-ups in a focused inbox with visible unread state."
         actions={
           <Link to="/explore">
             <Button variant="secondary">Browse artists</Button>
@@ -49,6 +51,7 @@ export function MessagesPage() {
               <div className="flex flex-wrap items-center gap-3">
                 <Badge variant="accent">Message flow</Badge>
                 <Badge variant="neutral">{conversationsQuery.data?.length ?? 0} active threads</Badge>
+                <Badge variant="neutral">{unreadMessages} unread messages</Badge>
               </div>
               <p className="mt-5 max-w-3xl font-display text-4xl leading-[1.02] tracking-[-0.04em] md:text-[3.4rem]">
                 Keep fan, collaborator, and artist feedback close to the music.
@@ -64,17 +67,17 @@ export function MessagesPage() {
             <Card>
               <CardHeader>
                 <div>
-                  <CardTitle>What works right now</CardTitle>
+                  <CardTitle>Inbox status</CardTitle>
                   <CardDescription className="mt-2">
-                    The messaging surface is intentionally focused on core conversation.
+                    Core conversation now includes visible unread thread state.
                   </CardDescription>
                 </div>
               </CardHeader>
               <div className="space-y-3">
                 {[
-                  "Open threads from public profiles.",
-                  "Send direct text messages without leaving the app.",
-                  "Keep recent releases and profile visits as the natural entry into a conversation.",
+                  `${unreadThreads} thread${unreadThreads === 1 ? "" : "s"} currently need attention.`,
+                  `${unreadMessages} unread message${unreadMessages === 1 ? "" : "s"} are waiting in the inbox.`,
+                  "Open threads from public profiles and keep release feedback in one place.",
                 ].map((item) => (
                   <div
                     key={item}

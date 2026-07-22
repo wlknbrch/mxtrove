@@ -1,7 +1,8 @@
+import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { FolderOpen, Heart, MessageCircle, Play, SkipForward } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { FolderOpen, Heart, MessageCircle, PencilLine, Play, Reply, SkipForward, Trash2 } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/layout/page-header";
@@ -10,20 +11,57 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PlaybackDuration } from "@/components/ui/playback-duration";
 import { ResolvedImage } from "@/components/ui/resolved-image";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { getArtworkAssetUrls } from "@/lib/asset-urls";
 import { queryClient } from "@/lib/query-client";
+import { cn, formatRelativeTime } from "@/lib/utils";
 
-import { addCommentToPost, getResolvedPostById, togglePostHeart } from "@/features/posts/api";
+import {
+  addCommentToPost,
+  deleteCommentOnPost,
+  deletePost,
+  getResolvedPostById,
+  togglePostHeart,
+  updateCommentOnPost,
+} from "@/features/posts/api";
 import { buildPostPlaybackTracks } from "@/features/posts/post-playback";
+import type { ResolvedComment } from "@/features/posts/types";
+
+function buildCommentThreads(comments: ResolvedComment[]) {
+  const repliesByParent = new Map<string, ResolvedComment[]>();
+
+  comments.forEach((comment) => {
+    if (!comment.parent_comment_id) {
+      return;
+    }
+
+    const existing = repliesByParent.get(comment.parent_comment_id) ?? [];
+    existing.push(comment);
+    repliesByParent.set(comment.parent_comment_id, existing);
+  });
+
+  return comments
+    .filter((comment) => comment.parent_comment_id === null)
+    .map((comment) => ({
+      comment,
+      replies: repliesByParent.get(comment.id) ?? [],
+    }))
+    .filter((entry) => !entry.comment.deleted_at || entry.replies.some((reply) => !reply.deleted_at));
+}
 
 export function PostDetailPage() {
   const { postId = "" } = useParams();
   const viewer = useAppViewer();
+  const navigate = useNavigate();
   const enqueue = usePlayerStore((state) => state.enqueue);
   const form = useForm<{ body: string }>({ defaultValues: { body: "" } });
+  const [replyTargetId, setReplyTargetId] = useState<string | null>(null);
+  const [replyBody, setReplyBody] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingBody, setEditingBody] = useState("");
 
   const postQuery = useQuery({
     queryKey: ["post", postId],
@@ -32,7 +70,7 @@ export function PostDetailPage() {
   });
 
   const commentMutation = useMutation({
-    mutationFn: async (body: string) => {
+    mutationFn: async (input: { body: string; parentCommentId?: string | null }) => {
       if (!viewer.userId) {
         throw new Error("Please sign in first.");
       }
@@ -40,16 +78,73 @@ export function PostDetailPage() {
       return addCommentToPost({
         postId,
         authorId: viewer.userId,
-        values: { body, parent_comment_id: null },
+        values: { body: input.body, parent_comment_id: input.parentCommentId ?? null },
       });
     },
     onSuccess: async () => {
       form.reset();
+      setReplyTargetId(null);
+      setReplyBody("");
       await queryClient.invalidateQueries({ queryKey: ["post", postId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["home-feed"] }),
+        queryClient.invalidateQueries({ queryKey: ["explore-feed"] }),
+      ]);
       toast.success("Comment added.");
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Could not add comment.");
+    },
+  });
+
+  const updateCommentMutation = useMutation({
+    mutationFn: async (input: { commentId: string; body: string }) => {
+      if (!viewer.userId) {
+        throw new Error("Please sign in first.");
+      }
+
+      return updateCommentOnPost({
+        commentId: input.commentId,
+        authorId: viewer.userId,
+        body: input.body,
+      });
+    },
+    onSuccess: async () => {
+      setEditingCommentId(null);
+      setEditingBody("");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["post", postId] }),
+        queryClient.invalidateQueries({ queryKey: ["home-feed"] }),
+        queryClient.invalidateQueries({ queryKey: ["explore-feed"] }),
+      ]);
+      toast.success("Comment updated.");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Could not update comment.");
+    },
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: async (commentId: string) => {
+      if (!viewer.userId) {
+        throw new Error("Please sign in first.");
+      }
+
+      return deleteCommentOnPost({
+        commentId,
+        authorId: viewer.userId,
+      });
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["post", postId] }),
+        queryClient.invalidateQueries({ queryKey: ["home-feed"] }),
+        queryClient.invalidateQueries({ queryKey: ["explore-feed"] }),
+      ]);
+      toast.success("Comment removed.");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Could not remove comment.");
     },
   });
 
@@ -84,12 +179,45 @@ export function PostDetailPage() {
       toast.error(error instanceof Error ? error.message : "Could not heart this post.");
     },
   });
+  const deletePostMutation = useMutation({
+    mutationFn: async () => {
+      if (!postQuery.data?.owner?.id || postQuery.data.owner.id !== viewer.userId) {
+        throw new Error("Only the owner can delete this post.");
+      }
+
+      await deletePost(postId);
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["post", postId] }),
+        queryClient.invalidateQueries({ queryKey: ["library-posts", viewer.userId] }),
+        queryClient.invalidateQueries({ queryKey: ["home-feed"] }),
+        queryClient.invalidateQueries({ queryKey: ["explore-feed"] }),
+        queryClient.invalidateQueries({ queryKey: ["profile-posts"] }),
+      ]);
+      toast.success("Post deleted.");
+      navigate("/library");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Could not delete this post.");
+    },
+  });
 
   const item = postQuery.data;
   const playbackTracks = item ? buildPostPlaybackTracks(item) : [];
+  const commentThreads = useMemo(() => (item ? buildCommentThreads(item.comments) : []), [item]);
   const canOpenSongWorkspace =
     Boolean(item?.single?.song?.id) && item?.owner?.id === viewer.userId;
   const isOwnPost = Boolean(item?.owner?.id && viewer.userId === item.owner.id);
+  const isMultiTrackRelease = Boolean(item && !item.single);
+  const releaseTrackCount = item?.releaseTracks.length ?? 0;
+  const playableTrackCount = playbackTracks.length;
+  const editPath =
+    item?.post.post_type === "single" && item.single?.song?.id
+      ? `/library/songs/${item.single.song.id}`
+      : item
+        ? `/post/${item.post.id}/edit`
+        : null;
 
   if (postQuery.isPending) {
     return (
@@ -120,21 +248,51 @@ export function PostDetailPage() {
         title={item.post.title}
         description={item.post.description ?? "Release details, public comments, and version-aware playback."}
         actions={
-          <Button
-            variant={item.viewerHasHearted ? "primary" : "secondary"}
-            onClick={() => void heartMutation.mutateAsync()}
-            disabled={heartMutation.isPending || isOwnPost}
-            aria-label={isOwnPost ? "You cannot heart your own post" : item.viewerHasHearted ? "Remove heart" : "Heart this post"}
-          >
-            <Heart className="size-4" />
-            {item.heartCount}
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            {isOwnPost && editPath ? (
+              <Link to={editPath}>
+                <Button variant="secondary">
+                  {item.post.post_type === "single" ? "Edit song" : "Edit release"}
+                </Button>
+              </Link>
+            ) : null}
+            {isOwnPost ? (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  if (!window.confirm(`Delete the post "${item.post.title}"?`)) {
+                    return;
+                  }
+
+                  void deletePostMutation.mutateAsync();
+                }}
+                disabled={deletePostMutation.isPending}
+              >
+                <Trash2 className="size-4" />
+                Delete post
+              </Button>
+            ) : null}
+            <Button
+              variant={item.viewerHasHearted ? "primary" : "secondary"}
+              onClick={() => void heartMutation.mutateAsync()}
+              disabled={heartMutation.isPending || isOwnPost}
+              aria-label={isOwnPost ? "You cannot heart your own post" : item.viewerHasHearted ? "Remove heart" : "Heart this post"}
+            >
+              <Heart className="size-4" />
+              {item.heartCount}
+            </Button>
+          </div>
         }
       />
 
       <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
-        <Card>
-          <div className="grid gap-5 md:grid-cols-[220px_minmax(0,1fr)]">
+        <Card className="overflow-hidden">
+          <div
+            className={cn(
+              "grid gap-5 p-5 md:p-6",
+              isMultiTrackRelease ? "lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start" : "md:grid-cols-[220px_minmax(0,1fr)]",
+            )}
+          >
             <div className="relative aspect-square overflow-hidden rounded-[24px] border border-border bg-white/4">
               {getArtworkAssetUrls(item.artwork).length > 0 ? (
                 <ResolvedImage
@@ -219,46 +377,85 @@ export function PostDetailPage() {
                     </p>
                   </div>
                 </div>
-              ) : (
-                <div className="rounded-[22px] border border-border bg-white/3 p-4">
-                  <p className="font-medium">Tracklist</p>
-                  <div className="mt-3 space-y-3">
-                    {item.releaseTracks.map((track) => {
-                      const playbackTrack = playbackTracks.find((entry) => entry.id === track.track.id) ?? null;
-                      return (
-                        <div key={track.track.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-border bg-white/4 px-4 py-3">
-                          <div className="min-w-0">
-                            <p className="truncate">
-                              {track.track.track_number}. {track.track.track_title}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {track.version?.version_label ?? "No mapped version"}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="neutral">{track.track.production_stage ?? "Playback"}</Badge>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={!playbackTrack}
-                              onClick={() => {
-                                if (playbackTrack) {
-                                  enqueue([playbackTrack], playbackTrack.id);
-                                }
-                              }}
-                            >
-                              <Play className="size-4" />
-                              Play
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+              ) : null}
             </div>
           </div>
+          {!item.single ? (
+            <div className="border-t border-white/[0.08] bg-[linear-gradient(180deg,rgba(157,92,255,0.08),rgba(255,255,255,0.01))] px-5 py-5 md:px-6 md:py-6">
+              <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <p className="font-medium">Tracklist</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Ordered front to back with direct per-track playback.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="neutral">{releaseTrackCount} total</Badge>
+                  <Badge variant={playableTrackCount > 0 ? "success" : "warning"}>
+                    {playableTrackCount > 0 ? `${playableTrackCount} ready to play` : "Playback unavailable"}
+                  </Badge>
+                </div>
+              </div>
+              <div className="mt-5 space-y-3">
+                {item.releaseTracks.map((track) => {
+                  const playbackTrack = playbackTracks.find((entry) => entry.id === track.track.id) ?? null;
+                  return (
+                    <div
+                      key={track.track.id}
+                      className="grid gap-4 rounded-[24px] border border-white/[0.08] bg-white/[0.035] px-4 py-4 transition-colors hover:border-accent/22 hover:bg-white/[0.05] md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:px-5"
+                    >
+                      <div className="flex min-w-0 items-start gap-4">
+                        <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-accent/22 bg-accent/12 font-display text-lg tracking-[-0.04em] text-accent-secondary">
+                          {track.track.track_number}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="truncate font-medium">{track.track.track_title}</p>
+                            <Badge variant="neutral">{track.version?.version_label ?? "Unmapped"}</Badge>
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                            <span>{track.version?.production_stage ?? track.track.production_stage ?? "Playback"}</span>
+                            {playbackTrack ? (
+                              <span className="inline-flex items-center gap-2">
+                                <span className="size-1.5 rounded-full bg-accent-secondary/75" />
+                                <PlaybackDuration
+                                  src={playbackTrack.srcCandidates ?? playbackTrack.src}
+                                  fallbackDurationSeconds={playbackTrack.durationSeconds ?? null}
+                                />
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-2">
+                                <span className="size-1.5 rounded-full bg-warning/80" />
+                                No playback file
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                        <Badge variant={playbackTrack ? "success" : "warning"}>
+                          {playbackTrack ? "Ready" : "Pending"}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={!playbackTrack}
+                          onClick={() => {
+                            if (playbackTrack) {
+                              enqueue([playbackTrack], playbackTrack.id);
+                            }
+                          }}
+                        >
+                          <Play className="size-4" />
+                          Play
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
         </Card>
 
         <Card>
@@ -266,23 +463,234 @@ export function PostDetailPage() {
             <div>
               <CardTitle>Comments</CardTitle>
               <CardDescription className="mt-2">
-                Comments belong to the post, not to each individual single version.
+                Comments belong to the post, not to each individual single version. Replies stay one level deep.
               </CardDescription>
             </div>
           </CardHeader>
           <div className="space-y-4">
-            {item.comments.map((comment) => (
-              <div key={comment.id} className="rounded-[18px] border border-border bg-white/3 px-4 py-3">
-                <p className="font-medium">{comment.author?.display_name ?? "Unknown artist"}</p>
-                <p className="mt-2 text-sm text-muted-foreground">{comment.body}</p>
-              </div>
-            ))}
+            {commentThreads.map(({ comment, replies }) => {
+              const isOwnComment = viewer.userId === comment.author_id;
+              const isDeleted = Boolean(comment.deleted_at);
+              const authorPath = comment.author?.username ? `/@${comment.author.username}` : null;
+
+              return (
+                <div key={comment.id} className="space-y-3 rounded-[20px] border border-border bg-white/3 px-4 py-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      {authorPath ? (
+                        <Link to={authorPath} className="font-medium hover:text-accent-secondary">
+                          {comment.author?.display_name ?? "Unknown artist"}
+                        </Link>
+                      ) : (
+                        <p className="font-medium">{comment.author?.display_name ?? "Unknown artist"}</p>
+                      )}
+                      <p className="mt-1 text-xs uppercase tracking-[0.18em] text-muted-foreground/75">
+                        {formatRelativeTime(comment.created_at)}
+                      </p>
+                    </div>
+                    {!isDeleted ? (
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setReplyTargetId(replyTargetId === comment.id ? null : comment.id);
+                            setReplyBody("");
+                          }}
+                        >
+                          <Reply className="size-4" />
+                          Reply
+                        </Button>
+                        {isOwnComment ? (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditingCommentId(editingCommentId === comment.id ? null : comment.id);
+                                setEditingBody(comment.body);
+                              }}
+                            >
+                              <PencilLine className="size-4" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => void deleteCommentMutation.mutateAsync(comment.id)}
+                              disabled={deleteCommentMutation.isPending}
+                            >
+                              <Trash2 className="size-4" />
+                              Delete
+                            </Button>
+                          </>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {editingCommentId === comment.id && !isDeleted ? (
+                    <form
+                      className="grid gap-3"
+                      onSubmit={async (event) => {
+                        event.preventDefault();
+                        await updateCommentMutation.mutateAsync({
+                          commentId: comment.id,
+                          body: editingBody,
+                        });
+                      }}
+                    >
+                      <Textarea value={editingBody} onChange={(event) => setEditingBody(event.currentTarget.value)} />
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingCommentId(null);
+                            setEditingBody("");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={updateCommentMutation.isPending || !editingBody.trim()}>
+                          Save
+                        </Button>
+                      </div>
+                    </form>
+                  ) : (
+                    <p className={`text-sm leading-7 ${isDeleted ? "italic text-muted-foreground/70" : "text-muted-foreground"}`}>
+                      {isDeleted ? "Comment removed." : comment.body}
+                    </p>
+                  )}
+
+                  {replyTargetId === comment.id && !isDeleted ? (
+                    <form
+                      className="grid gap-3 rounded-[18px] border border-white/[0.06] bg-white/[0.02] p-3"
+                      onSubmit={async (event) => {
+                        event.preventDefault();
+                        await commentMutation.mutateAsync({
+                          body: replyBody,
+                          parentCommentId: comment.id,
+                        });
+                      }}
+                    >
+                      <Textarea
+                        placeholder={`Reply to ${comment.author?.display_name ?? "this artist"}`}
+                        value={replyBody}
+                        onChange={(event) => setReplyBody(event.currentTarget.value)}
+                      />
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={() => {
+                            setReplyTargetId(null);
+                            setReplyBody("");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={commentMutation.isPending || !replyBody.trim()}>
+                          Reply
+                        </Button>
+                      </div>
+                    </form>
+                  ) : null}
+
+                  {replies.length ? (
+                    <div className="space-y-3 border-l border-white/[0.08] pl-4">
+                      {replies
+                        .filter((reply) => !reply.deleted_at)
+                        .map((reply) => {
+                          const replyPath = reply.author?.username ? `/@${reply.author.username}` : null;
+                          const ownReply = viewer.userId === reply.author_id;
+
+                          return (
+                            <div key={reply.id} className="rounded-[18px] border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  {replyPath ? (
+                                    <Link to={replyPath} className="font-medium hover:text-accent-secondary">
+                                      {reply.author?.display_name ?? "Unknown artist"}
+                                    </Link>
+                                  ) : (
+                                    <p className="font-medium">{reply.author?.display_name ?? "Unknown artist"}</p>
+                                  )}
+                                  <p className="mt-1 text-xs uppercase tracking-[0.18em] text-muted-foreground/75">
+                                    {formatRelativeTime(reply.created_at)}
+                                  </p>
+                                </div>
+                                {ownReply ? (
+                                  <div className="flex gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setEditingCommentId(editingCommentId === reply.id ? null : reply.id);
+                                        setEditingBody(reply.body);
+                                      }}
+                                    >
+                                      <PencilLine className="size-4" />
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => void deleteCommentMutation.mutateAsync(reply.id)}
+                                      disabled={deleteCommentMutation.isPending}
+                                    >
+                                      <Trash2 className="size-4" />
+                                      Delete
+                                    </Button>
+                                  </div>
+                                ) : null}
+                              </div>
+
+                              {editingCommentId === reply.id ? (
+                                <form
+                                  className="mt-3 grid gap-3"
+                                  onSubmit={async (event) => {
+                                    event.preventDefault();
+                                    await updateCommentMutation.mutateAsync({
+                                      commentId: reply.id,
+                                      body: editingBody,
+                                    });
+                                  }}
+                                >
+                                  <Textarea value={editingBody} onChange={(event) => setEditingBody(event.currentTarget.value)} />
+                                  <div className="flex justify-end gap-2">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      onClick={() => {
+                                        setEditingCommentId(null);
+                                        setEditingBody("");
+                                      }}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button type="submit" disabled={updateCommentMutation.isPending || !editingBody.trim()}>
+                                      Save
+                                    </Button>
+                                  </div>
+                                </form>
+                              ) : (
+                                <p className="mt-2 text-sm leading-7 text-muted-foreground">{reply.body}</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
 
           <form
             className="mt-5 grid gap-3"
             onSubmit={form.handleSubmit(async (values) => {
-              await commentMutation.mutateAsync(values.body);
+              await commentMutation.mutateAsync({ body: values.body });
             })}
           >
             <Textarea placeholder="Leave feedback on the release as a whole" {...form.register("body")} />

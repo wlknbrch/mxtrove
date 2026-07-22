@@ -60,7 +60,7 @@ export function SettingsIndexPage() {
       />
 
       <div className="grid gap-6 xl:grid-cols-[310px_minmax(0,1fr)]">
-        <SettingsSidebar driveReady={driveReady} publicProfilePath={publicProfilePath} />
+        <SettingsSidebar driveReady={driveReady} />
 
         <div className="space-y-6">
           <div className="grid gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">

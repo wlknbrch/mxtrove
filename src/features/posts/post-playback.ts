@@ -3,12 +3,14 @@ import {
   getPreviewPlaybackUrl,
   getPreviewPlaybackUrls,
 } from "@/lib/asset-urls";
+import { hasUsablePreviewAsset } from "@/lib/playback-health";
+import { getAssetWaveform } from "@/lib/waveform";
 
 import type { PlaybackTrack } from "@/components/audio/player-store";
 import type { ResolvedPostCard } from "@/features/posts/types";
 
 export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[] {
-  if (item.single?.previewAsset) {
+  if (item.single?.previewAsset && hasUsablePreviewAsset(item.single.previewAsset)) {
     const previewUrl = getPreviewPlaybackUrl(item.single.previewAsset);
     if (previewUrl) {
       return [
@@ -21,6 +23,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
           src: previewUrl,
           srcCandidates: getPreviewPlaybackUrls(item.single.previewAsset),
           durationSeconds: item.single.previewAsset.duration_seconds ?? null,
+          waveform: getAssetWaveform(item.single.previewAsset),
           versionLabel: item.single.featuredVersion?.version_label ?? null,
           queueGroupLabel: item.post.title,
         },
@@ -29,6 +32,10 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
   }
 
   return item.releaseTracks.reduce<PlaybackTrack[]>((tracks, track) => {
+    if (!hasUsablePreviewAsset(track.previewAsset)) {
+      return tracks;
+    }
+
     const previewUrl = getPreviewPlaybackUrl(track.previewAsset);
     if (!previewUrl) {
       return tracks;
@@ -43,6 +50,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
       src: previewUrl,
       srcCandidates: getPreviewPlaybackUrls(track.previewAsset),
       durationSeconds: track.previewAsset?.duration_seconds ?? null,
+      waveform: getAssetWaveform(track.previewAsset),
       versionLabel: track.track.production_stage,
       queueGroupLabel: item.post.title,
     });

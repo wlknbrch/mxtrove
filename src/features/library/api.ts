@@ -191,3 +191,73 @@ export async function createSongVersion(songId: string, values: VersionFormValue
 
   return data as SongVersion;
 }
+
+export async function deleteSongVersion(versionId: string) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay(140);
+    return;
+  }
+
+  const client = requireSupabase();
+  const { data: singleLink, error: singleLinkError } = await client
+    .from("single_posts")
+    .select("post_id")
+    .eq("featured_version_id", versionId)
+    .maybeSingle();
+
+  if (singleLinkError) {
+    throw singleLinkError;
+  }
+
+  if (singleLink) {
+    throw new Error("This version is currently live on a single post. Publish another version or delete the post first.");
+  }
+
+  const { error } = await client
+    .from("song_versions")
+    .delete()
+    .eq("id", versionId);
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function updateSongVersionPreview(input: {
+  versionId: string;
+  previewAssetId: string | null;
+}) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay(160);
+    return;
+  }
+
+  const client = requireSupabase();
+  const { data: version, error: versionError } = await client
+    .from("song_versions")
+    .update({
+      preview_asset_id: input.previewAssetId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.versionId)
+    .select("id")
+    .single();
+
+  if (versionError) {
+    throw versionError;
+  }
+
+  const { error: releaseTracksError } = await client
+    .from("release_tracks")
+    .update({
+      preview_asset_id: input.previewAssetId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("song_version_id", input.versionId);
+
+  if (releaseTracksError) {
+    throw releaseTracksError;
+  }
+
+  return version;
+}

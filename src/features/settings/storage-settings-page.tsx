@@ -98,7 +98,7 @@ export function StorageSettingsPage() {
       />
 
       <div className="grid gap-6 xl:grid-cols-[310px_minmax(0,1fr)_340px]">
-        <SettingsSidebar driveReady={driveReady} publicProfilePath={publicProfilePath} />
+        <SettingsSidebar driveReady={driveReady} />
 
         <div className="space-y-6">
           <Card>

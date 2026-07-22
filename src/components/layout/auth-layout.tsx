@@ -1,7 +1,6 @@
 import type { PropsWithChildren } from "react";
 
-import { Music4 } from "lucide-react";
-
+import { MxShareMark } from "@/components/layout/mxshare-mark";
 import { Card } from "@/components/ui/card";
 
 export function AuthLayout({ children }: PropsWithChildren) {
@@ -10,9 +9,7 @@ export function AuthLayout({ children }: PropsWithChildren) {
       <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr]">
         <section className="glass-panel hidden rounded-[36px] border border-border p-10 lg:flex lg:flex-col lg:justify-between">
           <div className="flex items-center gap-3 text-lg font-semibold">
-            <div className="flex size-11 items-center justify-center rounded-2xl bg-accent/12 text-accent">
-              <Music4 className="size-5" />
-            </div>
+            <MxShareMark className="size-11" />
             <span className="font-display text-2xl">MxShare</span>
           </div>
           <div className="space-y-5">

@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="0 0 1200 1200" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="120" y1="78" x2="1072" y2="1124" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B0715"/>
+      <stop offset="0.5" stop-color="#1E0F38"/>
+      <stop offset="1" stop-color="#07040E"/>
+    </linearGradient>
+    <radialGradient id="glowTop" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(956 210) rotate(144.384) scale(390 310)">
+      <stop stop-color="#A86AFF" stop-opacity="0.52"/>
+      <stop offset="0.42" stop-color="#A86AFF" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#A86AFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowBottom" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(230 1000) rotate(-21.146) scale(410 250)">
+      <stop stop-color="#46E1E8" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#46E1E8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="panelStroke" x1="74" y1="306" x2="1126" y2="306" gradientUnits="userSpaceOnUse">
+      <stop stop-color="rgba(255,255,255,0.10)"/>
+      <stop offset="0.5" stop-color="rgba(163,103,255,0.24)"/>
+      <stop offset="1" stop-color="rgba(255,255,255,0.10)"/>
+    </linearGradient>
+    <linearGradient id="pillStroke" x1="0" y1="0" x2="220" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="rgba(255,255,255,0.10)"/>
+      <stop offset="1" stop-color="rgba(108,228,255,0.20)"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="1200" rx="48" fill="url(#bg)"/>
+  <rect x="18" y="18" width="1164" height="1164" rx="30" stroke="rgba(235,224,255,0.10)" stroke-width="2"/>
+  <circle cx="956" cy="210" r="284" fill="url(#glowTop)"/>
+  <circle cx="230" cy="1000" r="320" fill="url(#glowBottom)"/>
+
+  <rect x="74" y="318" width="1052" height="564" rx="42" fill="rgba(255,255,255,0.028)" stroke="url(#panelStroke)" stroke-width="2"/>
+
+  <image href="mxshare-icon-no-bg.png" x="94" y="382" width="216" height="216" preserveAspectRatio="xMidYMid meet"/>
+
+  <rect x="344" y="392" width="300" height="48" rx="24" fill="rgba(255,255,255,0.028)" stroke="rgba(255,255,255,0.08)"/>
+  <circle cx="360" cy="416" r="6" fill="#68E2FF"/>
+  <text x="387" y="425" fill="#D8C3FF" font-size="18" font-family="Arial, Helvetica, sans-serif" letter-spacing="4">SOCIAL WORKING ARCHIVE</text>
+
+  <text x="344" y="568" fill="#FFF7FF" font-size="110" font-weight="700" font-family="Arial, Helvetica, sans-serif">MxShare</text>
+  <text x="346" y="638" fill="#D7C9EC" font-size="33" font-family="Arial, Helvetica, sans-serif">Share music. Share versions.</text>
+  <text x="346" y="694" fill="#ADA0C7" font-size="24" font-family="Arial, Helvetica, sans-serif">Private originals in Drive. Public posts, messaging, and waveform playback.</text>
+
+  <rect x="344" y="750" width="248" height="58" rx="29" fill="rgba(255,255,255,0.05)" stroke="url(#pillStroke)"/>
+  <text x="377" y="786" fill="#FFFFFF" font-size="22" font-weight="600" font-family="Arial, Helvetica, sans-serif">Singles, EPs, Albums</text>
+
+  <rect x="616" y="750" width="228" height="58" rx="29" fill="rgba(255,255,255,0.05)" stroke="url(#pillStroke)"/>
+  <text x="663" y="786" fill="#FFFFFF" font-size="22" font-weight="600" font-family="Arial, Helvetica, sans-serif">Waveform player</text>
+
+  <rect x="868" y="750" width="212" height="58" rx="29" fill="rgba(255,255,255,0.05)" stroke="url(#pillStroke)"/>
+  <text x="914" y="786" fill="#FFFFFF" font-size="22" font-weight="600" font-family="Arial, Helvetica, sans-serif">Feedback loops</text>
+
+  <rect x="110" y="836" width="944" height="1" fill="rgba(255,255,255,0.08)"/>
+  <text x="110" y="876" fill="#F1E7FF" font-size="26" font-weight="600" font-family="Arial, Helvetica, sans-serif">mxshare.wlknbrch.com</text>
+</svg>

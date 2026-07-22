@@ -13,6 +13,7 @@ import { env } from "@/lib/env";
 
 import { listHomeFeed } from "@/features/feed/api";
 import { FeedPostCard } from "@/features/feed/feed-post-card";
+import { CreatorDiscoverySection } from "@/features/follows/creator-discovery-section";
 import { buildPostPlaybackTracks } from "@/features/posts/post-playback";
 
 export function HomePage() {
@@ -83,7 +84,7 @@ export function HomePage() {
       <Card className="velvet-hero overflow-hidden border-accent/14 px-0 py-0">
         <div className="grid gap-0 xl:grid-cols-[minmax(0,1.2fr)_320px]">
           <div className="px-6 py-7 md:px-8 md:py-9 xl:px-10">
-            <p className="text-xs uppercase tracking-[0.28em] text-accent-secondary/82">Velvet Signal</p>
+            <p className="text-xs uppercase tracking-[0.28em] text-accent-secondary/82">Public Alpha</p>
             <p className="mt-4 max-w-3xl font-display text-4xl leading-[0.98] tracking-[-0.05em] md:text-5xl xl:text-6xl">
               A softer, deeper way to follow every version drop, release, and late-night update.
             </p>
@@ -146,11 +147,14 @@ export function HomePage() {
           ))}
         </div>
       ) : (
-        <EmptyState
-          icon={Sparkles}
-          title="Your feed is quiet for now"
-          description="Follow a few artists or publish your first single so Home can surface new versions and releases."
-        />
+        <div className="space-y-6">
+          <EmptyState
+            icon={Sparkles}
+            title="Your feed is quiet for now"
+            description="Follow a few artists or publish your first single so Home can surface new versions and releases."
+          />
+          <CreatorDiscoverySection />
+        </div>
       )}
     </div>
   );

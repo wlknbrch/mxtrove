@@ -1,12 +1,18 @@
 import { demoConversation, demoMessages, demoProfiles, demoViewerProfile } from "@/lib/demo-data";
 import { createDemoDelay, isDemoModeEnabled, requireSupabase } from "@/lib/service-utils";
 import type { MessageFormValues } from "@/lib/validators";
-import type { Conversation, Message, Profile } from "@/types/domain";
+import type { Conversation, ConversationMember, Message, Profile } from "@/types/domain";
 
 export interface ConversationPreview {
   conversation: Conversation;
   counterpart: Profile | null;
   lastMessage: Message | null;
+  unreadCount: number;
+}
+
+export interface UnreadConversationSummary {
+  unreadConversations: number;
+  unreadMessages: number;
 }
 
 function throwMessageError(error: { message?: string } | null) {
@@ -17,6 +23,14 @@ function throwMessageError(error: { message?: string } | null) {
   throw new Error(error.message || "Messaging request failed.");
 }
 
+function isUnreadMessage(createdAt: string, lastReadAt: string | null | undefined) {
+  if (!lastReadAt) {
+    return true;
+  }
+
+  return new Date(createdAt).getTime() > new Date(lastReadAt).getTime();
+}
+
 export async function listConversations(viewerId: string) {
   if (isDemoModeEnabled()) {
     await createDemoDelay();
@@ -25,6 +39,7 @@ export async function listConversations(viewerId: string) {
         conversation: demoConversation,
         counterpart: demoProfiles[1],
         lastMessage: demoMessages[demoMessages.length - 1],
+        unreadCount: 1,
       },
     ] satisfies ConversationPreview[];
   }
@@ -32,25 +47,25 @@ export async function listConversations(viewerId: string) {
   const client = requireSupabase();
   const { data: memberships, error } = await client
     .from("conversation_members")
-    .select("conversation_id")
+    .select("conversation_id, last_read_at")
     .eq("profile_id", viewerId);
 
   throwMessageError(error);
 
-  const conversationIds = ((memberships ?? []) as Array<{ conversation_id: string }>).map(
-    (membership) => membership.conversation_id,
+  const membershipRows = (memberships ?? []) as Array<Pick<ConversationMember, "conversation_id" | "last_read_at">>;
+  const membershipByConversationId = new Map(
+    membershipRows.map((membership) => [membership.conversation_id, membership]),
   );
+  const conversationIds = membershipRows.map((membership) => membership.conversation_id);
+
+  if (!conversationIds.length) {
+    return [];
+  }
 
   const [conversations, members, messages] = await Promise.all([
-    conversationIds.length
-      ? client.from("conversations").select("*").in("id", conversationIds)
-      : Promise.resolve({ data: [], error: null }),
-    conversationIds.length
-      ? client.from("conversation_members").select("*").in("conversation_id", conversationIds)
-      : Promise.resolve({ data: [], error: null }),
-    conversationIds.length
-      ? client.from("messages").select("*").in("conversation_id", conversationIds).order("created_at", { ascending: true })
-      : Promise.resolve({ data: [], error: null }),
+    client.from("conversations").select("*").in("id", conversationIds),
+    client.from("conversation_members").select("*").in("conversation_id", conversationIds),
+    client.from("messages").select("*").in("conversation_id", conversationIds).order("created_at", { ascending: true }),
   ]);
 
   throwMessageError(conversations.error);
@@ -68,20 +83,34 @@ export async function listConversations(viewerId: string) {
 
   throwMessageError(profileError);
 
-  return ((conversations.data ?? []) as Conversation[]).map((conversation) => {
-    const memberEntries = ((members.data ?? []) as Array<{ conversation_id: string; profile_id: string }>).filter(
-      (member) => member.conversation_id === conversation.id && member.profile_id !== viewerId,
-    );
-    const lastMessage =
-      ((messages.data ?? []) as Message[]).filter((message) => message.conversation_id === conversation.id).at(-1) ?? null;
+  return ((conversations.data ?? []) as Conversation[])
+    .map((conversation) => {
+      const memberEntries = ((members.data ?? []) as Array<{ conversation_id: string; profile_id: string }>).filter(
+        (member) => member.conversation_id === conversation.id && member.profile_id !== viewerId,
+      );
+      const conversationMessages = ((messages.data ?? []) as Message[]).filter(
+        (message) => message.conversation_id === conversation.id,
+      );
+      const lastMessage = conversationMessages.at(-1) ?? null;
+      const unreadCount = conversationMessages.filter(
+        (message) =>
+          message.sender_id !== viewerId &&
+          isUnreadMessage(message.created_at, membershipByConversationId.get(conversation.id)?.last_read_at),
+      ).length;
 
-    return {
-      conversation,
-      counterpart:
-        ((profiles ?? []) as Profile[]).find((profile) => profile.id === memberEntries[0]?.profile_id) ?? null,
-      lastMessage,
-    };
-  }) satisfies ConversationPreview[];
+      return {
+        conversation,
+        counterpart:
+          ((profiles ?? []) as Profile[]).find((profile) => profile.id === memberEntries[0]?.profile_id) ?? null,
+        lastMessage,
+        unreadCount,
+      };
+    })
+    .sort((left, right) => {
+      const leftTimestamp = left.lastMessage?.created_at ?? left.conversation.updated_at ?? left.conversation.created_at;
+      const rightTimestamp = right.lastMessage?.created_at ?? right.conversation.updated_at ?? right.conversation.created_at;
+      return new Date(rightTimestamp).getTime() - new Date(leftTimestamp).getTime();
+    }) satisfies ConversationPreview[];
 }
 
 export async function getConversation(conversationId: string) {
@@ -135,6 +164,66 @@ export async function createDirectConversation(input: { otherProfileId: string }
   return data as string;
 }
 
+export async function getUnreadConversationSummary(viewerId: string): Promise<UnreadConversationSummary> {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay(120);
+    return {
+      unreadConversations: 1,
+      unreadMessages: 1,
+    };
+  }
+
+  const client = requireSupabase();
+  const { data: memberships, error } = await client
+    .from("conversation_members")
+    .select("conversation_id, last_read_at")
+    .eq("profile_id", viewerId);
+
+  throwMessageError(error);
+
+  const membershipRows = (memberships ?? []) as Array<Pick<ConversationMember, "conversation_id" | "last_read_at">>;
+  const conversationIds = membershipRows.map((membership) => membership.conversation_id);
+
+  if (!conversationIds.length) {
+    return {
+      unreadConversations: 0,
+      unreadMessages: 0,
+    };
+  }
+
+  const { data: messages, error: messagesError } = await client
+    .from("messages")
+    .select("conversation_id, sender_id, created_at")
+    .in("conversation_id", conversationIds);
+
+  throwMessageError(messagesError);
+
+  const unreadByConversation = new Map<string, number>();
+  const membershipByConversationId = new Map(
+    membershipRows.map((membership) => [membership.conversation_id, membership]),
+  );
+  membershipRows.forEach((membership) => {
+    unreadByConversation.set(membership.conversation_id, 0);
+  });
+
+  ((messages ?? []) as Array<Pick<Message, "conversation_id" | "sender_id" | "created_at">>).forEach((message) => {
+    const membership = membershipByConversationId.get(message.conversation_id);
+    if (!membership || message.sender_id === viewerId) {
+      return;
+    }
+
+    if (isUnreadMessage(message.created_at, membership.last_read_at)) {
+      unreadByConversation.set(message.conversation_id, (unreadByConversation.get(message.conversation_id) ?? 0) + 1);
+    }
+  });
+
+  const unreadCounts = Array.from(unreadByConversation.values());
+  return {
+    unreadConversations: unreadCounts.filter((count) => count > 0).length,
+    unreadMessages: unreadCounts.reduce((sum, count) => sum + count, 0),
+  };
+}
+
 export async function sendMessage(input: {
   conversationId: string;
   senderId: string;
@@ -150,6 +239,20 @@ export async function sendMessage(input: {
     conversation_id: input.conversationId,
     sender_id: input.senderId,
     body: input.values.body,
+  });
+
+  throwMessageError(error);
+}
+
+export async function markConversationRead(conversationId: string) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay(100);
+    return;
+  }
+
+  const client = requireSupabase();
+  const { error } = await client.rpc("mark_conversation_read", {
+    target_conversation_id: conversationId,
   });
 
   throwMessageError(error);

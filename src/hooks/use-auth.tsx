@@ -9,6 +9,8 @@ import {
 } from "react";
 
 import { getCurrentSession, getSupabaseBrowserClient, onAuthSessionChange } from "@/lib/supabase";
+import { unsubscribeCurrentDeviceFromPush } from "@/lib/pwa";
+import { setPushSubscriptionActive } from "@/features/notifications/api";
 
 interface AuthContextValue {
   loading: boolean;
@@ -60,6 +62,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signOut: async () => {
         const client = getSupabaseBrowserClient();
         if (client) {
+          const endpoint = await unsubscribeCurrentDeviceFromPush().catch(() => null);
+          if (endpoint && session?.user?.id) {
+            await setPushSubscriptionActive({
+              profileId: session.user.id,
+              endpoint,
+              isActive: false,
+            }).catch(() => undefined);
+          }
           await client.auth.signOut();
         }
       },

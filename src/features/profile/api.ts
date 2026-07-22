@@ -191,42 +191,6 @@ export async function getProfilePosts(profileId: string): Promise<Post[]> {
   return (data ?? []) as Post[];
 }
 
-export async function toggleFollow(input: { viewerId: string; profileId: string; shouldFollow: boolean }) {
-  if (input.viewerId === input.profileId) {
-    throw new Error("You cannot follow yourself.");
-  }
-
-  if (isDemoModeEnabled()) {
-    await createDemoDelay(150);
-    return;
-  }
-
-  const client = requireSupabase();
-
-  if (input.shouldFollow) {
-    const { error } = await client.from("follows").insert({
-      follower_id: input.viewerId,
-      followed_id: input.profileId,
-    });
-
-    if (error) {
-      throw error;
-    }
-
-    return;
-  }
-
-  const { error } = await client
-    .from("follows")
-    .delete()
-    .eq("follower_id", input.viewerId)
-    .eq("followed_id", input.profileId);
-
-  if (error) {
-    throw error;
-  }
-}
-
 export function getDemoAvatarForProfile(profile: Profile) {
   const seed = demoProfiles.findIndex((entry) => entry.id === profile.id);
   return `/not-used-${seed}`;
