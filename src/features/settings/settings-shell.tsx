@@ -1,5 +1,5 @@
 import { Bell, Cloud, Palette, Shield, UserRound } from "lucide-react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,6 +67,8 @@ export function SettingsSidebar({
 }: {
   driveReady: boolean;
 }) {
+  const location = useLocation();
+
   return (
     <Card className="space-y-6 p-4 md:p-5">
       <div className="space-y-2 px-1">
@@ -79,12 +81,16 @@ export function SettingsSidebar({
       <div className="space-y-2">
         {implementedSections.map((item) => {
           const Icon = item.icon;
+          const isActive =
+            item.id === "overview"
+              ? location.pathname === "/settings"
+              : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
           return (
             <NavLink
               key={item.id}
               to={item.to}
               end={item.id === "overview"}
-              className={({ isActive }) =>
+              className={() =>
                 cn(
                   "flex items-start gap-3 rounded-[22px] border px-4 py-3.5 transition-[background-color,border-color,color]",
                   isActive

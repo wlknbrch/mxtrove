@@ -20,7 +20,7 @@ import {
 } from "@/features/drive/api";
 import { buildCloudConnectionUpsert, getStoredDriveFolders } from "@/features/drive/google-drive-connection";
 import { useGoogleDriveProvider } from "@/features/drive/use-google-drive-provider";
-import { createSong, getLibraryDashboard, updateSongVersionPreview } from "@/features/library/api";
+import { createSong, deleteSong, getLibraryDashboard, updateSongVersionPreview } from "@/features/library/api";
 import { generateAutomaticPreviewFromSourceAsset } from "@/features/media-processing/automatic-preview";
 import { deletePost, listResolvedPosts } from "@/features/posts/api";
 import { useAppViewer } from "@/hooks/use-app-viewer";
@@ -139,6 +139,21 @@ export function LibraryPage() {
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Could not delete this post.");
+    },
+  });
+  const deleteSongMutation = useMutation({
+    mutationFn: async (songId: string) => {
+      await deleteSong(songId);
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["library", viewer.userId] }),
+        queryClient.invalidateQueries({ queryKey: ["song-detail"] }),
+      ]);
+      toast.success("Song deleted.");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Could not delete this song.");
     },
   });
   const repairPlaybackMutation = useMutation({
@@ -348,9 +363,25 @@ export function LibraryPage() {
                         This song is still an empty shell. Add the original file, let the worker generate the public preview, and attach artwork in the song workspace before using it in a release.
                       </div>
                     )}
-                    <Link to={`/library/songs/${song.id}`}>
-                      <Button variant="secondary">Edit song and upload files</Button>
-                    </Link>
+                    <div className="flex flex-wrap gap-3">
+                      <Link to={`/library/songs/${song.id}`}>
+                        <Button variant="secondary">Edit song and upload files</Button>
+                      </Link>
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          if (!window.confirm(`Delete the song "${song.title}" and its private workspace?`)) {
+                            return;
+                          }
+
+                          void deleteSongMutation.mutateAsync(song.id);
+                        }}
+                        disabled={deleteSongMutation.isPending}
+                      >
+                        <Trash2 className="size-4" />
+                        Delete song
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               );
@@ -387,10 +418,7 @@ export function LibraryPage() {
         posts.length ? (
           <div className="space-y-4">
             {posts.map((item) => {
-              const editPath =
-                item.post.post_type === "single" && item.single?.song?.id
-                  ? `/library/songs/${item.single.song.id}`
-                  : `/post/${item.post.id}/edit`;
+              const editPath = `/post/${item.post.id}/edit`;
 
               return (
                 <Card key={item.post.id}>
@@ -421,7 +449,7 @@ export function LibraryPage() {
                       </Link>
                       <Link to={editPath}>
                         <Button variant="ghost">
-                          {item.post.post_type === "single" ? "Edit song" : "Edit release"}
+                          {item.post.post_type === "single" ? "Edit post" : "Edit release"}
                         </Button>
                       </Link>
                       <Button

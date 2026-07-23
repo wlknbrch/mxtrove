@@ -23,7 +23,7 @@ import { getCurrentProfile } from "@/features/profile/api";
 import { useAuth } from "@/hooks/use-auth";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { getAvatarAssetUrls } from "@/lib/asset-urls";
-import { envState } from "@/lib/env";
+import { env, envState } from "@/lib/env";
 import { cn } from "@/lib/utils";
 
 const navigation = [
@@ -82,7 +82,7 @@ export function AppShell() {
             <div className="space-y-2">
               <div className="inline-flex items-center gap-2 rounded-full border border-accent/18 bg-accent/10 px-2.5 py-1 text-[0.65rem] uppercase tracking-[0.28em] text-accent-secondary/82">
                 <CircleDot className="size-3 fill-current stroke-none" />
-                Early Access
+                 V{env.appVersion}
               </div>
               <p className="font-body text-[2rem] font-semibold tracking-[-0.04em]">MxShare</p>
               <p className="max-w-[11rem] text-sm leading-6 text-muted-foreground">

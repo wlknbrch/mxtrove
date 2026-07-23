@@ -9,7 +9,7 @@ export function PageHeader({
   actions,
   className,
 }: PropsWithChildren<{
-  eyebrow?: string;
+  eyebrow?: ReactNode;
   title: string;
   description?: string;
   actions?: ReactNode;

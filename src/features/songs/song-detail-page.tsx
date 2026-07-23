@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { FolderOpen, ImagePlus, Play, Trash2 } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/layout/page-header";
@@ -26,6 +26,7 @@ import { buildCloudConnectionUpsert, getStoredDriveFolders } from "@/features/dr
 import { useGoogleDriveProvider } from "@/features/drive/use-google-drive-provider";
 import {
   createSongVersion,
+  deleteSong,
   deleteSongVersion,
   getSongDetail,
   updateSong,
@@ -51,6 +52,7 @@ const privatePlaybackUrlCache = new Map<string, string>();
 
 export function SongDetailPage() {
   const { songId = "" } = useParams();
+  const navigate = useNavigate();
   const viewer = useAppViewer();
   const provider = useGoogleDriveProvider();
   const enqueue = usePlayerStore((state) => state.enqueue);
@@ -234,6 +236,20 @@ export function SongDetailPage() {
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Could not delete this version.");
+    },
+  });
+  const deleteSongMutation = useMutation({
+    mutationFn: async () => deleteSong(songId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["library", viewer.userId] }),
+        queryClient.invalidateQueries({ queryKey: ["song-detail", songId] }),
+      ]);
+      toast.success("Song deleted.");
+      navigate("/library");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Could not delete this song.");
     },
   });
 
@@ -469,12 +485,28 @@ export function SongDetailPage() {
         title={song.title}
         description={song.notes ?? "Upload the private source, generate the public playback file, and keep artwork attached to the same song."}
         actions={
-          <Link to="/library">
-            <Button variant="secondary">
-              <FolderOpen className="size-4" />
-              Back to library
+          <div className="flex flex-wrap gap-3">
+            <Link to="/library">
+              <Button variant="secondary">
+                <FolderOpen className="size-4" />
+                Back to library
+              </Button>
+            </Link>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                if (!window.confirm(`Delete the song "${song.title}" and its private workspace?`)) {
+                  return;
+                }
+
+                void deleteSongMutation.mutateAsync();
+              }}
+              disabled={deleteSongMutation.isPending}
+            >
+              <Trash2 className="size-4" />
+              Delete song
             </Button>
-          </Link>
+          </div>
         }
       />
 

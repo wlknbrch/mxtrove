@@ -17,6 +17,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
         {
           id: item.single.featuredVersion?.id ?? item.post.id,
           postId: item.post.id,
+          versionId: item.single.featuredVersion?.id ?? null,
           title: item.post.title,
           artistName: item.owner?.display_name ?? "Unknown artist",
           artworkUrl: getArtworkAssetUrls(item.artwork),
@@ -44,6 +45,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
     tracks.push({
       id: track.track.id,
       postId: item.post.id,
+      versionId: track.version?.id ?? track.track.song_version_id,
       title: track.track.track_title,
       artistName: item.owner?.display_name ?? "Unknown artist",
       artworkUrl: getArtworkAssetUrls(item.artwork),
@@ -51,10 +53,22 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
       srcCandidates: getPreviewPlaybackUrls(track.previewAsset),
       durationSeconds: track.previewAsset?.duration_seconds ?? null,
       waveform: getAssetWaveform(track.previewAsset),
-      versionLabel: track.track.production_stage,
+      versionLabel: track.version?.version_label ?? track.track.production_stage,
       queueGroupLabel: item.post.title,
     });
 
     return tracks;
   }, []);
+}
+
+export function getPlaybackQueueDurationSeconds(tracks: Array<Pick<PlaybackTrack, "durationSeconds">>) {
+  const knownDurations = tracks
+    .map((track) => track.durationSeconds)
+    .filter((duration): duration is number => typeof duration === "number" && Number.isFinite(duration) && duration > 0);
+
+  if (knownDurations.length === 0) {
+    return null;
+  }
+
+  return knownDurations.reduce((sum, duration) => sum + duration, 0);
 }

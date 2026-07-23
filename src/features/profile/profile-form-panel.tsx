@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
@@ -59,6 +59,38 @@ export function ProfileFormPanel({
       avatar_asset_id: initialValues?.avatar_asset_id ?? null,
     },
   });
+
+  useEffect(() => {
+    form.reset(
+      {
+        display_name: initialValues?.display_name ?? "",
+        username: initialValues?.username ?? "",
+        bio: initialValues?.bio ?? "",
+        location: initialValues?.location ?? "",
+        website_url: initialValues?.website_url ?? "",
+        instagram_url: initialValues?.instagram_url ?? "",
+        spotify_url: initialValues?.spotify_url ?? "",
+        youtube_url: initialValues?.youtube_url ?? "",
+        support_url: initialValues?.support_url ?? "",
+        avatar_asset_id: initialValues?.avatar_asset_id ?? null,
+      },
+      {
+        keepDirtyValues: true,
+      },
+    );
+  }, [
+    form,
+    initialValues?.avatar_asset_id,
+    initialValues?.bio,
+    initialValues?.display_name,
+    initialValues?.instagram_url,
+    initialValues?.location,
+    initialValues?.spotify_url,
+    initialValues?.support_url,
+    initialValues?.username,
+    initialValues?.website_url,
+    initialValues?.youtube_url,
+  ]);
 
   return (
     <Card>

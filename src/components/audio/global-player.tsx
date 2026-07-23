@@ -12,6 +12,7 @@ import {
   SkipForward,
   Volume2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ import { getResolvedPostById, togglePostHeart } from "@/features/posts/api";
 
 export function GlobalPlayer() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const navigate = useNavigate();
   const viewer = useAppViewer();
   const [currentTime, setCurrentTime] = useState(0);
   const [loadedDuration, setLoadedDuration] = useState<number | null>(null);
@@ -170,6 +172,7 @@ export function GlobalPlayer() {
     (repeatMode === "all" && queue.length > 1);
   const isHearted = Boolean(playerPostQuery.data?.viewerHasHearted);
   const isOwnPost = Boolean(playerPostQuery.data?.owner?.id && viewer.userId === playerPostQuery.data.owner.id);
+  const canOpenActivePost = Boolean(activePostId);
   const repeatLabel =
     repeatMode === "off"
       ? "Repeat off"
@@ -184,6 +187,20 @@ export function GlobalPlayer() {
     if (audio) {
       audio.currentTime = nextTime;
     }
+  }
+
+  function handleSeekFromPosition(clientX: number, element: HTMLElement) {
+    if (!displayDuration || displayDuration <= 0) {
+      return;
+    }
+
+    const bounds = element.getBoundingClientRect();
+    if (bounds.width <= 0) {
+      return;
+    }
+
+    const ratio = Math.min(Math.max((clientX - bounds.left) / bounds.width, 0), 1);
+    handleSeek(displayDuration * ratio);
   }
 
   function handlePreviousClick() {
@@ -231,6 +248,14 @@ export function GlobalPlayer() {
 
   function toggleCollapsed() {
     setIsCollapsed((current) => !current);
+  }
+
+  function openActivePost() {
+    if (!activePostId) {
+      return;
+    }
+
+    navigate(`/post/${activePostId}`);
   }
 
   return (
@@ -313,22 +338,47 @@ export function GlobalPlayer() {
       >
         {isCollapsed ? (
           <div className="velvet-hero overflow-hidden rounded-[28px] border border-border bg-[linear-gradient(180deg,rgba(12,9,25,0.96),rgba(7,6,18,0.96))] px-4 py-3 shadow-[0_-10px_40px_rgba(0,0,0,0.12)] md:px-5">
-            <div className="mb-3 h-1 overflow-hidden rounded-full bg-white/[0.08]">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-accent to-accent-secondary"
-                style={{ width: `${Math.max(progressPercent, 0)}%` }}
-              />
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="size-12 overflow-hidden rounded-[16px] border border-border bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_12px_28px_rgba(7,3,20,0.24)]">
-                {activeTrack.artworkUrl ? (
-                  <ResolvedImage
-                    className="size-full object-cover"
-                    src={activeTrack.artworkUrl}
-                    alt={activeTrack.title}
-                  />
-                ) : null}
+            <button
+              type="button"
+              className="mb-3 block w-full disabled:cursor-default"
+              onClick={(event) => handleSeekFromPosition(event.clientX, event.currentTarget)}
+              disabled={!displayDuration}
+              aria-label="Seek through the current track"
+            >
+              <div className="h-1 overflow-hidden rounded-full bg-white/[0.08]">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-accent to-accent-secondary"
+                  style={{ width: `${Math.max(progressPercent, 0)}%` }}
+                />
               </div>
+            </button>
+            <div className="flex items-center gap-3">
+              {canOpenActivePost ? (
+                <button
+                  type="button"
+                  className="size-12 overflow-hidden rounded-[16px] border border-border bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_12px_28px_rgba(7,3,20,0.24)] transition-[transform,border-color] hover:scale-[1.02] hover:border-accent/25"
+                  onClick={openActivePost}
+                  aria-label="Open current release"
+                >
+                  {activeTrack.artworkUrl ? (
+                    <ResolvedImage
+                      className="size-full object-cover"
+                      src={activeTrack.artworkUrl}
+                      alt={activeTrack.title}
+                    />
+                  ) : null}
+                </button>
+              ) : (
+                <div className="size-12 overflow-hidden rounded-[16px] border border-border bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_12px_28px_rgba(7,3,20,0.24)]">
+                  {activeTrack.artworkUrl ? (
+                    <ResolvedImage
+                      className="size-full object-cover"
+                      src={activeTrack.artworkUrl}
+                      alt={activeTrack.title}
+                    />
+                  ) : null}
+                </div>
+              )}
 
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-foreground">{activeTrack.title}</p>
@@ -343,12 +393,34 @@ export function GlobalPlayer() {
               </span>
 
               <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-full border border-white/8 bg-white/[0.03]"
+                onClick={handlePreviousClick}
+                disabled={!hasPreviousTrack && currentTime <= 3}
+                aria-label="Previous track"
+              >
+                <SkipBack className="size-4" />
+              </Button>
+
+              <Button
                 size="sm"
                 className="size-11 rounded-full border-accent/35 p-0 shadow-[0_14px_34px_rgba(111,58,225,0.32)]"
                 onClick={toggle}
                 aria-label={isPlaying ? "Pause" : "Play"}
               >
                 {isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-full border border-white/8 bg-white/[0.03]"
+                onClick={playNext}
+                disabled={!hasNextTrack}
+                aria-label="Next track"
+              >
+                <SkipForward className="size-4" />
               </Button>
 
               <Button
@@ -367,15 +439,32 @@ export function GlobalPlayer() {
           <div className="velvet-hero overflow-hidden rounded-[30px] border border-border bg-[linear-gradient(180deg,rgba(12,9,25,0.96),rgba(7,6,18,0.96))] px-4 py-4 shadow-[0_-10px_40px_rgba(0,0,0,0.12)] md:px-6 md:py-5">
             <div className="grid gap-5 xl:grid-cols-[1.05fr_minmax(520px,1.5fr)_0.95fr] xl:items-center">
               <div className="flex min-w-0 items-center gap-4">
-                <div className="size-18 overflow-hidden rounded-[24px] border border-border bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_16px_42px_rgba(7,3,20,0.32)]">
-                  {activeTrack.artworkUrl ? (
-                    <ResolvedImage
-                      className="size-full object-cover"
-                      src={activeTrack.artworkUrl}
-                      alt={activeTrack.title}
-                    />
-                  ) : null}
-                </div>
+                {canOpenActivePost ? (
+                  <button
+                    type="button"
+                    className="size-18 overflow-hidden rounded-[24px] border border-border bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_16px_42px_rgba(7,3,20,0.32)] transition-[transform,border-color] hover:scale-[1.01] hover:border-accent/25"
+                    onClick={openActivePost}
+                    aria-label="Open current release"
+                  >
+                    {activeTrack.artworkUrl ? (
+                      <ResolvedImage
+                        className="size-full object-cover"
+                        src={activeTrack.artworkUrl}
+                        alt={activeTrack.title}
+                      />
+                    ) : null}
+                  </button>
+                ) : (
+                  <div className="size-18 overflow-hidden rounded-[24px] border border-border bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_16px_42px_rgba(7,3,20,0.32)]">
+                    {activeTrack.artworkUrl ? (
+                      <ResolvedImage
+                        className="size-full object-cover"
+                        src={activeTrack.artworkUrl}
+                        alt={activeTrack.title}
+                      />
+                    ) : null}
+                  </div>
+                )}
                 <div className="min-w-0">
                   <p className="text-xs uppercase tracking-[0.28em] text-accent-secondary/78">Now playing</p>
                   <p className="mt-2 truncate text-xl font-medium text-foreground">{activeTrack.title}</p>

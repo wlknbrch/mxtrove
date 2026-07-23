@@ -192,6 +192,44 @@ export async function createSongVersion(songId: string, values: VersionFormValue
   return data as SongVersion;
 }
 
+export async function deleteSong(songId: string) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay(140);
+    return;
+  }
+
+  const client = requireSupabase();
+  const [singleUsage, releaseUsage] = await Promise.all([
+    client.from("single_posts").select("post_id", { count: "exact", head: true }).eq("song_id", songId),
+    client.from("release_tracks").select("id", { count: "exact", head: true }).eq("song_id", songId),
+  ]);
+
+  if (singleUsage.error) {
+    throw singleUsage.error;
+  }
+
+  if (releaseUsage.error) {
+    throw releaseUsage.error;
+  }
+
+  if ((singleUsage.count ?? 0) > 0) {
+    throw new Error("This song is still attached to a published or draft single post. Delete or remap that post first.");
+  }
+
+  if ((releaseUsage.count ?? 0) > 0) {
+    throw new Error("This song is still attached to an EP or album tracklist. Remove it from those releases first.");
+  }
+
+  const { error } = await client
+    .from("songs")
+    .delete()
+    .eq("id", songId);
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function deleteSongVersion(versionId: string) {
   if (isDemoModeEnabled()) {
     await createDemoDelay(140);

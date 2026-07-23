@@ -18,6 +18,8 @@ export interface ResolvedReleaseTrack {
   song: Song | null;
   version: SongVersion | null;
   previewAsset: Asset | null;
+  versionHeartCount: number;
+  viewerHasHeartedVersion: boolean;
 }
 
 export interface ResolvedSingleInfo {
@@ -25,6 +27,8 @@ export interface ResolvedSingleInfo {
   featuredVersion: SongVersion | null;
   previewAsset: Asset | null;
   previousVersion: SongVersion | null;
+  versionHeartCount: number;
+  viewerHasHeartedVersion: boolean;
 }
 
 export interface ResolvedPostCard {
@@ -37,6 +41,7 @@ export interface ResolvedPostCard {
   heartCount: number;
   viewerHasHearted: boolean;
   versionHeartCount: number;
+  viewerHasHeartedVersion: boolean;
   commentCount: number;
   feedEvent?: FeedEvent | null;
 }

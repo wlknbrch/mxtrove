@@ -1,3 +1,5 @@
+import packageJson from "../../package.json";
+
 const requiredAppUrl = import.meta.env.VITE_APP_URL;
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -6,6 +8,7 @@ const mediaWorkerUrl = import.meta.env.VITE_MEDIA_WORKER_URL;
 const webPushPublicKey = import.meta.env.VITE_WEB_PUSH_PUBLIC_KEY;
 
 export const env = {
+  appVersion: packageJson.version || "0.0.0",
   appUrl: requiredAppUrl || "http://localhost:5173",
   supabaseUrl: supabaseUrl || "",
   supabasePublishableKey: supabasePublishableKey || "",

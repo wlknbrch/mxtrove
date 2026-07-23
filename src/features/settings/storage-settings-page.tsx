@@ -97,7 +97,7 @@ export function StorageSettingsPage() {
         description="Connect once, let MxShare create its own Drive folder, and route future audio, artwork, and avatars into that structure."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[310px_minmax(0,1fr)_340px]">
+      <div className="grid gap-6 2xl:grid-cols-[310px_minmax(0,1fr)_340px]">
         <SettingsSidebar driveReady={driveReady} />
 
         <div className="space-y-6">

@@ -30,6 +30,7 @@ function arrayBufferToBase64(buffer: ArrayBuffer | null) {
 export function supportsWebPush() {
   return (
     typeof window !== "undefined" &&
+    window.isSecureContext &&
     "serviceWorker" in navigator &&
     "PushManager" in window &&
     "Notification" in window
@@ -41,7 +42,7 @@ export async function registerAppServiceWorker() {
     return null;
   }
 
-  return navigator.serviceWorker.register("/sw.js");
+  return navigator.serviceWorker.register("/sw.js", { scope: "/" });
 }
 
 export async function getCurrentPushSubscription() {
@@ -57,6 +58,12 @@ export async function subscribeCurrentDeviceToPush() {
   if (!envState.hasWebPushKey) {
     throw new Error("VITE_WEB_PUSH_PUBLIC_KEY is missing.");
   }
+  if (!env.pwaEnabled) {
+    throw new Error("Push notifications are disabled for this build. Set VITE_PWA_ENABLED to true.");
+  }
+  if (!window.isSecureContext) {
+    throw new Error("Push notifications require HTTPS or localhost.");
+  }
   if (!supportsWebPush()) {
     throw new Error("This browser does not support service workers and push notifications.");
   }
@@ -66,17 +73,32 @@ export async function subscribeCurrentDeviceToPush() {
     throw new Error("Push permission was not granted.");
   }
 
-  await registerAppServiceWorker();
-  const registration = await navigator.serviceWorker.ready;
-  const existing = await registration.pushManager.getSubscription();
-  if (existing) {
-    return existing;
-  }
+  try {
+    const registration = await registerAppServiceWorker();
+    if (!registration) {
+      throw new Error("The push service worker could not be registered.");
+    }
 
-  return registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: decodeBase64Url(env.webPushPublicKey),
-  });
+    await navigator.serviceWorker.ready;
+    const existing = await registration.pushManager.getSubscription();
+    if (existing) {
+      return existing;
+    }
+
+    return registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: decodeBase64Url(env.webPushPublicKey),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown push subscription error.";
+    if (/registration failed|abort|not supported|denied/i.test(message)) {
+      throw new Error(
+        "The browser allowed notifications, but creating the push subscription failed. In Brave, allow notifications for this site, disable Shields if they block push, and confirm the app is running over HTTPS.",
+      );
+    }
+
+    throw error;
+  }
 }
 
 export async function unsubscribeCurrentDeviceFromPush() {

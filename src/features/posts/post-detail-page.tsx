@@ -10,24 +10,24 @@ import { usePlayerStore } from "@/components/audio/player-store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { PlaybackDuration } from "@/components/ui/playback-duration";
 import { ResolvedImage } from "@/components/ui/resolved-image";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { getArtworkAssetUrls } from "@/lib/asset-urls";
 import { queryClient } from "@/lib/query-client";
-import { cn, formatRelativeTime } from "@/lib/utils";
+import { cn, formatDuration, formatRelativeTime } from "@/lib/utils";
 
 import {
   addCommentToPost,
   deleteCommentOnPost,
   deletePost,
   getResolvedPostById,
+  toggleVersionHeart,
   togglePostHeart,
   updateCommentOnPost,
 } from "@/features/posts/api";
-import { buildPostPlaybackTracks } from "@/features/posts/post-playback";
+import { buildPostPlaybackTracks, getPlaybackQueueDurationSeconds } from "@/features/posts/post-playback";
 import type { ResolvedComment } from "@/features/posts/types";
 
 function buildCommentThreads(comments: ResolvedComment[]) {
@@ -50,6 +50,76 @@ function buildCommentThreads(comments: ResolvedComment[]) {
       replies: repliesByParent.get(comment.id) ?? [],
     }))
     .filter((entry) => !entry.comment.deleted_at || entry.replies.some((reply) => !reply.deleted_at));
+}
+
+function VersionHeartButton({
+  postId,
+  ownerId,
+  versionId,
+  count,
+  active,
+}: {
+  postId: string;
+  ownerId: string | null | undefined;
+  versionId: string | null | undefined;
+  count: number;
+  active: boolean;
+}) {
+  const viewer = useAppViewer();
+  const isOwnVersion = Boolean(ownerId && viewer.userId && ownerId === viewer.userId);
+  const heartMutation = useMutation({
+    mutationFn: async () => {
+      if (!viewer.userId) {
+        throw new Error("Please sign in first.");
+      }
+      if (!versionId) {
+        throw new Error("This track is not linked to a shareable song version yet.");
+      }
+
+      return toggleVersionHeart({
+        versionId,
+        profileId: viewer.userId,
+        active: !active,
+      });
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["post", postId] }),
+        queryClient.invalidateQueries({ queryKey: ["home-feed"] }),
+        queryClient.invalidateQueries({ queryKey: ["explore-feed"] }),
+        ownerId ? queryClient.invalidateQueries({ queryKey: ["profile-posts", ownerId] }) : Promise.resolve(),
+      ]);
+      toast.success(active ? "Song heart removed." : "Song heart sent.");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Could not update this song heart.");
+    },
+  });
+
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className={cn(
+        "gap-2",
+        active && "text-accent-secondary",
+        isOwnVersion && "opacity-55",
+      )}
+      onClick={() => void heartMutation.mutateAsync()}
+      disabled={heartMutation.isPending || !versionId || isOwnVersion}
+      aria-pressed={active}
+      aria-label={
+        isOwnVersion
+          ? "You cannot heart your own song"
+          : active
+            ? "Remove song heart"
+            : "Heart this song"
+      }
+    >
+      <Heart className={cn("size-4", active && "fill-current")} />
+      {count}
+    </Button>
+  );
 }
 
 export function PostDetailPage() {
@@ -212,12 +282,8 @@ export function PostDetailPage() {
   const isMultiTrackRelease = Boolean(item && !item.single);
   const releaseTrackCount = item?.releaseTracks.length ?? 0;
   const playableTrackCount = playbackTracks.length;
-  const editPath =
-    item?.post.post_type === "single" && item.single?.song?.id
-      ? `/library/songs/${item.single.song.id}`
-      : item
-        ? `/post/${item.post.id}/edit`
-        : null;
+  const releaseDurationSeconds = getPlaybackQueueDurationSeconds(playbackTracks);
+  const editPath = item ? `/post/${item.post.id}/edit` : null;
 
   if (postQuery.isPending) {
     return (
@@ -244,7 +310,18 @@ export function PostDetailPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={item.owner ? `@${item.owner.username}` : "Post"}
+        eyebrow={
+          item.owner?.username ? (
+            <Link
+              to={`/@${item.owner.username}`}
+              className="transition-colors hover:text-foreground"
+            >
+              @{item.owner.username}
+            </Link>
+          ) : (
+            "Post"
+          )
+        }
         title={item.post.title}
         description={item.post.description ?? "Release details, public comments, and version-aware playback."}
         actions={
@@ -252,7 +329,7 @@ export function PostDetailPage() {
             {isOwnPost && editPath ? (
               <Link to={editPath}>
                 <Button variant="secondary">
-                  {item.post.post_type === "single" ? "Edit song" : "Edit release"}
+                  {item.post.post_type === "single" ? "Edit post" : "Edit release"}
                 </Button>
               </Link>
             ) : null}
@@ -318,6 +395,9 @@ export function PostDetailPage() {
                   <MessageCircle className="size-4" />
                   {item.commentCount}
                 </span>
+                {isMultiTrackRelease && releaseDurationSeconds ? (
+                  <span>{formatDuration(releaseDurationSeconds)} total</span>
+                ) : null}
               </div>
               <div className="flex flex-wrap gap-3">
                 <Button
@@ -358,6 +438,16 @@ export function PostDetailPage() {
                 <div className="rounded-[22px] border border-border bg-white/3 p-4">
                   <p className="font-medium">Single timeline</p>
                   <div className="mt-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Song hearts</span>
+                      <VersionHeartButton
+                        postId={item.post.id}
+                        ownerId={item.owner?.id}
+                        versionId={item.single.featuredVersion?.id}
+                        count={item.single.versionHeartCount}
+                        active={item.single.viewerHasHeartedVersion}
+                      />
+                    </div>
                     {item.single.previousVersion ? (
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Previous</span>
@@ -394,6 +484,9 @@ export function PostDetailPage() {
                   <Badge variant={playableTrackCount > 0 ? "success" : "warning"}>
                     {playableTrackCount > 0 ? `${playableTrackCount} ready to play` : "Playback unavailable"}
                   </Badge>
+                  {releaseDurationSeconds ? (
+                    <Badge variant="accent">{formatDuration(releaseDurationSeconds)} total</Badge>
+                  ) : null}
                 </div>
               </div>
               <div className="mt-5 space-y-3">
@@ -436,6 +529,13 @@ export function PostDetailPage() {
                         <Badge variant={playbackTrack ? "success" : "warning"}>
                           {playbackTrack ? "Ready" : "Pending"}
                         </Badge>
+                        <VersionHeartButton
+                          postId={item.post.id}
+                          ownerId={item.owner?.id}
+                          versionId={track.version?.id ?? track.track.song_version_id}
+                          count={track.versionHeartCount}
+                          active={track.viewerHasHeartedVersion}
+                        />
                         <Button
                           variant="ghost"
                           size="sm"

@@ -62,8 +62,8 @@ export function SettingsIndexPage() {
       <div className="grid gap-6 xl:grid-cols-[310px_minmax(0,1fr)]">
         <SettingsSidebar driveReady={driveReady} />
 
-        <div className="space-y-6">
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+        <div className="min-w-0 space-y-6">
+          <div className="grid min-w-0 gap-6 2xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
             <div className="space-y-6">
               <Card>
                 <CardHeader>
@@ -137,7 +137,7 @@ export function SettingsIndexPage() {
               </Card>
             </div>
 
-            <Card className="overflow-hidden">
+            <Card className="min-w-0 overflow-hidden">
               <div className="rounded-[28px] border border-accent/20 bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.28),rgba(255,255,255,0.02)_58%,rgba(255,255,255,0.01))] p-5">
                 <div className="flex items-center gap-4">
                   <Avatar
@@ -155,35 +155,35 @@ export function SettingsIndexPage() {
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-4">
-                <div className="rounded-[24px] border border-white/[0.06] bg-white/[0.02] p-4">
+              <div className="mt-5 grid min-w-0 gap-4">
+                <div className="min-w-0 rounded-[24px] border border-white/[0.06] bg-white/[0.02] p-4">
                   <p className="text-xs uppercase tracking-[0.22em] text-accent-secondary/75">Bio</p>
-                  <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                  <p className="mt-3 break-words text-sm leading-7 text-muted-foreground">
                     {profile?.bio?.trim() || "Add a short intro so people landing on your profile understand your sound immediately."}
                   </p>
                 </div>
 
-                <div className="rounded-[24px] border border-white/[0.06] bg-white/[0.02] p-4">
-                  <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="min-w-0 rounded-[24px] border border-white/[0.06] bg-white/[0.02] p-4">
+                  <div className="mb-3 flex flex-wrap items-center gap-3">
                     <p className="text-xs uppercase tracking-[0.22em] text-accent-secondary/75">Public links</p>
                     <Badge variant="accent">{connectedLinks} connected</Badge>
                   </div>
                   <div className="space-y-2 text-sm text-muted-foreground">
-                    <p className="truncate">{profile?.website_url ?? "Website missing"}</p>
-                    <p className="truncate">{profile?.support_url ?? "Support link missing"}</p>
-                    <p className="truncate">{profile?.spotify_url ?? "Spotify link missing"}</p>
+                    <p className="break-all">{profile?.website_url ?? "Website missing"}</p>
+                    <p className="break-all">{profile?.support_url ?? "Support link missing"}</p>
+                    <p className="break-all">{profile?.spotify_url ?? "Spotify link missing"}</p>
                   </div>
                 </div>
 
-                <div className="rounded-[24px] border border-white/[0.06] bg-white/[0.02] p-4">
-                  <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="min-w-0 rounded-[24px] border border-white/[0.06] bg-white/[0.02] p-4">
+                  <div className="mb-3 flex flex-wrap items-center gap-3">
                     <p className="text-xs uppercase tracking-[0.22em] text-accent-secondary/75">Storage status</p>
                     <Badge variant={driveReady ? "success" : "warning"}>{driveReady ? "Connected" : "Needs setup"}</Badge>
                   </div>
                   <div className="space-y-2 text-sm text-muted-foreground">
-                    <p className="truncate">Drive account: {connectionQuery.data?.provider_account_email ?? "Not connected"}</p>
-                    <p className="truncate">Root folder: {storedFolders?.rootFolderId ?? "Pending"}</p>
-                    <p className="truncate">Avatar folder: {storedFolders?.avatarsFolderId ?? "Pending"}</p>
+                    <p className="break-all">Drive account: {connectionQuery.data?.provider_account_email ?? "Not connected"}</p>
+                    <p className="break-all">Root folder: {storedFolders?.rootFolderId ?? "Pending"}</p>
+                    <p className="break-all">Avatar folder: {storedFolders?.avatarsFolderId ?? "Pending"}</p>
                   </div>
                 </div>
               </div>

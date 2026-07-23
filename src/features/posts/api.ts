@@ -55,6 +55,8 @@ function resolveDemoPost(postId: string, viewerId?: string | null) {
       song: demoSongs.find((song) => song.id === track.song_id) ?? null,
       version: demoSongVersions.find((version) => version.id === track.song_version_id) ?? null,
       previewAsset: demoAssets.find((asset) => asset.id === track.preview_asset_id) ?? null,
+      versionHeartCount: track.song_version_id === demoSongVersions[1]?.id ? 7 : 0,
+      viewerHasHeartedVersion: Boolean(viewerId === demoViewerProfile.id && track.song_version_id === demoSongVersions[1]?.id),
     }));
 
   return {
@@ -67,6 +69,8 @@ function resolveDemoPost(postId: string, viewerId?: string | null) {
           featuredVersion,
           previousVersion,
           previewAsset,
+          versionHeartCount: featuredVersion ? 9 : 0,
+          viewerHasHeartedVersion: Boolean(viewerId === demoViewerProfile.id && featuredVersion),
         }
       : null,
     releaseTracks,
@@ -74,6 +78,7 @@ function resolveDemoPost(postId: string, viewerId?: string | null) {
     heartCount: post.post_type === "single" ? 24 : 19,
     viewerHasHearted: viewerId === demoViewerProfile.id && post.id === demoPosts[0]?.id,
     versionHeartCount: featuredVersion ? 9 : 0,
+    viewerHasHeartedVersion: Boolean(viewerId === demoViewerProfile.id && featuredVersion),
     commentCount: comments.length,
     feedEvent: demoFeedEvents.find((event) => event.post_id === post.id) ?? null,
   } satisfies ResolvedPostCard;
@@ -170,13 +175,43 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
     ? await client.from("assets").select("*").eq("id", previewAssetId).maybeSingle()
     : { data: null, error: null };
 
+  const releaseTrackRows = (releaseTracksResult.data ?? []) as Array<{
+    id: string;
+    song_id: string;
+    song_version_id: string | null;
+    preview_asset_id: string | null;
+  }>;
+  const versionIds = [
+    singleLink?.featured_version_id ?? null,
+    ...releaseTrackRows.map((track) => track.song_version_id),
+  ].filter((value): value is string => Boolean(value));
+  const versionHeartsResult = versionIds.length
+    ? await client
+        .from("version_hearts")
+        .select("song_version_id, profile_id")
+        .in("song_version_id", versionIds)
+    : { data: [], error: null };
+
+  if (versionHeartsResult.error) {
+    throw versionHeartsResult.error;
+  }
+
+  const versionHearts = (versionHeartsResult.data ?? []) as Array<{
+    song_version_id: string;
+    profile_id: string;
+  }>;
+  const versionHeartCounts = new Map<string, number>();
+  const viewerHeartedVersionIds = new Set<string>();
+
+  versionHearts.forEach((row) => {
+    versionHeartCounts.set(row.song_version_id, (versionHeartCounts.get(row.song_version_id) ?? 0) + 1);
+    if (viewerId && row.profile_id === viewerId) {
+      viewerHeartedVersionIds.add(row.song_version_id);
+    }
+  });
+
   const releaseTracks = await Promise.all(
-    ((releaseTracksResult.data ?? []) as Array<{
-      id: string;
-      song_id: string;
-      song_version_id: string | null;
-      preview_asset_id: string | null;
-    }>).map(async (track) => {
+    releaseTrackRows.map(async (track) => {
       const [song, version, previewAsset] = await Promise.all([
         client.from("songs").select("*").eq("id", track.song_id).maybeSingle(),
         track.song_version_id
@@ -192,6 +227,8 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
         song: song.data as ResolvedReleaseTrack["song"],
         version: version.data as ResolvedReleaseTrack["version"],
         previewAsset: previewAsset.data as ResolvedReleaseTrack["previewAsset"],
+        versionHeartCount: track.song_version_id ? versionHeartCounts.get(track.song_version_id) ?? 0 : 0,
+        viewerHasHeartedVersion: track.song_version_id ? viewerHeartedVersionIds.has(track.song_version_id) : false,
       };
     }),
   );
@@ -206,6 +243,12 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
           featuredVersion: featuredVersionResult.data as ResolvedSingleInfo["featuredVersion"],
           previousVersion: previousVersionResult.data as ResolvedSingleInfo["previousVersion"],
           previewAsset: previewAssetResult.data as ResolvedSingleInfo["previewAsset"],
+          versionHeartCount: singleLink?.featured_version_id
+            ? versionHeartCounts.get(singleLink.featured_version_id) ?? 0
+            : 0,
+          viewerHasHeartedVersion: singleLink?.featured_version_id
+            ? viewerHeartedVersionIds.has(singleLink.featured_version_id)
+            : false,
         }
       : null,
     releaseTracks,
@@ -219,6 +262,9 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
       (metricsResult.data as { featured_version_heart_count?: number } | null)
         ?.featured_version_heart_count ?? 0,
     ),
+    viewerHasHeartedVersion: singleLink?.featured_version_id
+      ? viewerHeartedVersionIds.has(singleLink.featured_version_id)
+      : false,
     commentCount: Number((metricsResult.data as { comment_count?: number } | null)?.comment_count ?? 0),
     feedEvent: null,
   };
@@ -487,6 +533,84 @@ export async function updateReleasePost(input: {
   }
 }
 
+export async function updateSinglePost(input: {
+  postId: string;
+  title: string;
+  description?: string;
+  releaseUrl?: string;
+  artworkAssetId?: string | null;
+  featuredVersionId: string;
+}) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay(220);
+    return;
+  }
+
+  const client = requireSupabase();
+  const [{ data: post, error: postError }, { data: singleLink, error: singleError }, { data: version, error: versionError }] =
+    await Promise.all([
+      client.from("posts").select("id, post_type, visibility").eq("id", input.postId).maybeSingle(),
+      client.from("single_posts").select("post_id, song_id, featured_version_id").eq("post_id", input.postId).maybeSingle(),
+      client.from("song_versions").select("id, song_id, preview_asset_id").eq("id", input.featuredVersionId).maybeSingle(),
+    ]);
+
+  if (postError) {
+    throw postError;
+  }
+  if (singleError) {
+    throw singleError;
+  }
+  if (versionError) {
+    throw versionError;
+  }
+  if (!post || post.post_type !== "single") {
+    throw new Error("Single post not found.");
+  }
+  if (!singleLink) {
+    throw new Error("This single is not linked to a song anymore.");
+  }
+  if (!version) {
+    throw new Error("Selected version not found.");
+  }
+  if (version.song_id !== singleLink.song_id) {
+    throw new Error("Selected version does not belong to this single.");
+  }
+  if (post.visibility === "public" && !version.preview_asset_id) {
+    throw new Error("Public singles need a playback-ready preview for the selected version.");
+  }
+
+  const { error: metadataError } = await client.rpc("update_release_post", {
+    target_post_id: input.postId,
+    next_title: input.title,
+    next_description: input.description ?? "",
+    next_release_url: input.releaseUrl ?? "",
+    next_artwork_asset_id: input.artworkAssetId ?? null,
+    next_tracks: null,
+  });
+
+  if (metadataError) {
+    throw metadataError;
+  }
+
+  if (singleLink.featured_version_id === input.featuredVersionId) {
+    return;
+  }
+
+  if (post.visibility === "public") {
+    await publishSingleVersion({ versionId: input.featuredVersionId });
+    return;
+  }
+
+  const { error: updateError } = await client
+    .from("single_posts")
+    .update({ featured_version_id: input.featuredVersionId })
+    .eq("post_id", input.postId);
+
+  if (updateError) {
+    throw updateError;
+  }
+}
+
 export async function addCommentToPost(input: {
   postId: string;
   authorId: string;
@@ -636,6 +760,109 @@ export async function togglePostHeart(input: {
     .from("post_hearts")
     .delete()
     .eq("post_id", input.postId)
+    .eq("profile_id", input.profileId);
+
+  if (error) {
+    throw error;
+  }
+
+  return {
+    viewerHasHearted: false,
+    changed: true,
+  };
+}
+
+export async function toggleVersionHeart(input: {
+  versionId: string;
+  profileId: string;
+  active: boolean;
+}) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay(150);
+    const version = demoSongVersions.find((entry) => entry.id === input.versionId) ?? null;
+    const song = version ? demoSongs.find((entry) => entry.id === version.song_id) ?? null : null;
+
+    if (input.active && song?.owner_id === input.profileId) {
+      throw new Error("You cannot heart your own song.");
+    }
+
+    return {
+      viewerHasHearted: Boolean(input.active),
+      changed: true,
+    };
+  }
+
+  const client = requireSupabase();
+  const { data: version, error: versionError } = await client
+    .from("song_versions")
+    .select("song_id")
+    .eq("id", input.versionId)
+    .maybeSingle();
+
+  if (versionError) {
+    throw versionError;
+  }
+
+  if (!version) {
+    throw new Error("That song version could not be found.");
+  }
+
+  const [{ data: song, error: songError }, { data: existingHeart, error: heartLookupError }] = await Promise.all([
+    client.from("songs").select("owner_id").eq("id", version.song_id).maybeSingle(),
+    client
+      .from("version_hearts")
+      .select("song_version_id")
+      .eq("song_version_id", input.versionId)
+      .eq("profile_id", input.profileId)
+      .maybeSingle(),
+  ]);
+
+  if (songError) {
+    throw songError;
+  }
+
+  if (heartLookupError) {
+    throw heartLookupError;
+  }
+
+  if (input.active && song?.owner_id === input.profileId) {
+    throw new Error("You cannot heart your own song.");
+  }
+
+  if (input.active && existingHeart) {
+    return {
+      viewerHasHearted: true,
+      changed: false,
+    };
+  }
+
+  if (!input.active && !existingHeart) {
+    return {
+      viewerHasHearted: false,
+      changed: false,
+    };
+  }
+
+  if (input.active) {
+    const { error } = await client.from("version_hearts").insert({
+      song_version_id: input.versionId,
+      profile_id: input.profileId,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return {
+      viewerHasHearted: true,
+      changed: true,
+    };
+  }
+
+  const { error } = await client
+    .from("version_hearts")
+    .delete()
+    .eq("song_version_id", input.versionId)
     .eq("profile_id", input.profileId);
 
   if (error) {

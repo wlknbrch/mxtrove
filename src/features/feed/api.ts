@@ -1,7 +1,45 @@
 import { demoFeedEvents } from "@/lib/demo-data";
 import { createDemoDelay, isDemoModeEnabled, requireSupabase } from "@/lib/service-utils";
+import type { FeedEvent } from "@/types/domain";
 
 import { getResolvedPostById, listResolvedPosts } from "@/features/posts/api";
+
+const HOME_PRIMARY_LIMIT = 12;
+const HOME_TRENDING_LIMIT = 12;
+const HOME_FEED_LIMIT = 18;
+
+function mergeUniquePostIds(groups: string[][], limit: number) {
+  const seen = new Set<string>();
+  const orderedIds: string[] = [];
+
+  groups.forEach((group) => {
+    group.forEach((postId) => {
+      if (seen.has(postId) || orderedIds.length >= limit) {
+        return;
+      }
+
+      seen.add(postId);
+      orderedIds.push(postId);
+    });
+  });
+
+  return orderedIds;
+}
+
+function getLatestFeedEventByPostId(feedEvents: FeedEvent[]) {
+  const latestByPostId = new Map<string, FeedEvent>();
+
+  feedEvents
+    .slice()
+    .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
+    .forEach((event) => {
+      if (!latestByPostId.has(event.post_id)) {
+        latestByPostId.set(event.post_id, event);
+      }
+    });
+
+  return latestByPostId;
+}
 
 export interface ExploreCatalogResult {
   result_kind: "creator" | "post";
@@ -25,39 +63,89 @@ export async function listHomeFeed(viewerId: string | null) {
     await createDemoDelay();
     const posts = await listResolvedPosts({ visibility: "public", viewerId });
     const resolvedById = new Map(posts.map((post) => [post.post.id, post]));
-    return demoFeedEvents
-      .slice()
-      .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
-      .map((event) => {
-        const post = resolvedById.get(event.post_id);
+    const latestFeedEventByPostId = getLatestFeedEventByPostId(demoFeedEvents);
+    const orderedIds = mergeUniquePostIds(
+      [
+        demoFeedEvents
+          .slice()
+          .sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime())
+          .map((event) => event.post_id),
+        posts.map((post) => post.post.id),
+      ],
+      HOME_FEED_LIMIT,
+    );
+
+    return orderedIds
+      .map((postId) => {
+        const post = resolvedById.get(postId);
         if (!post) {
           return null;
         }
 
         return {
           ...post,
-          feedEvent: event,
+          feedEvent: latestFeedEventByPostId.get(postId) ?? post.feedEvent ?? null,
         };
       })
       .filter((post): post is NonNullable<typeof post> => Boolean(post));
   }
 
   const client = requireSupabase();
-  const { data, error } = await client
-    .rpc("list_home_feed_post_ids", {
-      limit_count: 50,
-      offset_count: 0,
-    });
+  const [{ data: homeRows, error: homeError }, { data: trendingRows, error: trendingError }, resolvedPosts] =
+    await Promise.all([
+      client.rpc("list_home_feed_post_ids", {
+        limit_count: HOME_PRIMARY_LIMIT,
+        offset_count: 0,
+      }),
+      client.rpc("list_trending_public_post_ids", {
+        limit_count: HOME_TRENDING_LIMIT,
+        offset_count: 0,
+      }),
+      listResolvedPosts({ visibility: "public", viewerId }),
+    ]);
 
-  if (error) {
-    throw error;
+  if (homeError) {
+    throw homeError;
   }
 
-  const uniquePostIds = ((data ?? []) as Array<{ post_id: string }>).map((row) => row.post_id);
-  const resolvedPosts = await listResolvedPosts({ visibility: "public", viewerId });
+  if (trendingError) {
+    throw trendingError;
+  }
+
+  const primaryPostIds = ((homeRows ?? []) as Array<{ post_id: string }>).map((row) => row.post_id);
+  const trendingPostIds = ((trendingRows ?? []) as Array<{ post_id: string }>).map((row) => row.post_id);
+  const latestPublicPostIds = resolvedPosts.map((post) => post.post.id);
+  const orderedPostIds = mergeUniquePostIds(
+    [primaryPostIds, trendingPostIds, latestPublicPostIds],
+    HOME_FEED_LIMIT,
+  );
   const resolvedById = new Map(resolvedPosts.map((post) => [post.post.id, post]));
-  return uniquePostIds
-    .map((postId) => resolvedById.get(postId) ?? null)
+  const feedEventsResult = orderedPostIds.length
+    ? await client
+        .from("feed_events")
+        .select("*")
+        .in("post_id", orderedPostIds)
+        .order("created_at", { ascending: false })
+    : { data: [], error: null };
+
+  if (feedEventsResult.error) {
+    throw feedEventsResult.error;
+  }
+
+  const latestFeedEventByPostId = getLatestFeedEventByPostId((feedEventsResult.data ?? []) as FeedEvent[]);
+
+  return orderedPostIds
+    .map((postId) => {
+      const post = resolvedById.get(postId);
+      if (!post) {
+        return null;
+      }
+
+      return {
+        ...post,
+        feedEvent: latestFeedEventByPostId.get(postId) ?? post.feedEvent ?? null,
+      };
+    })
     .filter((post): post is NonNullable<typeof post> => Boolean(post));
 }
 

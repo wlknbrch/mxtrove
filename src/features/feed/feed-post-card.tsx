@@ -13,10 +13,10 @@ import { getAssetById } from "@/features/drive/api";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { getArtworkAssetUrls, getAvatarAssetUrls } from "@/lib/asset-urls";
 import { queryClient } from "@/lib/query-client";
-import { cn, formatRelativeTime } from "@/lib/utils";
+import { cn, formatDuration, formatRelativeTime } from "@/lib/utils";
 import { usePlayerStore } from "@/components/audio/player-store";
 import { Waveform } from "@/components/audio/waveform";
-import { buildPostPlaybackTracks } from "@/features/posts/post-playback";
+import { buildPostPlaybackTracks, getPlaybackQueueDurationSeconds } from "@/features/posts/post-playback";
 import { togglePostHeart } from "@/features/posts/api";
 
 import type { ResolvedPostCard } from "@/features/posts/types";
@@ -34,6 +34,7 @@ export function FeedPostCard({
   const viewer = useAppViewer();
   const enqueue = usePlayerStore((state) => state.enqueue);
   const playbackTracks = buildPostPlaybackTracks(item);
+  const releaseDurationSeconds = getPlaybackQueueDurationSeconds(playbackTracks);
   const isSpotlight = spotlight && !compact;
   const isOwnPost = Boolean(viewer.userId && item.owner?.id === viewer.userId);
   const ownerAvatarQuery = useQuery({
@@ -109,7 +110,7 @@ export function FeedPostCard({
     item.single?.previousVersion
       ? `Previous ${item.single.previousVersion.version_label}`
       : playbackTracks.length > 1
-        ? `${playbackTracks.length} playable tracks`
+        ? `${playbackTracks.length} playable tracks${releaseDurationSeconds ? ` • ${formatDuration(releaseDurationSeconds)}` : ""}`
         : "Spotlight release",
     item.single?.featuredVersion?.production_stage
       ? `${item.single.featuredVersion.production_stage} stage`
@@ -199,7 +200,7 @@ export function FeedPostCard({
                   <span className="truncate">{eventLabel}</span>
                   <span className="shrink-0 text-white/70">
                     {playbackTracks.length > 0
-                      ? `${playbackTracks.length} track${playbackTracks.length === 1 ? "" : "s"}`
+                      ? `${playbackTracks.length} track${playbackTracks.length === 1 ? "" : "s"}${!item.single && releaseDurationSeconds ? ` • ${formatDuration(releaseDurationSeconds)}` : ""}`
                       : "No audio"}
                   </span>
                 </div>
@@ -217,6 +218,9 @@ export function FeedPostCard({
                     >
                       {item.post.title}
                     </Link>
+                    {!item.single && releaseDurationSeconds ? (
+                      <Badge variant="neutral">{formatDuration(releaseDurationSeconds)} total</Badge>
+                    ) : null}
                     {item.single?.featuredVersion?.production_stage ? (
                       <Badge variant="cyan">{item.single.featuredVersion.production_stage}</Badge>
                     ) : null}
@@ -228,7 +232,8 @@ export function FeedPostCard({
                     </p>
                   ) : item.releaseTracks.length > 0 ? (
                     <p className="text-sm leading-7 text-muted-foreground">
-                      {item.releaseTracks.length} tracks ready for playback.
+                      {item.releaseTracks.length} tracks ready for playback
+                      {releaseDurationSeconds ? ` across ${formatDuration(releaseDurationSeconds)}.` : "."}
                     </p>
                   ) : playbackTracks.length > 0 ? (
                     <p className="text-sm leading-7 text-muted-foreground">

@@ -86,7 +86,7 @@ export function ProfileSettingsPage() {
         description="Shape the public surface fans land on first: name, username, avatar, intro, and the links that turn curiosity into support."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[310px_minmax(0,1fr)_360px]">
+      <div className="grid gap-6 2xl:grid-cols-[310px_minmax(0,1fr)_360px]">
         <SettingsSidebar driveReady={driveReady} />
 
         <ProfileFormPanel
@@ -154,7 +154,7 @@ export function ProfileSettingsPage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-3">
                 {publicProfilePath ? (
                   <Link to={publicProfilePath}>
                     <Button variant="secondary">

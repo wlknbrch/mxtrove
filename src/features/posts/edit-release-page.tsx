@@ -1,7 +1,7 @@
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Disc3, FolderOpen, GripVertical, ImagePlus, Save, ShieldCheck } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
@@ -24,7 +24,7 @@ import {
 import { buildCloudConnectionUpsert, getStoredDriveFolders } from "@/features/drive/google-drive-connection";
 import { useGoogleDriveProvider } from "@/features/drive/use-google-drive-provider";
 import { getLibraryDashboard } from "@/features/library/api";
-import { getResolvedPostById, updateReleasePost } from "@/features/posts/api";
+import { getResolvedPostById, updateReleasePost, updateSinglePost } from "@/features/posts/api";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { getArtworkAssetUrls } from "@/lib/asset-urls";
 import { queryClient } from "@/lib/query-client";
@@ -117,6 +117,7 @@ export function EditReleasePage() {
   const [description, setDescription] = useState("");
   const [releaseUrl, setReleaseUrl] = useState("");
   const [artworkAssetId, setArtworkAssetId] = useState<string | null>(null);
+  const [singleSongVersionId, setSingleSongVersionId] = useState<string | null>(null);
   const [tracks, setTracks] = useState<EditableTrack[]>([]);
 
   const postQuery = useQuery({
@@ -142,6 +143,17 @@ export function EditReleasePage() {
   const artworkAssets = (libraryQuery.data?.assets ?? []).filter((asset) => asset.asset_type === "cover_artwork");
   const storedDriveFolders = getStoredDriveFolders(connectionQuery.data);
   const isOwner = Boolean(item?.owner?.id && item.owner.id === viewer.userId);
+  const singleSong = item?.single?.song ?? null;
+  const singleAvailableVersions = singleSong ? getSongVersions(singleSong.id, versions) : [];
+  const selectedSingleVersion = singleSong
+    ? ((singleSongVersionId
+        ? singleAvailableVersions.find((entry) => entry.id === singleSongVersionId) ?? null
+        : singleAvailableVersions[0] ?? null) ?? null)
+    : null;
+  const singleTrackStatus =
+    item?.post.post_type === "single"
+      ? getTrackStatus(selectedSingleVersion, item.post.visibility === "public")
+      : null;
 
   useEffect(() => {
     provider.hydrateConnection({
@@ -151,7 +163,7 @@ export function EditReleasePage() {
   }, [connectionQuery.data?.provider_account_email, provider, storedDriveFolders]);
 
   useEffect(() => {
-    if (!item || item.post.post_type === "single") {
+    if (!item) {
       return;
     }
 
@@ -159,6 +171,13 @@ export function EditReleasePage() {
     setDescription(item.post.description ?? "");
     setReleaseUrl(item.post.release_url ?? "");
     setArtworkAssetId(item.post.artwork_asset_id ?? null);
+    if (item.post.post_type === "single") {
+      setSingleSongVersionId(item.single?.featuredVersion?.id ?? null);
+      setTracks([]);
+      return;
+    }
+
+    setSingleSongVersionId(null);
     setTracks(
       item.releaseTracks.map((track) => ({
         songId: track.track.song_id,
@@ -246,6 +265,28 @@ export function EditReleasePage() {
       if (!isOwner) {
         throw new Error("Only the release owner can edit this post.");
       }
+      if (item.post.post_type === "single") {
+        if (!singleSong) {
+          throw new Error("This post is no longer linked to a song.");
+        }
+        if (!selectedSingleVersion) {
+          throw new Error("Choose a version for this single before saving.");
+        }
+        if (item.post.visibility === "public" && !selectedSingleVersion.preview_asset_id) {
+          throw new Error("Public singles need a playback-ready preview for the selected version.");
+        }
+
+        await updateSinglePost({
+          postId,
+          title: title.trim(),
+          description: description.trim(),
+          releaseUrl: releaseUrl.trim() || undefined,
+          artworkAssetId,
+          featuredVersionId: selectedSingleVersion.id,
+        });
+        return;
+      }
+
       if (!tracks.length) {
         throw new Error("Keep at least one track in the release.");
       }
@@ -285,16 +326,25 @@ export function EditReleasePage() {
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["post", postId] }),
+        queryClient.invalidateQueries({ queryKey: ["player-post", postId] }),
+        queryClient.invalidateQueries({ queryKey: ["library", viewer.userId] }),
+        queryClient.invalidateQueries({ queryKey: ["library-posts"] }),
         queryClient.invalidateQueries({ queryKey: ["home-feed"] }),
         queryClient.invalidateQueries({ queryKey: ["explore-feed"] }),
         item?.owner?.id
           ? queryClient.invalidateQueries({ queryKey: ["profile-posts", item.owner.id] })
           : Promise.resolve(),
       ]);
-      toast.success("Release updated.");
+      toast.success(item?.post.post_type === "single" ? "Post updated." : "Release updated.");
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Could not update the release.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : item?.post.post_type === "single"
+            ? "Could not update the post."
+            : "Could not update the release.",
+      );
     },
   });
 
@@ -319,24 +369,42 @@ export function EditReleasePage() {
     );
   }
 
-  if (!item || item.post.post_type === "single") {
+  if (!item) {
     return (
       <Card>
         <CardTitle>Release unavailable</CardTitle>
         <CardDescription className="mt-2">
-          This editing flow only applies to EPs and albums you currently own.
+          This post is not available anymore.
+        </CardDescription>
+      </Card>
+    );
+  }
+
+  if (!isOwner) {
+    return (
+      <Card>
+        <CardTitle>Release unavailable</CardTitle>
+        <CardDescription className="mt-2">
+          Only the owner can edit this post.
         </CardDescription>
       </Card>
     );
   }
 
   const selectedArtwork = artworkAssets.find((asset) => asset.id === artworkAssetId) ?? item.artwork ?? null;
-  const readyTrackCount = tracks.filter((track) => {
-    const version =
-      (track.songVersionId ? versions.find((entry) => entry.id === track.songVersionId) ?? null : getLatestSongVersion(track.songId, versions)) ??
-      null;
-    return Boolean(version?.preview_asset_id);
-  }).length;
+  const isSinglePost = item.post.post_type === "single";
+  const releaseTrackCount = isSinglePost ? (singleSong ? 1 : 0) : tracks.length;
+  const readyTrackCount = isSinglePost
+    ? singleTrackStatus?.label === "Ready"
+      ? 1
+      : 0
+    : tracks.filter((track) => {
+        const version =
+          (track.songVersionId
+            ? versions.find((entry) => entry.id === track.songVersionId) ?? null
+            : getLatestSongVersion(track.songId, versions)) ?? null;
+        return Boolean(version?.preview_asset_id);
+      }).length;
 
   return (
     <div className="space-y-8">
@@ -350,8 +418,12 @@ export function EditReleasePage() {
 
       <PageHeader
         eyebrow="Release editor"
-        title={`Edit ${item.post.post_type.toUpperCase()}`}
-        description="Reorder tracks, remap versions, rename slots, and update the release metadata without creating fake public version history."
+        title={isSinglePost ? "Edit single post" : `Edit ${item.post.post_type.toUpperCase()}`}
+        description={
+          isSinglePost
+            ? "Update the live post metadata and switch which version powers the single without leaving the release editor."
+            : "Reorder tracks, remap versions, rename slots, and update the release metadata without creating fake public version history."
+        }
         actions={
           <Button onClick={() => void updateMutation.mutateAsync()} disabled={updateMutation.isPending || !isOwner}>
             <Save className="size-4" />
@@ -365,9 +437,11 @@ export function EditReleasePage() {
           <Card>
             <CardHeader>
               <div>
-                <CardTitle>Release metadata</CardTitle>
+                <CardTitle>{isSinglePost ? "Post metadata" : "Release metadata"}</CardTitle>
                 <CardDescription className="mt-2 text-base leading-7">
-                  These changes update the existing public post instead of generating a new one.
+                  {isSinglePost
+                    ? "These changes update the existing single post in place while keeping the song workspace separate."
+                    : "These changes update the existing public post instead of generating a new one."}
                 </CardDescription>
               </div>
             </CardHeader>
@@ -432,134 +506,203 @@ export function EditReleasePage() {
             </div>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <div>
-                <CardTitle>Track editor</CardTitle>
-                <CardDescription className="mt-2 text-base leading-7">
-                  Each slot can point to a different song version, and the order can move without creating public feed noise.
-                </CardDescription>
-              </div>
-            </CardHeader>
+          {isSinglePost ? (
+            <Card>
+              <CardHeader>
+                <div>
+                  <CardTitle>Single version</CardTitle>
+                  <CardDescription className="mt-2 text-base leading-7">
+                    Choose which private version powers this post. Deep file and version management still lives in the song workspace.
+                  </CardDescription>
+                </div>
+              </CardHeader>
 
-            <div className="mt-5 flex flex-wrap gap-3">
-              {songs.map((song) => {
-                const active = tracks.some((track) => track.songId === song.id);
-                return (
-                  <Button
-                    key={song.id}
-                    variant={active ? "primary" : "secondary"}
-                    onClick={() => {
-                      setTracks((current) => {
-                        if (active) {
-                          return current.filter((track) => track.songId !== song.id);
-                        }
+              <div className="grid gap-4 rounded-[20px] border border-white/[0.05] bg-white/[0.02] p-4 md:grid-cols-[minmax(0,1fr)_260px_auto]">
+                <div className="grid gap-2">
+                  <span className="text-sm font-medium">Song</span>
+                  <div className="rounded-[18px] border border-white/[0.08] bg-white/[0.03] px-4 py-3">
+                    <p className="font-medium">{singleSong?.title ?? "Song unavailable"}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {singleTrackStatus?.description ?? "Create or upload a version in the song workspace first."}
+                    </p>
+                  </div>
+                </div>
 
-                        const latestVersion = getLatestSongVersion(song.id, versions);
-                        return [
-                          ...current,
-                          {
-                            songId: song.id,
-                            trackTitle: song.title,
-                            songVersionId: latestVersion?.id ?? null,
-                          },
-                        ];
-                      });
-                    }}
+                <label className="grid gap-2">
+                  <span className="text-sm font-medium">Linked version</span>
+                  <Select
+                    value={singleSongVersionId ?? selectedSingleVersion?.id ?? ""}
+                    onChange={(event) => setSingleSongVersionId(event.currentTarget.value || null)}
+                    disabled={!singleAvailableVersions.length}
                   >
-                    {song.title}
-                  </Button>
-                );
-              })}
-            </div>
+                    {!singleAvailableVersions.length ? <option value="">No versions available yet</option> : null}
+                    {singleAvailableVersions.map((entry) => (
+                      <option key={entry.id} value={entry.id}>
+                        {entry.version_label} · {entry.production_stage}
+                      </option>
+                    ))}
+                  </Select>
+                </label>
 
-            <div className="mt-5 space-y-4">
-              {tracks.length ? (
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <SortableContext items={tracks.map((track) => track.songId)} strategy={verticalListSortingStrategy}>
-                    {tracks.map((track, index) => {
-                      const song = songs.find((entry) => entry.id === track.songId) ?? null;
-                      const availableVersions = getSongVersions(track.songId, versions);
-                      const version =
-                        (track.songVersionId
-                          ? availableVersions.find((entry) => entry.id === track.songVersionId) ?? null
-                          : availableVersions[0] ?? null) ?? null;
-                      const status = getTrackStatus(version, item.post.visibility === "public");
+                {singleSong ? (
+                  <div className="flex items-end">
+                    <Link to={`/library/songs/${singleSong.id}`} className="w-full">
+                      <Button variant="ghost" className="w-full">
+                        <FolderOpen className="size-4" />
+                        Open full version in library
+                      </Button>
+                    </Link>
+                  </div>
+                ) : null}
+              </div>
 
-                      return (
-                        <div key={track.songId} className="space-y-3">
-                          <SortableTrackEditor
-                            id={track.songId}
-                            title={`${index + 1}. ${track.trackTitle.trim() || song?.title || "Untitled track"}`}
-                            subtitle={
-                              version
-                                ? `${version.version_label} · ${version.production_stage}`
-                                : "No version linked yet"
-                            }
-                            statusLabel={status.label}
-                          />
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <Badge variant={singleTrackStatus?.badgeVariant ?? "warning"}>
+                  {singleTrackStatus?.label ?? "Needs version"}
+                </Badge>
+                {selectedSingleVersion ? (
+                  <span className="text-sm text-muted-foreground">
+                    {selectedSingleVersion.version_label} · {selectedSingleVersion.production_stage}
+                  </span>
+                ) : (
+                  <span className="text-sm text-muted-foreground">
+                    No playback-ready version is linked yet.
+                  </span>
+                )}
+              </div>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <div>
+                  <CardTitle>Track editor</CardTitle>
+                  <CardDescription className="mt-2 text-base leading-7">
+                    Each slot can point to a different song version, and the order can move without creating public feed noise.
+                  </CardDescription>
+                </div>
+              </CardHeader>
 
-                          <div className="grid gap-4 rounded-[20px] border border-white/[0.05] bg-white/[0.02] p-4 md:grid-cols-[minmax(0,1fr)_240px_auto]">
-                            <label className="grid gap-2">
-                              <span className="text-sm font-medium">Track title</span>
-                              <Input
-                                value={track.trackTitle}
-                                onChange={(event) =>
-                                  setTracks((current) =>
-                                    current.map((entry) =>
-                                      entry.songId === track.songId
-                                        ? { ...entry, trackTitle: event.currentTarget.value }
-                                        : entry,
-                                    ),
-                                  )
-                                }
-                              />
-                            </label>
+              <div className="mt-5 flex flex-wrap gap-3">
+                {songs.map((song) => {
+                  const active = tracks.some((track) => track.songId === song.id);
+                  return (
+                    <Button
+                      key={song.id}
+                      variant={active ? "primary" : "secondary"}
+                      onClick={() => {
+                        setTracks((current) => {
+                          if (active) {
+                            return current.filter((track) => track.songId !== song.id);
+                          }
 
-                            <label className="grid gap-2">
-                              <span className="text-sm font-medium">Linked version</span>
-                              <Select
-                                value={track.songVersionId ?? ""}
-                                onChange={(event) =>
-                                  setTracks((current) =>
-                                    current.map((entry) =>
-                                      entry.songId === track.songId
-                                        ? { ...entry, songVersionId: event.currentTarget.value || null }
-                                        : entry,
-                                    ),
-                                  )
-                                }
-                              >
-                                <option value="">Use latest available version</option>
-                                {availableVersions.map((entry) => (
-                                  <option key={entry.id} value={entry.id}>
-                                    {entry.version_label} · {entry.production_stage}
-                                  </option>
-                                ))}
-                              </Select>
-                            </label>
+                          const latestVersion = getLatestSongVersion(song.id, versions);
+                          return [
+                            ...current,
+                            {
+                              songId: song.id,
+                              trackTitle: song.title,
+                              songVersionId: latestVersion?.id ?? null,
+                            },
+                          ];
+                        });
+                      }}
+                    >
+                      {song.title}
+                    </Button>
+                  );
+                })}
+              </div>
 
-                            <div className="flex items-end">
-                              <Link to={`/library/songs/${track.songId}`} className="w-full">
-                                <Button variant="ghost" className="w-full">
-                                  <FolderOpen className="size-4" />
-                                  Open workspace
-                                </Button>
-                              </Link>
+              <div className="mt-5 space-y-4">
+                {tracks.length ? (
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={tracks.map((track) => track.songId)} strategy={verticalListSortingStrategy}>
+                      {tracks.map((track, index) => {
+                        const song = songs.find((entry) => entry.id === track.songId) ?? null;
+                        const availableVersions = getSongVersions(track.songId, versions);
+                        const version =
+                          (track.songVersionId
+                            ? availableVersions.find((entry) => entry.id === track.songVersionId) ?? null
+                            : availableVersions[0] ?? null) ?? null;
+                        const status = getTrackStatus(version, item.post.visibility === "public");
+
+                        return (
+                          <div key={track.songId} className="space-y-3">
+                            <SortableTrackEditor
+                              id={track.songId}
+                              title={`${index + 1}. ${track.trackTitle.trim() || song?.title || "Untitled track"}`}
+                              subtitle={
+                                version
+                                  ? `${version.version_label} · ${version.production_stage}`
+                                  : "No version linked yet"
+                              }
+                              statusLabel={status.label}
+                            />
+
+                            <div className="grid gap-4 rounded-[20px] border border-white/[0.05] bg-white/[0.02] p-4 md:grid-cols-[minmax(0,1fr)_240px_auto]">
+                              <label className="grid gap-2">
+                                <span className="text-sm font-medium">Track title</span>
+                                <Input
+                                  value={track.trackTitle}
+                                  onChange={(event) => {
+                                    const nextTrackTitle = event.currentTarget.value;
+                                    setTracks((current) =>
+                                      current.map((entry) =>
+                                        entry.songId === track.songId
+                                          ? { ...entry, trackTitle: nextTrackTitle }
+                                          : entry,
+                                      ),
+                                    );
+                                  }}
+                                />
+                              </label>
+
+                              <label className="grid gap-2">
+                                <span className="text-sm font-medium">Linked version</span>
+                                <Select
+                                  value={track.songVersionId ?? ""}
+                                  onChange={(event) => {
+                                    const nextSongVersionId = event.currentTarget.value || null;
+                                    setTracks((current) =>
+                                      current.map((entry) =>
+                                        entry.songId === track.songId
+                                          ? { ...entry, songVersionId: nextSongVersionId }
+                                          : entry,
+                                      ),
+                                    );
+                                  }}
+                                >
+                                  <option value="">Use latest available version</option>
+                                  {availableVersions.map((entry) => (
+                                    <option key={entry.id} value={entry.id}>
+                                      {entry.version_label} · {entry.production_stage}
+                                    </option>
+                                  ))}
+                                </Select>
+                              </label>
+
+                              <div className="flex items-end">
+                                <Link to={`/library/songs/${track.songId}`} className="w-full">
+                                  <Button variant="ghost" className="w-full">
+                                    <FolderOpen className="size-4" />
+                                    Open workspace
+                                  </Button>
+                                </Link>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </SortableContext>
-                </DndContext>
-              ) : (
-                <div className="rounded-[22px] border border-white/[0.06] bg-white/[0.02] px-4 py-4 text-sm leading-7 text-muted-foreground">
-                  No tracks selected. Add songs from your library above to keep editing this release.
-                </div>
-              )}
-            </div>
-          </Card>
+                        );
+                      })}
+                    </SortableContext>
+                  </DndContext>
+                ) : (
+                  <div className="rounded-[22px] border border-white/[0.06] bg-white/[0.02] px-4 py-4 text-sm leading-7 text-muted-foreground">
+                    No tracks selected. Add songs from your library above to keep editing this release.
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
         </div>
 
         <div className="space-y-6">
@@ -580,15 +723,22 @@ export function EditReleasePage() {
                 <Disc3 className="size-10 text-accent-secondary" />
                 <p className="mt-4 font-display text-3xl tracking-[-0.03em]">{title.trim() || item.post.title}</p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {item.post.post_type.toUpperCase()} · {item.post.visibility} · {tracks.length} track{tracks.length === 1 ? "" : "s"}
+                  {item.post.post_type.toUpperCase()} · {item.post.visibility} · {releaseTrackCount} track{releaseTrackCount === 1 ? "" : "s"}
                 </p>
               </div>
 
               <div className="rounded-[22px] border border-white/[0.06] bg-white/[0.02] px-4 py-4">
                 <p className="text-xs uppercase tracking-[0.22em] text-accent-secondary/75">Readiness snapshot</p>
                 <div className="mt-3 space-y-2 text-sm text-muted-foreground">
-                  <p>Track count: {tracks.length}</p>
-                  <p>Ready playback tracks: {readyTrackCount}/{tracks.length}</p>
+                  <p>Track count: {releaseTrackCount}</p>
+                  <p>Ready playback tracks: {readyTrackCount}/{releaseTrackCount}</p>
+                  {isSinglePost ? (
+                    <p>
+                      {selectedSingleVersion
+                        ? `Current version: ${selectedSingleVersion.version_label}`
+                        : "No version linked yet."}
+                    </p>
+                  ) : null}
                   <p>{releaseUrl.trim() ? "External release link set." : "No external release link set."}</p>
                 </div>
               </div>
@@ -602,9 +752,19 @@ export function EditReleasePage() {
                 <p className="font-medium">Editing rules</p>
               </div>
               <div className="space-y-2 text-sm leading-7 text-muted-foreground">
-                <p>Changing order or mapped versions updates the release in place.</p>
-                <p>Every public track still needs a playback-ready version.</p>
-                <p>Deep audio work remains inside each song workspace so the release stays a thin orchestration layer.</p>
+                {isSinglePost ? (
+                  <>
+                    <p>Metadata updates happen in place on the existing single post.</p>
+                    <p>Public singles still need a playback-ready preview for whichever version you choose.</p>
+                    <p>Deep audio work remains inside the song workspace so the post editor stays focused on public-facing release details.</p>
+                  </>
+                ) : (
+                  <>
+                    <p>Changing order or mapped versions updates the release in place.</p>
+                    <p>Every public track still needs a playback-ready version.</p>
+                    <p>Deep audio work remains inside each song workspace so the release stays a thin orchestration layer.</p>
+                  </>
+                )}
               </div>
             </div>
           </Card>
