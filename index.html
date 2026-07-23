@@ -41,6 +41,19 @@
     />
     <meta name="twitter:image" content="%VITE_APP_URL%/mxshare-share-preview.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <script>
+      try {
+        const appearance = JSON.parse(localStorage.getItem("mxshare:appearance:v2") || "{}");
+        const root = document.documentElement;
+        root.dataset.theme = appearance.theme || "dark";
+        root.dataset.accent = appearance.accent || "violet";
+        root.dataset.density = appearance.interface_density || "comfortable";
+        root.dataset.contrast = appearance.increase_contrast ? "high" : "normal";
+        root.dataset.transparency = appearance.reduce_transparency ? "reduced" : "normal";
+        root.dataset.motion = appearance.reduce_motion || appearance.reduced_motion ? "reduced" : "normal";
+        root.dataset.textSize = appearance.larger_ui_text ? "large" : "normal";
+      } catch {}
+    </script>
     <title>MxShare</title>
   </head>
   <body>

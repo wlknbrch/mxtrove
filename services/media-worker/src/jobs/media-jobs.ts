@@ -1,10 +1,12 @@
 import fs from "node:fs/promises";
+import { createHash } from "node:crypto";
 import type { ChildProcess } from "node:child_process";
 
 import { config } from "../config.js";
 import { transcodeToMp3, decodeToMonoPcm } from "../media/ffmpeg.js";
 import { probeAudioFile } from "../media/ffprobe.js";
 import { ensureJobDir, getJobPaths, removeJobDir } from "../media/paths.js";
+import { protectedMediaStorage } from "../protected-media/index.js";
 import { supabaseAdmin } from "../supabase/service.js";
 import { generateWaveformFromPcm } from "../waveform/generate-waveform.js";
 
@@ -38,6 +40,11 @@ export interface MediaJobRecord {
   ready_at: string | null;
   completed_at: string | null;
   expires_at: string | null;
+  output_mode: "public_cloud" | "protected";
+  protected_purpose: "post_preview" | "collaboration_preview" | "message_audio" | null;
+  target_project_id: string | null;
+  target_post_id: string | null;
+  protected_asset_id: string | null;
   updated_at: string;
 }
 
@@ -82,6 +89,10 @@ export async function createMediaProcessingJobForOwner(input: {
   ownerId: string;
   sourceAssetId: string;
   songVersionId?: string | null;
+  outputMode?: "public_cloud" | "protected";
+  protectedPurpose?: "post_preview" | "collaboration_preview" | "message_audio" | null;
+  projectId?: string | null;
+  postId?: string | null;
 }) {
   const { data: asset, error: assetError } = await supabaseAdmin
     .from("assets")
@@ -114,15 +125,68 @@ export async function createMediaProcessingJobForOwner(input: {
     }
   }
 
-  const { data: existing, error: existingError } = await supabaseAdmin
+  const outputMode = input.outputMode ?? "public_cloud";
+  const protectedPurpose = outputMode === "protected"
+    ? input.protectedPurpose ?? "collaboration_preview"
+    : null;
+
+  if (outputMode === "protected" && protectedPurpose === "collaboration_preview") {
+    if (!input.projectId) {
+      throw new Error("A collaboration project is required for this protected preview.");
+    }
+
+    const { data: canUpload, error: permissionError } = await supabaseAdmin.rpc(
+      "can_upload_project_version",
+      {
+        target_project_id: input.projectId,
+        target_profile_id: input.ownerId,
+      },
+    );
+    if (permissionError) {
+      throw permissionError;
+    }
+    if (!canUpload) {
+      throw new Error("You cannot upload versions to this collaboration project.");
+    }
+  }
+
+  if (outputMode === "protected" && protectedPurpose === "post_preview") {
+    if (!input.postId) {
+      throw new Error("A target post is required for this protected preview.");
+    }
+    const { data: post, error: postError } = await supabaseAdmin
+      .from("posts")
+      .select("id")
+      .eq("id", input.postId)
+      .eq("owner_id", input.ownerId)
+      .maybeSingle();
+    if (postError) {
+      throw postError;
+    }
+    if (!post) {
+      throw new Error("The target post could not be found.");
+    }
+  }
+
+  let existingQuery = supabaseAdmin
     .from("media_processing_jobs")
     .select("*")
     .eq("owner_id", input.ownerId)
     .eq("source_asset_id", input.sourceAssetId)
+    .eq("output_mode", outputMode)
     .in("status", ["created", "uploading", "queued", "probing", "transcoding", "generating_waveform", "ready", "uploading_to_drive"])
     .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .limit(1);
+  if (outputMode === "protected") {
+    existingQuery = existingQuery.eq("protected_purpose", protectedPurpose);
+    existingQuery = input.projectId
+      ? existingQuery.eq("target_project_id", input.projectId)
+      : existingQuery.is("target_project_id", null);
+    existingQuery = input.postId
+      ? existingQuery.eq("target_post_id", input.postId)
+      : existingQuery.is("target_post_id", null);
+  }
+  const { data: existing, error: existingError } = await existingQuery.maybeSingle();
 
   if (existingError) {
     throw existingError;
@@ -145,6 +209,10 @@ export async function createMediaProcessingJobForOwner(input: {
       input_mime_type: asset.mime_type,
       input_bytes: asset.bytes,
       input_checksum: asset.checksum,
+      output_mode: outputMode,
+      protected_purpose: protectedPurpose,
+      target_project_id: input.projectId ?? null,
+      target_post_id: input.postId ?? null,
     })
     .select("*")
     .single();
@@ -235,6 +303,7 @@ export async function processMediaJob(jobId: string) {
     updated_at: new Date().toISOString(),
   });
 
+  let reservedProtectedAssetId: string | null = null;
   try {
     await ensureNotCancelled(jobId);
 
@@ -285,6 +354,72 @@ export async function processMediaJob(jobId: string) {
     const waveform = generateWaveformFromPcm(pcm.stdout, metadata.durationSeconds);
     const outputStats = await fs.stat(paths.previewPath);
 
+    if (job.output_mode === "protected") {
+      await updateJob(jobId, {
+        stage: "Securing collaboration preview",
+        progress: 88,
+        updated_at: new Date().toISOString(),
+      });
+
+      const reservation = await reserveProtectedPreview({
+        job,
+        outputBytes: outputStats.size,
+      });
+      reservedProtectedAssetId = reservation.id;
+
+      await protectedMediaStorage.put({
+        assetId: reservation.id,
+        storageKey: reservation.storage_key,
+        sourcePath: paths.previewPath,
+        mimeType: "audio/mpeg",
+        bytes: outputStats.size,
+      });
+
+      const checksum = createHash("sha256")
+        .update(await fs.readFile(paths.previewPath))
+        .digest("hex");
+      await finalizeProtectedPreview({
+        assetId: reservation.id,
+        bytes: outputStats.size,
+        checksum,
+        durationSeconds: metadata.durationSeconds,
+        waveform,
+      });
+
+      if (job.song_version_id) {
+        const { error: versionError } = await supabaseAdmin
+          .from("song_versions")
+          .update({
+            protected_preview_asset_id: reservation.id,
+            sharing_mode:
+              job.protected_purpose === "collaboration_preview"
+                ? "project_members"
+                : "followers",
+          })
+          .eq("id", job.song_version_id)
+          .eq("owner_id", job.owner_id);
+        if (versionError) {
+          throw versionError;
+        }
+      }
+
+      await updateJob(jobId, {
+        status: "completed",
+        stage: "Protected preview ready",
+        progress: 100,
+        output_mime_type: "audio/mpeg",
+        output_bytes: outputStats.size,
+        waveform_data: waveform,
+        protected_asset_id: reservation.id,
+        ready_at: new Date().toISOString(),
+        completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+      reservedProtectedAssetId = null;
+      await removeJobDir(jobId);
+      return;
+    }
+
     await updateJob(jobId, {
       status: "ready",
       stage: "Ready for Google Drive upload",
@@ -298,6 +433,15 @@ export async function processMediaJob(jobId: string) {
     });
   } catch (error) {
     activeProcesses.delete(jobId);
+    if (reservedProtectedAssetId) {
+      await protectedMediaStorage.delete(reservedProtectedAssetId).catch(() => undefined);
+      const { error: releaseError } = await supabaseAdmin.rpc("release_protected_media_asset", {
+        target_asset_id: reservedProtectedAssetId,
+      });
+      if (releaseError) {
+        console.error("Could not release failed protected media reservation.", releaseError);
+      }
+    }
     if (error instanceof Error && error.message === "cancelled") {
       await updateJob(jobId, {
         status: "cancelled",
@@ -318,6 +462,59 @@ export async function processMediaJob(jobId: string) {
       updated_at: new Date().toISOString(),
       expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
     });
+  }
+}
+
+interface ProtectedPreviewReservation {
+  id: string;
+  storage_key: string;
+}
+
+async function reserveProtectedPreview(input: {
+  job: MediaJobRecord;
+  outputBytes: number;
+}) {
+  const { data, error } = await supabaseAdmin.rpc("reserve_protected_media_asset", {
+    target_owner_id: input.job.owner_id,
+    target_purpose: input.job.protected_purpose ?? "collaboration_preview",
+    target_filename: `${input.job.id}.mp3`,
+    target_mime_type: "audio/mpeg",
+    expected_bytes: input.outputBytes,
+    target_source_asset_id: input.job.source_asset_id,
+    target_post_id: input.job.target_post_id,
+    target_project_id: input.job.target_project_id,
+    target_song_version_id: input.job.song_version_id,
+    target_expires_at: null,
+  });
+  if (error) {
+    throw error;
+  }
+
+  const reservation = (Array.isArray(data) ? data[0] : data) as ProtectedPreviewReservation | null;
+  if (!reservation?.id || !reservation.storage_key) {
+    throw new Error("Protected media reservation failed.");
+  }
+  return reservation;
+}
+
+async function finalizeProtectedPreview(input: {
+  assetId: string;
+  bytes: number;
+  checksum: string;
+  durationSeconds: number;
+  waveform: unknown;
+}) {
+  const { error } = await supabaseAdmin.rpc("finalize_protected_media_asset", {
+    target_asset_id: input.assetId,
+    actual_bytes: input.bytes,
+    target_checksum: input.checksum,
+    target_duration_seconds: input.durationSeconds,
+    target_width: null,
+    target_height: null,
+    target_waveform_data: input.waveform,
+  });
+  if (error) {
+    throw error;
   }
 }
 

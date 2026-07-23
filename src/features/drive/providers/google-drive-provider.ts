@@ -197,6 +197,7 @@ async function xhrUpload(params: {
 }
 
 export class GoogleDriveProvider implements CloudStorageProvider {
+  readonly provider = "google_drive" as const;
   private state: GoogleDriveState = {
     accessToken: null,
     expiresAt: null,
@@ -345,6 +346,7 @@ export class GoogleDriveProvider implements CloudStorageProvider {
 
     return {
       provider: "google_drive",
+      accountId: email,
       email,
       accessToken,
       expiresAt: this.state.expiresAt,
@@ -361,6 +363,13 @@ export class GoogleDriveProvider implements CloudStorageProvider {
     };
   }
 
+  async restoreSession(): Promise<boolean> {
+    return Boolean(
+      this.state.accessToken
+      && (!this.state.expiresAt || this.state.expiresAt - Date.now() > 60_000),
+    );
+  }
+
   async ensureRootStructure(): Promise<CloudFolderStructure> {
     if (this.state.folders) {
       return this.state.folders;
@@ -373,6 +382,7 @@ export class GoogleDriveProvider implements CloudStorageProvider {
     const previews = await this.findOrCreateFolder("Previews", audio.id);
     const artwork = await this.findOrCreateFolder("Artwork", root.id);
     const avatars = await this.findOrCreateFolder("Avatars", artwork.id);
+    const exportsFolder = await this.findOrCreateFolder("Exports", root.id);
 
     this.state.folders = {
       rootFolderId: root.id,
@@ -381,6 +391,7 @@ export class GoogleDriveProvider implements CloudStorageProvider {
       audioPreviewsFolderId: previews.id,
       artworkFolderId: artwork.id,
       avatarsFolderId: avatars.id,
+      exportsFolderId: exportsFolder.id,
     };
 
     return this.state.folders;
@@ -521,7 +532,7 @@ export class GoogleDriveProvider implements CloudStorageProvider {
     return extractMetadata((await response.json()) as Parameters<typeof extractMetadata>[0]);
   }
 
-  async makePublicPreview(fileId: string): Promise<PublicAssetResult> {
+  async createPublicPreview(fileId: string): Promise<PublicAssetResult> {
     const accessToken = await this.ensureAuthenticated();
     const safeFileId = assertDriveId(fileId, "file");
     await authorizedFetch(

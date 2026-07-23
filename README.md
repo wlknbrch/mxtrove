@@ -1,253 +1,350 @@
-# MxShare V1 / V1.5
+# MxShare V2
 
-MxShare is a social working archive for musicians. Private originals stay in each artist's own Google Drive, while Supabase handles auth, metadata, messaging, notifications, feed logic, and access control.
+MxShare is a collaborative working archive for musicians. Artists keep private
+originals in their own cloud account, while MxShare provides versioned releases,
+collaboration rooms, protected previews, timestamped feedback, messaging, social
+discovery, and public release pages.
 
-## Stack
+The production site is designed for:
 
-- React + Vite + TypeScript
-- React Router
-- Tailwind CSS v4
-- TanStack Query
-- Zustand
-- Supabase Auth / Postgres / RLS / SQL migrations
-- Google Identity Services + Google Drive REST API
-- Self-hosted media worker with Fastify + FFmpeg + web-push
+- `https://mxshare.wlknbrch.com`
+- `https://www.mxshare.wlknbrch.com` (redirects to the apex domain)
+
+## What V2 Includes
+
+- Private Single, EP, Album, and loose-collection collaboration projects
+- Owner, Admin, Editor, Contributor, Reviewer, and Viewer roles enforced by SQL
+- Profile/email invites, invitation lifecycle, membership changes, and ownership transfer
+- Shared tracklists, assignment, status, ordering, active versions, and project chat
+- Timestamped and ranged feedback, replies, reactions, resolution, and A/B version compare
+- Public, followers-only, unlisted, and private releases
+- Protected playback for collaboration, follower-only, unlisted, and message media
+- Direct-message audio, image, document, project, post, and version attachments
+- Blocking, muting, profile privacy, message privacy, and invite privacy
+- Dark, light, and system themes with accents, density, player, and accessibility settings
+- Google Drive, Dropbox, and OneDrive providers with explicit browser-mediated migration
+- Credits, external links, QR codes, embeds, and dynamic public social cards
+- Search across permitted creators, releases, songs, projects, feedback, and messages
+- Moderation reports, admin-only actions, recoverable account deletion, and data export
+- Realtime project, message, and notification refresh
+- PWA shell, read-only offline snapshots, and local drafts
 
 ## Architecture
 
-### App shape
+```text
+Browser
+  React + Vite + TypeScript
+  React Router + TanStack Query + Zustand
+  Personal cloud provider sessions
 
-- `src/app`: providers and app bootstrap
-- `src/components`: layout, player, and shared UI primitives
-- `src/features`: auth, drive, feed, follows, library, media-processing, messages, notifications, posts, profile, settings, songs
-- `src/lib`: environment handling, helpers, domain logic, demo fixtures, PWA helpers, Supabase wiring
-- `src/routes`: protected routing and route registration
-- `src/types`: shared domain models
-- `services/media-worker`: V1.5 audio processing + push worker
+Supabase
+  Auth
+  PostgreSQL
+  RLS, RPCs, Realtime
+  Metadata only (no audio binaries)
 
-### Storage model
+Media worker
+  Fastify
+  FFmpeg / ffprobe
+  Protected derivative storage
+  Attachments, exports, web push, and social cards
 
-- Supabase never stores audio binaries.
-- Google Drive stores:
-  - private original audio
-  - public preview audio
-  - cover artwork
-  - avatars
-- Supabase stores:
-  - Drive file IDs and folder IDs
-  - file metadata and waveform payloads
-  - songs, versions, posts, comments, follows, messages, notifications, push subscriptions
-
-### Media pipeline
-
-V1.5 introduces a split pipeline:
-
-1. The browser uploads the original to the user's private Google Drive folder.
-2. The browser sends the same file to the self-hosted media worker.
-3. The worker creates an MP3 preview plus waveform data.
-4. The browser downloads the preview from the worker and uploads it into the public previews folder in Drive.
-5. Supabase stores the preview asset metadata and links it back to the original.
-
-This keeps Drive tokens out of the worker and keeps Supabase free of media binaries.
-
-## Local setup
-
-1. Install frontend dependencies:
-
-   ```bash
-   npm install
-   ```
-
-2. Install worker dependencies:
-
-   ```bash
-   npm --prefix services/media-worker install
-   ```
-
-3. Copy env values:
-
-   ```bash
-   cp .env.example .env
-   cp services/media-worker/.env.example services/media-worker/.env
-   ```
-
-4. Create a Supabase project.
-
-5. Run the SQL migrations in order:
-
-   - [`supabase/migrations/20260707190000_mxshare_v1.sql`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/supabase/migrations/20260707190000_mxshare_v1.sql)
-   - [`supabase/migrations/20260709001500_fix_message_rls_recursion.sql`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/supabase/migrations/20260709001500_fix_message_rls_recursion.sql)
-   - [`supabase/migrations/20260710103000_mxshare_v15_social_graph.sql`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/supabase/migrations/20260710103000_mxshare_v15_social_graph.sql)
-   - [`supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql)
-
-6. Optionally seed local development data:
-
-   - [`supabase/seed.sql`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/supabase/seed.sql)
-
-7. Configure Google Cloud:
-
-   - create an OAuth client for a web application
-   - enable the Google Drive API
-   - add local origin(s), for example `http://localhost:5173`
-   - use the client ID as `VITE_GOOGLE_DRIVE_CLIENT_ID`
-   - do not expose any Google client secret in the frontend
-
-8. Set frontend environment variables:
-
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_PUBLISHABLE_KEY`
-   - `VITE_GOOGLE_DRIVE_CLIENT_ID`
-   - `VITE_MEDIA_WORKER_URL`
-   - `VITE_WEB_PUSH_PUBLIC_KEY`
-   - `VITE_APP_URL`
-
-9. Set worker environment variables:
-
-   - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SECRET_KEY`
-   - `WEB_PUSH_PUBLIC_KEY`
-   - `WEB_PUSH_PRIVATE_KEY`
-   - `WEB_PUSH_SUBJECT`
-   - `APP_ORIGIN`
-   - optional FFmpeg and temp-directory overrides from [`services/media-worker/.env.example`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/services/media-worker/.env.example)
-
-10. Start the worker:
-
-   ```bash
-   npm run worker:dev
-   ```
-
-11. Start the app:
-
-   ```bash
-   npm run dev
-   ```
-
-12. Optional local UI QA without backend credentials:
-
-   - set `VITE_ENABLE_DEMO_MODE=true`
-   - this is clearly marked demo mode
-   - Drive playback, push, and worker processing stay simulated there
-
-## Production deployment on a VPS with Docker + Traefik
-
-This repo is now prepared for the production shape below:
-
-- the Vite app is built into a static frontend image via [`Dockerfile`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/Dockerfile)
-- Nginx serves the SPA with cache rules and a health endpoint via [`deploy/nginx/mxshare.conf`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/deploy/nginx/mxshare.conf)
-- the media worker runs as its own container
-- Traefik terminates TLS and routes:
-  - `https://mxshare.wlknbrch.com` → frontend
-  - `https://www.mxshare.wlknbrch.com` → permanent redirect to the apex domain
-  - `https://mxshare.wlknbrch.com/worker/*` → media worker
-
-The production compose entrypoint is [`docker-compose.production.yml`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/docker-compose.production.yml). Example secrets and runtime values live in [`deploy/mxshare.vps.env.example`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/deploy/mxshare.vps.env.example).
-
-### 1. VPS prerequisites
-
-- Docker Engine + Docker Compose plugin installed
-- Traefik already running on the VPS
-- a shared external Traefik network available, default name: `traefik-public`
-- DNS records in place:
-  - `mxshare.wlknbrch.com` → VPS IP
-  - `www.mxshare.wlknbrch.com` → VPS IP or CNAME to the apex
-
-If the Traefik network does not exist yet:
-
-```bash
-docker network create traefik-public
+Production
+  Docker
+  Nginx
+  Traefik
 ```
 
-### 2. Supabase production checklist
+Important directories:
 
-1. Create or reuse the production Supabase project.
-2. Run all migrations in the order listed in the local setup section above.
-3. Set the Auth site URL to:
+- `src/features/projects`: projects, roles, invites, tracks, feedback, and review
+- `src/features/attachments`: message attachment client and rendering
+- `src/features/privacy`: privacy and account lifecycle APIs
+- `src/features/appearance`: local/account appearance synchronization
+- `src/features/dropbox` and `src/features/onedrive`: provider implementations
+- `services/media-worker/src/protected-media`: private derivative storage and streaming
+- `services/media-worker/src/attachments`: validated attachment processing
+- `services/media-worker/src/social-preview`: dynamic HTML and OG images
+- `supabase/migrations`: additive V1, V1.5, and V2 schema history
+- `supabase/tests`: database and RLS regression tests
 
-   ```text
-   https://mxshare.wlknbrch.com
-   ```
+## Storage And Trust Model
 
-4. Add these Auth redirect / allowed URLs:
+Private WAV, FLAC, AIFF, and master files remain in the uploader's personal
+Google Drive, Dropbox, or OneDrive account. MxShare does not copy those originals
+to Supabase or the VPS as a permanent backup.
 
-   - `https://mxshare.wlknbrch.com`
-   - `https://www.mxshare.wlknbrch.com`
-   - your existing localhost URLs for development if you still want local sign-in
+The VPS protected-media volume may contain only derivatives:
 
-5. Deploy the public Drive media proxy Edge Function:
+- MP3 collaboration and restricted-release previews
+- message audio previews and waveforms
+- EXIF-stripped WebP image previews
+- allowed small documents
+- temporary export archives
+- cached social-preview images
 
-   ```bash
-   supabase functions deploy drive-media --no-verify-jwt
-   ```
+Protected files are never served by Nginx as static files. The worker endpoint
+checks authentication or a valid share token, calls server-side permission RPCs,
+supports HTTP byte ranges, and returns private no-store cache headers.
 
-That function lives at [`supabase/functions/drive-media/index.ts`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/supabase/functions/drive-media/index.ts) and is required for production artwork / avatar / public-audio proxying outside localhost.
+The default provider is `LocalProtectedMediaStorage` at:
 
-### 3. Google Cloud production checklist
+```text
+/data/mxshare-protected-media
+```
 
-For the Google Drive OAuth client:
+`S3ProtectedMediaStorage` is an inactive provider boundary only. It is not a
+configured production backend yet.
 
-- enable the Google Drive API
-- add these Authorized JavaScript origins:
-  - `https://mxshare.wlknbrch.com`
-  - `https://www.mxshare.wlknbrch.com`
-- keep using the web client ID as `VITE_GOOGLE_DRIVE_CLIENT_ID`
-- do not expose any client secret in the frontend image
+## Requirements
 
-If your app is still in Google's external testing mode, make sure the production Google account(s) that should connect Drive are approved testers until verification is complete.
+- Node.js 22
+- npm
+- FFmpeg and ffprobe for local worker development
+- Supabase CLI 2.109.1 or compatible
+- Docker Engine and Docker Compose for local Supabase and production containers
+- A Supabase project
+- At least one configured personal cloud OAuth application
 
-### 4. Web Push / VAPID keys
+Install the Supabase CLI on macOS:
 
-Generate a VAPID key pair once, then reuse it for both the frontend and worker:
+```bash
+brew install supabase/tap/supabase
+supabase --version
+```
+
+## Local Setup
+
+Install dependencies:
+
+```bash
+npm ci
+npm --prefix services/media-worker ci
+```
+
+Create local environment files:
+
+```bash
+cp .env.example .env
+cp services/media-worker/.env.example services/media-worker/.env
+```
+
+Required frontend values:
+
+```text
+VITE_SUPABASE_URL
+VITE_SUPABASE_PUBLISHABLE_KEY
+VITE_MEDIA_WORKER_URL
+VITE_APP_URL
+```
+
+Add the client IDs for every provider you want to expose:
+
+```text
+VITE_GOOGLE_DRIVE_CLIENT_ID
+VITE_DROPBOX_CLIENT_ID
+VITE_ONEDRIVE_CLIENT_ID
+```
+
+Required worker values:
+
+```text
+SUPABASE_URL
+SUPABASE_SECRET_KEY or SUPABASE_SERVICE_ROLE_KEY
+PROTECTED_MEDIA_SIGNING_SECRET
+APP_ORIGIN
+WORKER_PUBLIC_URL
+PUBLIC_APP_URL
+```
+
+Generate a signing secret:
+
+```bash
+openssl rand -base64 48
+```
+
+Start and migrate local Supabase:
+
+```bash
+supabase start
+supabase db reset --local
+supabase test db
+```
+
+`supabase db reset --local` applies every migration in timestamp order and then
+runs `supabase/seed.sql`. The seed is idempotent and is intended only for local
+development.
+
+Start the worker and web app in separate terminals:
+
+```bash
+npm run worker:dev
+npm run dev
+```
+
+The default URLs are:
+
+```text
+Web:    http://localhost:5173
+Worker: http://localhost:8080
+```
+
+Set `VITE_ENABLE_DEMO_MODE=true` only for explicit UI-only inspection. Demo mode
+does not prove RLS, OAuth, protected playback, uploads, or Realtime behavior.
+
+## Supabase Deployment
+
+Link the repository to the production project:
+
+```bash
+supabase login
+supabase link --project-ref YOUR_PROJECT_REF
+```
+
+Inspect and push all pending migrations:
+
+```bash
+supabase db diff --linked
+supabase db push
+```
+
+Deploy the public cloud-media proxy:
+
+```bash
+supabase functions deploy drive-media --no-verify-jwt
+```
+
+The function is at `supabase/functions/drive-media/index.ts`. It proxies only
+public asset records; private originals and protected derivatives do not use it.
+
+Production Auth settings:
+
+```text
+Site URL:
+https://mxshare.wlknbrch.com
+
+Allowed redirect URLs:
+https://mxshare.wlknbrch.com
+https://www.mxshare.wlknbrch.com
+http://localhost:5173
+```
+
+Enable Realtime for the V2 tables through the included migrations. Do not expose
+the service-role or secret key to the frontend.
+
+## OAuth Providers
+
+### Google Drive
+
+- Enable Google Drive API.
+- Add `http://localhost:5173` for development.
+- Add both production origins.
+- Use the `drive.file` scope.
+- Put only the web client ID in the frontend.
+- Add test users while the consent screen remains in external testing.
+
+### Dropbox
+
+Create a scoped Dropbox app and add:
+
+```text
+http://localhost:5173/oauth/callback/dropbox
+https://mxshare.wlknbrch.com/oauth/callback/dropbox
+```
+
+Set the app key as `VITE_DROPBOX_CLIENT_ID`.
+
+### OneDrive
+
+Create a Microsoft Entra SPA registration and add:
+
+```text
+http://localhost:5173/oauth/callback/onedrive
+https://mxshare.wlknbrch.com/oauth/callback/onedrive
+```
+
+Allow delegated `User.Read` and `Files.ReadWrite`, then set the application
+client ID as `VITE_ONEDRIVE_CLIENT_ID`.
+
+Provider access tokens intentionally remain in browser `sessionStorage`. They
+are not stored in Supabase. Expired Dropbox or OneDrive sessions require a
+reconnect. OneDrive anonymous-link revocation must currently be completed in
+OneDrive when Microsoft Graph does not expose a safe single-link revoke flow.
+
+## Web Push
+
+Generate one VAPID pair:
 
 ```bash
 npx web-push generate-vapid-keys
 ```
 
-Use:
+Use the public value in both `VITE_WEB_PUSH_PUBLIC_KEY` and
+`WEB_PUSH_PUBLIC_KEY`. Keep `WEB_PUSH_PRIVATE_KEY` worker-only. Use a real
+contact URI for `WEB_PUSH_SUBJECT`.
 
-- `publicKey` as `VITE_WEB_PUSH_PUBLIC_KEY` and `WEB_PUSH_PUBLIC_KEY`
-- `privateKey` as `WEB_PUSH_PRIVATE_KEY`
-- a real admin contact as `WEB_PUSH_SUBJECT`, for example `mailto:contact@wlknbrch.com`
+Browser notifications require HTTPS in production. Brave users may also need to
+allow notification permissions and Brave's push messaging setting.
 
-### 5. Prepare the production env file
+## Production With Docker And Traefik
 
-Copy the example env file:
+Prerequisites:
+
+- DNS for both hostnames points to the VPS.
+- Traefik is already attached to an external Docker network.
+- The default network name is `traefik-public`.
+- Ports 80 and 443 are reachable by Traefik.
+
+Create the network if needed:
+
+```bash
+docker network create traefik-public
+```
+
+Create the production environment:
 
 ```bash
 cp deploy/mxshare.vps.env.example deploy/mxshare.vps.env
 ```
 
-Then fill in the real values. The most important production values are:
+At minimum, replace every placeholder in that file. Important production values:
 
-- `VITE_APP_URL=https://mxshare.wlknbrch.com`
-- `VITE_MEDIA_WORKER_URL=https://mxshare.wlknbrch.com/worker`
-- `APP_ORIGIN=https://mxshare.wlknbrch.com,https://www.mxshare.wlknbrch.com`
-- `SUPABASE_SERVICE_ROLE_KEY=...`
-- `VITE_SUPABASE_PUBLISHABLE_KEY=...`
-- `VITE_GOOGLE_DRIVE_CLIENT_ID=...`
-- `VITE_WEB_PUSH_PUBLIC_KEY=...`
-- `WEB_PUSH_PRIVATE_KEY=...`
-
-The frontend build is static, so any change to `VITE_*` variables requires rebuilding the web image.
-
-### 6. Build and launch on the VPS
-
-From the repo root on the server:
-
-```bash
-docker compose --env-file deploy/mxshare.vps.env -f docker-compose.production.yml up -d --build
+```text
+VITE_APP_URL=https://mxshare.wlknbrch.com
+VITE_MEDIA_WORKER_URL=https://mxshare.wlknbrch.com/worker
+APP_ORIGIN=https://mxshare.wlknbrch.com,https://www.mxshare.wlknbrch.com
+PUBLIC_APP_URL=https://mxshare.wlknbrch.com
+WORKER_PUBLIC_URL=https://mxshare.wlknbrch.com/worker
+PROTECTED_MEDIA_DIR=/data/mxshare-protected-media
 ```
 
-Useful follow-up commands:
+Build and start:
 
 ```bash
-docker compose --env-file deploy/mxshare.vps.env -f docker-compose.production.yml ps
-docker compose --env-file deploy/mxshare.vps.env -f docker-compose.production.yml logs -f web media-worker
+docker compose \
+  --env-file deploy/mxshare.vps.env \
+  -f docker-compose.production.yml \
+  up -d --build
 ```
 
-### 7. Post-deploy verification
+The compose file creates persistent volumes for worker temp data and protected
+media. Back up `mxshare-protected-media`; do not publish or bind it into Nginx.
 
-Check the frontend and worker health endpoints:
+Traefik routing included in the compose file:
+
+```text
+mxshare.wlknbrch.com/*          -> Nginx web app
+www.mxshare.wlknbrch.com/*      -> permanent apex redirect
+mxshare.wlknbrch.com/worker/*   -> Fastify worker, /worker stripped
+mxshare.wlknbrch.com/social/*   -> social HTML renderer
+mxshare.wlknbrch.com/og/*       -> cached OG image renderer
+```
+
+Public share buttons use `/social/post/:postId` and
+`/social/profile/:username`. Crawlers receive dynamic metadata; browsers are
+immediately redirected to the canonical app route.
+
+Health checks:
 
 ```bash
 curl -I https://mxshare.wlknbrch.com
@@ -255,154 +352,140 @@ curl https://mxshare.wlknbrch.com/worker/healthz
 curl https://mxshare.wlknbrch.com/worker/readyz
 ```
 
-Then verify the real product flows:
+Inspect containers:
 
-1. Load `https://mxshare.wlknbrch.com`.
-2. Confirm `https://www.mxshare.wlknbrch.com` redirects to the apex domain.
-3. Sign in with a real account.
-4. Connect Google Drive from Settings.
-5. Upload a private original and confirm the worker generates the preview.
-6. Confirm feed images, avatars, and playback all resolve correctly through the deployed Edge Function and worker.
-7. Trigger a push test from Settings → Notifications.
+```bash
+docker compose \
+  --env-file deploy/mxshare.vps.env \
+  -f docker-compose.production.yml \
+  ps
 
-### 8. Rolling updates later
+docker compose \
+  --env-file deploy/mxshare.vps.env \
+  -f docker-compose.production.yml \
+  logs -f web media-worker
+```
 
-For future releases:
+Deploy later updates:
 
 ```bash
 git pull
-docker compose --env-file deploy/mxshare.vps.env -f docker-compose.production.yml up -d --build
+supabase db push
+supabase functions deploy drive-media --no-verify-jwt
+docker compose \
+  --env-file deploy/mxshare.vps.env \
+  -f docker-compose.production.yml \
+  up -d --build
 ```
 
-If you only changed worker-only env values, you can recreate just the worker service. If you changed any `VITE_*` values, rebuild the frontend as well.
-
-## Product flows implemented
-
-- email/password login and registration via Supabase
-- onboarding and profile editing
-- public profile routes at `/@username`
-- follow/unfollow plus follower/following routes
-- follow-derived Home feed and creator discovery surfaces
-- Home and Explore feeds
-- library dashboard with songs, versions, and assets
-- song workspace with direct original upload, automatic preview generation, artwork upload, song editing, asset cleanup, and version creation
-- single publishing flow with automatic preview generation from uploaded originals
-- EP / album creation flow with drag-and-drop ordering and workspace jump-off links
-- EP / album editing after publish with track remapping and reorder support
-- public post detail with post hearts, threaded comments, replies, comment edit/delete, and release playback
-- Google Drive settings flow with reconnect / repair behavior
-- notification settings for browser push and event-level delivery preferences
-- direct messages and unread counts
-- notification center and unread state
-- global audio player with queue, seek, repeat, volume, hearts, and real waveform rendering from stored waveform data
-- PWA manifest + service worker registration for web push
-
-## Worker
-
-The worker lives in [`services/media-worker`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/services/media-worker/README.md).
-
-It provides:
-
-- `/v1/media/jobs/:id/input` for raw original uploads
-- job polling and preview download endpoints
-- cleanup of expired worker artifacts
-- queued web-push dispatch
-
-Deployment artifacts:
-
-- [`Dockerfile`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/Dockerfile)
-- [`services/media-worker/Dockerfile`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/services/media-worker/Dockerfile)
-- [`docker-compose.worker.yml`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/docker-compose.worker.yml)
-- [`docker-compose.production.yml`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/docker-compose.production.yml)
-- [`deploy/nginx/mxshare.conf`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/deploy/nginx/mxshare.conf)
-- [`deploy/mxshare.vps.env.example`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/deploy/mxshare.vps.env.example)
-- [`supabase/functions/drive-media/index.ts`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/supabase/functions/drive-media/index.ts)
+Every `VITE_*` change requires rebuilding the frontend image.
 
 ## Commands
 
-- Frontend type check:
+```bash
+# Complete frontend check
+npm run check
 
-  ```bash
-  npm run typecheck
-  ```
+# Individual frontend checks
+npm run typecheck
+npm test
+npm run build
 
-- Frontend tests:
+# Worker checks
+npm run worker:typecheck
+npm --prefix services/media-worker test
+npm run worker:build
 
-  ```bash
-  npm test
-  ```
+# Database and RLS tests (requires Docker)
+supabase db reset --local
+supabase test db
 
-- Frontend build:
-
-  ```bash
-  npm run build
-  ```
-
-- Worker type check:
-
-  ```bash
-  npm run worker:typecheck
-  ```
-
-- Worker build:
-
-  ```bash
-  npm run worker:build
-  ```
+# Production dependency audits
+npm audit --omit=dev
+npm --prefix services/media-worker audit --omit=dev
+```
 
 ## CI
 
-GitHub Actions workflow:
+`.github/workflows/ci.yml` runs:
 
-- [` .github/workflows/ci.yml `](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/.github/workflows/ci.yml)
+- Frontend typecheck, unit tests, and production build
+- Worker typecheck, unit tests, and build
+- Local Supabase startup, all migrations, seed, and database/RLS tests
+- Frontend Docker build
+- Worker Docker build
 
-It currently runs:
+CI is the required database proof when Docker is unavailable on a development
+machine.
 
-- frontend typecheck, tests, and production build
-- worker typecheck and build
+## Migration Of Existing V1/V1.5 Data
 
-## Tests
+All V2 migrations are additive. Do not edit or rerun old migration files
+manually against production.
 
-Current local coverage includes:
+The migrations:
 
-- username validation
-- song creation payload
-- version-number derivation
-- single-update activity bump logic
-- album track-change non-bump logic
-- private-original rejection for public playback
-- browser-friendly public preview acceptance
-- Drive folder persistence helpers
+- backfill owner IDs and collaboration-safe version fields
+- keep existing Google Drive asset references valid
+- preserve public Single, EP, Album, feed, message, and notification data
+- add default privacy, appearance, quota, and cloud-connection records
+- migrate legacy release URLs into structured external links
+- move hidden locations out of the publicly readable profile row
 
-Relevant files:
+Before production migration:
 
-- [`src/lib/domain.test.ts`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/src/lib/domain.test.ts)
-- [`src/features/drive/google-drive-connection.test.ts`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/src/features/drive/google-drive-connection.test.ts)
-- [`supabase/tests/v1_rls.sql`](/Users/wlknbrch/Desktop/Dev%20Projects/MxShare/mxshare-web/supabase/tests/v1_rls.sql)
+```bash
+pg_dump --format=custom --no-owner --no-acl YOUR_DATABASE_URL > mxshare-before-v2.dump
+```
 
-## Manual test plan
+After `supabase db push`, verify one existing account, release, avatar, artwork,
+preview, conversation, and notification before inviting production traffic.
 
-1. Register a new user and confirm a profile row is created.
-2. Complete onboarding and confirm `/@username` resolves.
-3. Open Settings → Google Drive and connect Drive.
-4. Confirm the `MxShare` folder structure is created in the linked Drive.
-5. Upload a private source in the song workspace or single flow.
-6. Confirm the worker generates a preview automatically and that the preview becomes publicly playable.
-7. Confirm waveforms appear in feed cards and the global player for processed previews.
-8. Publish a first public single.
-9. Create an EP or album from multiple songs.
-10. Edit that release and confirm reorder / remap changes save in place.
-11. Open a public post from a second account and verify hearts, comments, replies, and edits behave correctly.
-12. Open Settings → Notifications, enable push in the browser, and send a test push.
-13. Confirm a different account still cannot read private originals or private song metadata.
+## Security Notes
 
-## Known current limits
+- Share and invite tokens are cryptographically random and only hashed at rest.
+- Protected read URLs are short lived and bounded by `PROTECTED_URL_TTL_SECONDS`.
+- New protected URL requests re-check follows, membership, visibility, blocks, and tokens.
+- Existing signed URLs remain valid only until their configured TTL expires.
+- Attachment signatures are inspected; SVG, HTML, archives, and executables are rejected.
+- Image previews are rotated, resized, and re-encoded to WebP to remove EXIF metadata.
+- Filenames are not used as storage paths and are sanitized for response headers.
+- Protected-media quota updates lock rows to avoid reservation races.
+- Admin access is based on server-controlled app roles, not editable profile fields.
+- Account deletion requires recent password authentication, deactivates first, and uses a grace period.
+- Cloud originals are not deleted during account cleanup unless a future explicit cloud-file deletion path is enabled.
 
-- no Dropbox, OneDrive, iCloud, S3, or custom storage backends
-- no group spaces or collaboration rooms
-- no media attachments in direct messages
-- no follower-only visibility
-- no playlists, monetization, DRM, or download restrictions
-- no native iOS or Android clients
-- DB/RLS SQL tests are present but not yet executed automatically inside local app commands
-- route-level social cards are still static app-wide metadata, not per-release Open Graph cards
+## Manual Acceptance
+
+Use at least three real accounts and complete this flow before calling a deployment
+fully accepted:
+
+1. Create an Album project and invite a second account as Editor.
+2. Accept the invite and confirm both accounts see the same project and project chat.
+3. Upload a version from the Editor's cloud provider.
+4. Confirm only a protected MP3 derivative reaches the VPS.
+5. Add feedback at a timestamp, reply, resolve it, and compare two versions.
+6. Publish a followers-only Single from the project.
+7. Confirm a follower can read and play it while a non-follower cannot.
+8. Unfollow and confirm a new protected-media request is rejected.
+9. Create and revoke an unlisted review link.
+10. Upload audio, image, and PDF attachments in a direct message.
+11. Confirm a non-member cannot request those attachments.
+12. Block a third account and verify follow, message, invite, comment, and heart restrictions.
+13. Change message privacy to mutual follows and test both one-way and mutual states.
+14. Switch to Light Theme, reload, sign out/in, and verify persistence.
+15. Connect a second cloud provider and migrate a disposable test asset.
+16. Verify credits, links, QR, embed, and dynamic social cards on a public release.
+17. Request a data export and download it before expiry.
+18. Run the complete CI workflow and inspect both Docker health checks.
+
+## Deliberate Limits
+
+V2 does not include native apps, DAW plugins, live audio, simultaneous DAW
+editing, stem separation, AI mixing/mastering, DRM, subscriptions, payment
+processing, music distribution, iCloud Drive, anonymous comments, forums, video
+calls, or a production S3 protected-media backend.
+
+Offline mode caches only bounded metadata and drafts. It never pretends that
+uploads, cloud access, publishing, membership changes, protected playback, or
+message sending succeeded while disconnected.

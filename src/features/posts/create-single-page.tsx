@@ -16,29 +16,32 @@ import { Textarea } from "@/components/ui/textarea";
 import { UploadDropzone } from "@/features/drive/components/upload-dropzone";
 import {
   createAssetRecord,
-  getCloudConnection,
+  getCloudConnections,
   updateAssetPublicLinks,
   upsertCloudConnection,
 } from "@/features/drive/api";
+import { getCloudStorageProvider } from "@/features/cloud-providers/provider-registry";
 import { buildCloudConnectionUpsert, getStoredDriveFolders } from "@/features/drive/google-drive-connection";
-import { useGoogleDriveProvider } from "@/features/drive/use-google-drive-provider";
+import type { GoogleDriveProvider } from "@/features/drive/providers/google-drive-provider";
 import { createSong, getLibraryDashboard, createSongVersion } from "@/features/library/api";
 import { MediaProcessingStatusCard } from "@/features/media-processing/media-processing-status-card";
 import {
   generateAutomaticPreviewFromSourceAsset,
+  generateProtectedPreviewFromSourceAsset,
   uploadOriginalWithAutomaticPreview,
 } from "@/features/media-processing/automatic-preview";
 import {
   createSinglePost,
   findSinglePostBySongId,
   publishSingleVersion,
+  updateSinglePostForPublish,
 } from "@/features/posts/api";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { getArtworkAssetUrls } from "@/lib/asset-urls";
 import { productionStages } from "@/lib/constants";
 import { queryClient } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
-import type { Asset, MediaProcessingJob, Song } from "@/types/domain";
+import type { Asset, CloudProvider, MediaProcessingJob, Song, Visibility } from "@/types/domain";
 
 const steps = [
   { id: 1, label: "Single info" },
@@ -49,7 +52,6 @@ const steps = [
 
 export function CreateSinglePage() {
   const viewer = useAppViewer();
-  const provider = useGoogleDriveProvider();
   const navigate = useNavigate();
   const artworkInputId = useId();
   const artworkInputRef = useRef<HTMLInputElement | null>(null);
@@ -61,31 +63,45 @@ export function CreateSinglePage() {
   const [productionStage, setProductionStage] = useState("Demo");
   const [description, setDescription] = useState("");
   const [postTitle, setPostTitle] = useState("");
-  const [visibility, setVisibility] = useState<"private" | "public">("public");
+  const [visibility, setVisibility] = useState<Visibility>("public");
   const [uploadedOriginal, setUploadedOriginal] = useState<Asset | null>(null);
   const [uploadedPreview, setUploadedPreview] = useState<Asset | null>(null);
   const [uploadedArtwork, setUploadedArtwork] = useState<Asset | null>(null);
   const [mediaProcessingJob, setMediaProcessingJob] = useState<MediaProcessingJob | null>(null);
   const [mediaProcessingError, setMediaProcessingError] = useState<string | null>(null);
+  const [uploadProviderId, setUploadProviderId] = useState<CloudProvider>("google_drive");
+  const initializedDefaultProvider = useRef(false);
+  const provider = getCloudStorageProvider(uploadProviderId);
 
   const libraryQuery = useQuery({
     queryKey: ["library", viewer.userId],
     queryFn: () => getLibraryDashboard(viewer.userId!),
     enabled: Boolean(viewer.userId),
   });
-  const connectionQuery = useQuery({
-    queryKey: ["cloud-connection", viewer.userId],
-    queryFn: () => getCloudConnection(viewer.userId!),
+  const connectionsQuery = useQuery({
+    queryKey: ["cloud-connections", viewer.userId],
+    queryFn: () => getCloudConnections(viewer.userId!),
     enabled: Boolean(viewer.userId),
   });
-  const storedDriveFolders = getStoredDriveFolders(connectionQuery.data);
+  const activeConnection = (connectionsQuery.data ?? []).find((entry) => entry.provider === uploadProviderId) ?? null;
+  const storedDriveFolders = getStoredDriveFolders(activeConnection);
 
   useEffect(() => {
-    provider.hydrateConnection({
-      email: connectionQuery.data?.provider_account_email ?? null,
+    if (initializedDefaultProvider.current || !connectionsQuery.data?.length) return;
+    initializedDefaultProvider.current = true;
+    setUploadProviderId(
+      connectionsQuery.data.find((entry) => entry.is_default)?.provider ?? connectionsQuery.data[0].provider,
+    );
+  }, [connectionsQuery.data]);
+
+  useEffect(() => {
+    if (uploadProviderId !== "google_drive") return;
+    const googleProvider = getCloudStorageProvider("google_drive") as GoogleDriveProvider;
+    googleProvider.hydrateConnection({
+      email: activeConnection?.provider_account_email ?? null,
       folders: storedDriveFolders,
     });
-  }, [connectionQuery.data?.provider_account_email, provider, storedDriveFolders]);
+  }, [activeConnection?.provider_account_email, storedDriveFolders, uploadProviderId]);
 
   const availableArtwork = useMemo(
     () => (libraryQuery.data?.assets ?? []).filter((asset) => asset.asset_type === "cover_artwork"),
@@ -114,20 +130,31 @@ export function CreateSinglePage() {
     ? libraryQuery.data?.assets.find((asset) => asset.id === selectedSong.default_artwork_asset_id) ?? null
     : null;
 
-  async function refreshDriveSetup() {
+  async function refreshDriveSetup(providerId: CloudProvider = uploadProviderId) {
     if (!viewer.userId) {
       throw new Error("Please sign in first.");
     }
 
-    const result = await provider.connect();
-    await upsertCloudConnection(buildCloudConnectionUpsert(viewer.userId, result));
-    await queryClient.invalidateQueries({ queryKey: ["cloud-connection", viewer.userId] });
+    const activeProvider = getCloudStorageProvider(providerId);
+    const result = await activeProvider.connect();
+    const currentConnection = (connectionsQuery.data ?? []).find((entry) => entry.provider === providerId);
+    await upsertCloudConnection({
+      ...buildCloudConnectionUpsert(viewer.userId, result),
+      is_default: currentConnection?.is_default ?? (connectionsQuery.data ?? []).length === 0,
+    });
+    await queryClient.invalidateQueries({ queryKey: ["cloud-connections", viewer.userId] });
     return result.folders;
   }
 
-  async function resolveDriveFolder(target: "originals" | "previews" | "artwork") {
-    const cachedFolders = provider.getCachedFolders();
-    const activeFolders = cachedFolders ?? storedDriveFolders ?? (await refreshDriveSetup());
+  async function resolveDriveFolder(
+    target: "originals" | "previews" | "artwork",
+    providerId: CloudProvider = uploadProviderId,
+  ) {
+    const targetProvider = getCloudStorageProvider(providerId);
+    const hasSession = await targetProvider.restoreSession();
+    const activeFolders = hasSession
+      ? await targetProvider.ensureRootStructure()
+      : await refreshDriveSetup(providerId);
 
     if (target === "originals") {
       return activeFolders.audioOriginalsFolderId;
@@ -138,6 +165,14 @@ export function CreateSinglePage() {
     }
 
     return activeFolders.artworkFolderId;
+  }
+
+  async function resolveProviderForAsset(asset: Asset) {
+    const assetProvider = getCloudStorageProvider(asset.provider);
+    if (!(await assetProvider.restoreSession())) {
+      await refreshDriveSetup(asset.provider);
+    }
+    return assetProvider;
   }
 
   function handleArtworkPickerKeyDown(event: KeyboardEvent<HTMLLabelElement>) {
@@ -246,12 +281,35 @@ export function CreateSinglePage() {
           },
         }));
 
-      if (!existingPost) {
+      if (existingPost) {
+        await updateSinglePostForPublish({
+          postId: existingPost.id,
+          featuredVersionId: version.id,
+          title: postTitle.trim() || song.title,
+          description: description.trim(),
+          artworkAssetId: uploadedArtwork?.id ?? selectedSongArtworkAsset?.id ?? null,
+          visibility,
+        });
+      } else {
         await queryClient.invalidateQueries({ queryKey: ["post", post.id] });
       }
 
       if (visibility === "public") {
         await publishSingleVersion({ versionId: version.id });
+      } else if (
+        (visibility === "followers" || visibility === "unlisted")
+        && !version.protected_preview_asset_id
+      ) {
+        setMediaProcessingError(null);
+        const protectedJob = await generateProtectedPreviewFromSourceAsset({
+          provider: await resolveProviderForAsset(selectedOriginalAsset),
+          sourceAsset: selectedOriginalAsset,
+          songVersionId: version.id,
+          purpose: "post_preview",
+          postId: post.id,
+          onJobChange: setMediaProcessingJob,
+        });
+        setMediaProcessingJob(protectedJob);
       }
 
       return post;
@@ -274,7 +332,7 @@ export function CreateSinglePage() {
 
   const handleArtworkUpload = async (file: File) => {
     if (!viewer.userId) {
-      throw new Error("Connect Google Drive first.");
+      throw new Error("Connect a cloud provider first.");
     }
 
     const artworkFolderId = await resolveDriveFolder("artwork");
@@ -282,7 +340,7 @@ export function CreateSinglePage() {
       file,
       parentFolderId: artworkFolderId,
     });
-    const publicPreview = await provider.makePublicPreview(upload.fileId);
+    const publicPreview = await provider.createPublicPreview(upload.fileId);
     const asset = await createAssetRecord({
       ownerId: viewer.userId,
       assetType: "cover_artwork",
@@ -353,7 +411,7 @@ export function CreateSinglePage() {
                     <div
                       className={`flex size-11 items-center justify-center rounded-full border ${
                         step >= entry.id
-                          ? "border-accent/35 bg-[linear-gradient(135deg,rgba(157,92,255,0.96),rgba(193,126,255,0.88))] text-white shadow-[0_12px_28px_rgba(120,65,231,0.3)]"
+                          ? "border-accent/35 bg-[linear-gradient(135deg,rgba(var(--accent-rgb),0.96),var(--accent-strong))] text-white shadow-[0_12px_28px_rgba(var(--accent-rgb),0.3)]"
                           : "border-border bg-white/[0.03] text-muted-foreground"
                       }`}
                     >
@@ -423,22 +481,48 @@ export function CreateSinglePage() {
 
           {step === 2 ? (
             <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div>
+                    <CardTitle>Upload provider</CardTitle>
+                    <CardDescription className="mt-2 text-base leading-7">
+                      New originals, generated previews, and artwork use this provider. Existing assets keep their own provider.
+                    </CardDescription>
+                  </div>
+                </CardHeader>
+                <Select
+                  value={uploadProviderId}
+                  onChange={(event) => setUploadProviderId(event.currentTarget.value as CloudProvider)}
+                >
+                  {(connectionsQuery.data ?? []).map((connection) => (
+                    <option key={connection.id} value={connection.provider}>
+                      {connection.provider === "google_drive"
+                        ? "Google Drive"
+                        : connection.provider === "dropbox"
+                          ? "Dropbox"
+                          : "OneDrive"}
+                      {connection.is_default ? " · default" : ""}
+                    </option>
+                  ))}
+                </Select>
+              </Card>
+
               {!storedDriveFolders ? (
                 <Card>
                   <CardHeader>
                     <div>
-                      <CardTitle>Google Drive setup required</CardTitle>
+                      <CardTitle>Cloud storage setup required</CardTitle>
                       <CardDescription className="mt-2 text-base leading-7">
-                        Prepare Drive once in Settings before uploading. MxShare will create its dedicated folder structure
-                        there and reuse it for future singles.
+                        Connect the selected provider once in Settings. MxShare creates a dedicated folder structure
+                        there and reuses it for future uploads.
                       </CardDescription>
                     </div>
                   </CardHeader>
                   <div className="flex flex-wrap gap-3">
                     <Link to="/settings/storage">
-                      <Button>Open Google Drive setup</Button>
+                      <Button>Open cloud storage setup</Button>
                     </Link>
-                    <Button variant="ghost" onClick={() => void connectionQuery.refetch()}>
+                    <Button variant="ghost" onClick={() => void connectionsQuery.refetch()}>
                       Refresh status
                     </Button>
                   </div>
@@ -527,12 +611,13 @@ export function CreateSinglePage() {
                           setMediaProcessingJob(null);
 
                           try {
-                            const previewFolderId = await resolveDriveFolder("previews");
+                            const sourceProvider = await resolveProviderForAsset(sourceAsset);
+                            const sourcePreviewFolderId = await resolveDriveFolder("previews", sourceAsset.provider);
                             const result = await generateAutomaticPreviewFromSourceAsset({
                               ownerId,
-                              provider,
+                              provider: sourceProvider,
                               sourceAsset,
-                              previewFolderId,
+                              previewFolderId: sourcePreviewFolderId,
                               onJobChange: setMediaProcessingJob,
                             });
                             setUploadedPreview(result.previewAsset);
@@ -659,6 +744,8 @@ export function CreateSinglePage() {
                   <span className="text-sm font-medium">Visibility</span>
                   <Select value={visibility} onChange={(event) => setVisibility(event.currentTarget.value as typeof visibility)}>
                     <option value="public">Public</option>
+                    <option value="followers">Followers only</option>
+                    <option value="unlisted">Invite link only</option>
                     <option value="private">Private</option>
                   </Select>
                 </label>
@@ -695,6 +782,8 @@ export function CreateSinglePage() {
                       ? uploadedPreview
                         ? "A generated public preview asset is attached."
                         : "Generate the public preview from the private original before publishing."
+                      : visibility === "followers" || visibility === "unlisted"
+                        ? "MxShare will create a protected MP3 after the release shell is saved."
                       : "Private release: the generated preview can be attached later."}
                   </p>
                 </div>
@@ -702,7 +791,7 @@ export function CreateSinglePage() {
 
               <div className="mt-5 flex flex-wrap gap-3">
                 <Button onClick={() => void publishMutation.mutateAsync()} disabled={publishMutation.isPending}>
-                  {visibility === "public" ? "Publish single" : "Save private single draft"}
+                  {visibility === "private" ? "Save private single draft" : "Publish single"}
                 </Button>
                 <Badge
                   variant="neutral"
@@ -755,7 +844,7 @@ export function CreateSinglePage() {
                     className="aspect-square w-full object-cover"
                   />
                 ) : (
-                  <div className="flex aspect-square items-center justify-center bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.24),rgba(255,255,255,0.02)_60%,rgba(255,255,255,0.01))]">
+                  <div className="flex aspect-square items-center justify-center bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.24),rgba(255,255,255,0.02)_60%,rgba(255,255,255,0.01))]">
                     <Disc3 className="size-14 text-accent-secondary/70" />
                   </div>
                 )}
@@ -776,7 +865,8 @@ export function CreateSinglePage() {
                 <p className="font-medium">Privacy notes</p>
               </div>
               <div className="space-y-2 text-sm leading-7 text-muted-foreground">
-                <p>Originals stay private in your Google Drive.</p>
+                <p>Originals stay private in your selected personal cloud provider.</p>
+                <p>Each new upload uses the provider selected for this release.</p>
                 <p>Only the preview and artwork become public when you choose public visibility.</p>
                 <p>You can attach a new version later without losing the post-level conversation.</p>
               </div>
@@ -793,8 +883,8 @@ export function CreateSinglePage() {
                 </div>
                 <div className="rounded-[20px] border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-sm leading-7 text-muted-foreground">
                   {storedDriveFolders
-                    ? "Drive setup looks healthy for this release."
-                    : "Complete the Drive setup before uploads can move forward cleanly."}
+                    ? "The selected provider is ready for this release."
+                    : "Connect the selected provider before uploads can move forward cleanly."}
                 </div>
                 <div className="rounded-[20px] border border-white/[0.06] bg-white/[0.02] px-4 py-3 text-sm leading-7 text-muted-foreground">
                   {visibility === "public"

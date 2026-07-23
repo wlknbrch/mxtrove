@@ -1,5 +1,8 @@
 import { env, envState } from "@/lib/env";
 
+const LOCAL_APP_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+const DEV_SERVICE_WORKER_RESET_KEY = "mxshare:dev-service-worker-reset";
+
 function decodeBase64Url(value: string) {
   const padding = "=".repeat((4 - (value.length % 4)) % 4);
   const normalized = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -38,11 +41,48 @@ export function supportsWebPush() {
 }
 
 export async function registerAppServiceWorker() {
-  if (!env.pwaEnabled || !supportsWebPush()) {
+  if (
+    !env.pwaEnabled ||
+    !supportsWebPush() ||
+    typeof window === "undefined" ||
+    LOCAL_APP_HOSTS.has(window.location.hostname)
+  ) {
     return null;
   }
 
   return navigator.serviceWorker.register("/sw.js", { scope: "/" });
+}
+
+export async function resetDevelopmentServiceWorkers() {
+  if (
+    typeof window === "undefined" ||
+    !("serviceWorker" in navigator) ||
+    !LOCAL_APP_HOSTS.has(window.location.hostname)
+  ) {
+    return false;
+  }
+
+  const registrations = await navigator.serviceWorker.getRegistrations();
+  if (registrations.length === 0) {
+    window.sessionStorage.removeItem(DEV_SERVICE_WORKER_RESET_KEY);
+    return false;
+  }
+
+  await Promise.all(registrations.map((registration) => registration.unregister()));
+
+  if ("caches" in window) {
+    const cacheKeys = await window.caches.keys();
+    await Promise.all(cacheKeys.map((cacheKey) => window.caches.delete(cacheKey)));
+  }
+
+  if (!window.sessionStorage.getItem(DEV_SERVICE_WORKER_RESET_KEY)) {
+    window.sessionStorage.setItem(DEV_SERVICE_WORKER_RESET_KEY, "1");
+    window.location.reload();
+    return true;
+  }
+
+  window.sessionStorage.removeItem(DEV_SERVICE_WORKER_RESET_KEY);
+  return false;
 }
 
 export async function getCurrentPushSubscription() {

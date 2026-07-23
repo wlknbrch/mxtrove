@@ -1,7 +1,19 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
-import { FolderOpen, Heart, MessageCircle, PencilLine, Play, Reply, SkipForward, Trash2 } from "lucide-react";
+import {
+  Code2,
+  Copy,
+  ExternalLink,
+  FolderOpen,
+  Heart,
+  Link2,
+  MessageCircle,
+  PencilLine,
+  Play,
+  Reply,
+  SkipForward,
+  Trash2,
+} from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -14,20 +26,25 @@ import { PlaybackDuration } from "@/components/ui/playback-duration";
 import { ResolvedImage } from "@/components/ui/resolved-image";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppViewer } from "@/hooks/use-app-viewer";
+import { useLocalDraft } from "@/hooks/use-local-draft";
 import { getArtworkAssetUrls } from "@/lib/asset-urls";
 import { queryClient } from "@/lib/query-client";
 import { cn, formatDuration, formatRelativeTime } from "@/lib/utils";
 
 import {
   addCommentToPost,
+  createPostShareLink,
   deleteCommentOnPost,
   deletePost,
   getResolvedPostById,
+  listPostShareLinks,
+  revokePostShareLink,
   toggleVersionHeart,
   togglePostHeart,
   updateCommentOnPost,
 } from "@/features/posts/api";
 import { buildPostPlaybackTracks, getPlaybackQueueDurationSeconds } from "@/features/posts/post-playback";
+import { ReleaseQrCode } from "@/features/posts/release-qr-code";
 import type { ResolvedComment } from "@/features/posts/types";
 
 function buildCommentThreads(comments: ResolvedComment[]) {
@@ -127,16 +144,48 @@ export function PostDetailPage() {
   const viewer = useAppViewer();
   const navigate = useNavigate();
   const enqueue = usePlayerStore((state) => state.enqueue);
-  const form = useForm<{ body: string }>({ defaultValues: { body: "" } });
+  const draftOwner = viewer.userId ?? "guest";
+  const [commentDraft, setCommentDraft, clearCommentDraft] = useLocalDraft(
+    `mxshare:draft:post-comment:${draftOwner}:${postId}`,
+    "",
+  );
+  const [replyDrafts, setReplyDrafts] = useLocalDraft<Record<string, string>>(
+    `mxshare:draft:post-replies:${draftOwner}:${postId}`,
+    {},
+  );
   const [replyTargetId, setReplyTargetId] = useState<string | null>(null);
-  const [replyBody, setReplyBody] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingBody, setEditingBody] = useState("");
+  const [freshShareUrl, setFreshShareUrl] = useState<string | null>(null);
 
   const postQuery = useQuery({
     queryKey: ["post", postId],
     queryFn: () => getResolvedPostById(postId, viewer.userId),
     enabled: Boolean(postId),
+  });
+  const shareLinksQuery = useQuery({
+    queryKey: ["post-share-links", postId],
+    queryFn: () => listPostShareLinks(postId),
+    enabled: Boolean(postId && postQuery.data?.owner?.id === viewer.userId),
+  });
+  const createShareMutation = useMutation({
+    mutationFn: () => createPostShareLink({ postId }),
+    onSuccess: async ({ share_token: token }) => {
+      const url = `${window.location.origin}/share/${token}`;
+      setFreshShareUrl(url);
+      await navigator.clipboard.writeText(url);
+      await queryClient.invalidateQueries({ queryKey: ["post-share-links", postId] });
+      toast.success("Private share link copied. This token is only shown once.");
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not create a share link."),
+  });
+  const revokeShareMutation = useMutation({
+    mutationFn: revokePostShareLink,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["post-share-links", postId] });
+      toast.success("Share link revoked.");
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not revoke the share link."),
   });
 
   const commentMutation = useMutation({
@@ -151,10 +200,17 @@ export function PostDetailPage() {
         values: { body: input.body, parent_comment_id: input.parentCommentId ?? null },
       });
     },
-    onSuccess: async () => {
-      form.reset();
+    onSuccess: async (_result, input) => {
+      if (input.parentCommentId) {
+        setReplyDrafts((current) => {
+          const next = { ...current };
+          delete next[input.parentCommentId!];
+          return next;
+        });
+      } else {
+        clearCommentDraft();
+      }
       setReplyTargetId(null);
-      setReplyBody("");
       await queryClient.invalidateQueries({ queryKey: ["post", postId] });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["home-feed"] }),
@@ -350,6 +406,23 @@ export function PostDetailPage() {
               </Button>
             ) : null}
             <Button
+              variant="secondary"
+              onClick={async () => {
+                if (item.post.visibility === "unlisted" && isOwnPost) {
+                  createShareMutation.mutate();
+                  return;
+                }
+                const shareUrl = item.post.visibility === "public"
+                  ? `${window.location.origin}/social/post/${item.post.id}`
+                  : window.location.href;
+                await navigator.clipboard.writeText(shareUrl);
+                toast.success("Release link copied.");
+              }}
+            >
+              <Copy className="size-4" />
+              {item.post.visibility === "unlisted" && isOwnPost ? "Create share link" : "Copy link"}
+            </Button>
+            <Button
               variant={item.viewerHasHearted ? "primary" : "secondary"}
               onClick={() => void heartMutation.mutateAsync()}
               disabled={heartMutation.isPending || isOwnPost}
@@ -471,7 +544,7 @@ export function PostDetailPage() {
             </div>
           </div>
           {!item.single ? (
-            <div className="border-t border-white/[0.08] bg-[linear-gradient(180deg,rgba(157,92,255,0.08),rgba(255,255,255,0.01))] px-5 py-5 md:px-6 md:py-6">
+            <div className="border-t border-white/[0.08] bg-[linear-gradient(180deg,rgba(var(--accent-rgb),0.08),rgba(255,255,255,0.01))] px-5 py-5 md:px-6 md:py-6">
               <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div>
                   <p className="font-medium">Tracklist</p>
@@ -502,8 +575,8 @@ export function PostDetailPage() {
                           {track.track.track_number}
                         </div>
                         <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="truncate font-medium">{track.track.track_title}</p>
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <p className="break-words font-medium">{track.track.track_title}</p>
                             <Badge variant="neutral">{track.version?.version_label ?? "Unmapped"}</Badge>
                           </div>
                           <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
@@ -595,7 +668,6 @@ export function PostDetailPage() {
                           size="sm"
                           onClick={() => {
                             setReplyTargetId(replyTargetId === comment.id ? null : comment.id);
-                            setReplyBody("");
                           }}
                         >
                           <Reply className="size-4" />
@@ -669,15 +741,21 @@ export function PostDetailPage() {
                       onSubmit={async (event) => {
                         event.preventDefault();
                         await commentMutation.mutateAsync({
-                          body: replyBody,
+                          body: replyDrafts[comment.id] ?? "",
                           parentCommentId: comment.id,
                         });
                       }}
                     >
                       <Textarea
                         placeholder={`Reply to ${comment.author?.display_name ?? "this artist"}`}
-                        value={replyBody}
-                        onChange={(event) => setReplyBody(event.currentTarget.value)}
+                        value={replyDrafts[comment.id] ?? ""}
+                        onChange={(event) => {
+                          const body = event.currentTarget.value;
+                          setReplyDrafts((current) => ({
+                            ...current,
+                            [comment.id]: body,
+                          }));
+                        }}
                       />
                       <div className="flex justify-end gap-2">
                         <Button
@@ -685,12 +763,14 @@ export function PostDetailPage() {
                           variant="ghost"
                           onClick={() => {
                             setReplyTargetId(null);
-                            setReplyBody("");
                           }}
                         >
                           Cancel
                         </Button>
-                        <Button type="submit" disabled={commentMutation.isPending || !replyBody.trim()}>
+                        <Button
+                          type="submit"
+                          disabled={commentMutation.isPending || !(replyDrafts[comment.id] ?? "").trim()}
+                        >
                           Reply
                         </Button>
                       </div>
@@ -789,17 +869,168 @@ export function PostDetailPage() {
 
           <form
             className="mt-5 grid gap-3"
-            onSubmit={form.handleSubmit(async (values) => {
-              await commentMutation.mutateAsync({ body: values.body });
-            })}
+            onSubmit={async (event) => {
+              event.preventDefault();
+              await commentMutation.mutateAsync({ body: commentDraft });
+            }}
           >
-            <Textarea placeholder="Leave feedback on the release as a whole" {...form.register("body")} />
+            <Textarea
+              placeholder="Leave feedback on the release as a whole"
+              value={commentDraft}
+              onChange={(event) => setCommentDraft(event.currentTarget.value)}
+            />
             <div className="flex justify-end">
-              <Button type="submit" disabled={commentMutation.isPending}>Comment</Button>
+              {viewer.userId ? (
+                <Button type="submit" disabled={commentMutation.isPending || !commentDraft.trim()}>
+                  Comment
+                </Button>
+              ) : (
+                <Link to="/login">
+                  <Button type="button">Sign in to comment</Button>
+                </Link>
+              )}
             </div>
           </form>
         </Card>
       </div>
+
+      {item.post.release_notes || item.credits.length || item.externalLinks.length ? (
+        <div className="grid gap-5 lg:grid-cols-3">
+          {item.post.release_notes ? (
+            <Card>
+              <p className="text-xs uppercase tracking-[0.22em] text-accent-secondary">Release notes</p>
+              <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-muted-foreground">{item.post.release_notes}</p>
+            </Card>
+          ) : null}
+          {item.credits.length ? (
+            <Card>
+              <h2 className="font-display text-3xl">Credits</h2>
+              <div className="mt-5 space-y-3">
+                {item.credits.map((credit) => (
+                  <div key={credit.id} className="flex items-center justify-between gap-4">
+                    <span className="truncate">{credit.display_name}</span>
+                    <Badge variant="neutral">{credit.role.replace("_", " ")}</Badge>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ) : null}
+          {item.externalLinks.length ? (
+            <Card>
+              <h2 className="font-display text-3xl">Release links</h2>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {item.externalLinks.map((link) => (
+                  <a key={link.id} href={link.url} target="_blank" rel="noreferrer">
+                    <Button size="sm" variant="secondary">
+                      {link.label}
+                      <ExternalLink className="size-3.5" />
+                    </Button>
+                  </a>
+                ))}
+              </div>
+            </Card>
+          ) : null}
+        </div>
+      ) : null}
+
+      {item.post.visibility === "public" ? (
+        <Card>
+          <div className="grid items-center gap-6 md:grid-cols-[minmax(0,1fr)_auto]">
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em] text-accent-secondary">
+                Take this release with you
+              </p>
+              <h2 className="mt-2 font-display text-3xl">Scan, share, or embed</h2>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
+                The QR code is generated in this browser. MxShare does not send the release URL to an
+                external QR service.
+              </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(
+                      `${window.location.origin}/social/post/${item.post.id}`,
+                    );
+                    toast.success("Release link copied.");
+                  }}
+                >
+                  <Copy className="size-4" />
+                  Copy release link
+                </Button>
+                {item.post.allow_embed ? (
+                  <Button
+                    variant="secondary"
+                    onClick={async () => {
+                      const code = `<iframe src="${window.location.origin}/embed/post/${item.post.id}" loading="lazy" allow="autoplay"></iframe>`;
+                      await navigator.clipboard.writeText(code);
+                      toast.success("Embed code copied.");
+                    }}
+                  >
+                    <Code2 className="size-4" />
+                    Copy embed
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+            <ReleaseQrCode
+              url={`${window.location.origin}/social/post/${item.post.id}`}
+              title={item.post.title}
+            />
+          </div>
+        </Card>
+      ) : null}
+
+      {isOwnPost ? (
+        <Card>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.22em] text-accent-secondary">Sharing</p>
+              <h2 className="mt-2 font-display text-3xl">Release access</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Private tokens are hash-only. Save a newly generated URL now because MxShare cannot reveal it later.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={() => createShareMutation.mutate()} disabled={createShareMutation.isPending}>
+                <Link2 className="size-4" />
+                New private link
+              </Button>
+            </div>
+          </div>
+          {freshShareUrl ? (
+            <div className="mt-4 flex items-center gap-3 rounded-[18px] border border-success/20 bg-success/5 px-4 py-3">
+              <span className="min-w-0 flex-1 truncate text-sm">{freshShareUrl}</span>
+              <Button size="sm" variant="ghost" onClick={() => void navigator.clipboard.writeText(freshShareUrl)}>
+                <Copy className="size-4" />
+              </Button>
+            </div>
+          ) : null}
+          {(shareLinksQuery.data ?? []).length ? (
+            <div className="mt-5 space-y-2">
+              {shareLinksQuery.data!.map((link) => (
+                <div key={link.id} className="flex flex-wrap items-center gap-3 rounded-[18px] border border-border px-4 py-3">
+                  <Badge variant={link.is_active ? "success" : "neutral"}>{link.is_active ? "active" : "revoked"}</Badge>
+                  <span className="text-sm text-muted-foreground">{link.use_count} opens</span>
+                  <span className="text-sm text-muted-foreground">
+                    {link.expires_at ? `expires ${new Date(link.expires_at).toLocaleDateString()}` : "no expiry"}
+                  </span>
+                  {link.is_active ? (
+                    <Button
+                      className="ml-auto"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => revokeShareMutation.mutate(link.id)}
+                    >
+                      Revoke
+                    </Button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </Card>
+      ) : null}
     </div>
   );
 }

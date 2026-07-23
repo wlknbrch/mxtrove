@@ -122,7 +122,7 @@ export function ProfileSettingsPage() {
             </CardHeader>
 
             <div className="space-y-4">
-              <div className="rounded-[24px] border border-accent/16 bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.18),rgba(255,255,255,0.02)_58%,rgba(255,255,255,0.01))] p-5">
+              <div className="rounded-[24px] border border-accent/16 bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.18),rgba(255,255,255,0.02)_58%,rgba(255,255,255,0.01))] p-5">
                 <p className="font-display text-3xl tracking-[-0.03em]">{profile?.display_name ?? "Your display name"}</p>
                 <p className="mt-2 text-sm text-muted-foreground">
                   {profile?.username ? `@${profile.username}` : "Add a route-safe username"}

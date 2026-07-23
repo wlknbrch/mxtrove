@@ -1,15 +1,10 @@
 import { useMemo } from "react";
 
-import { GoogleDriveProvider } from "@/features/drive/providers/google-drive-provider";
-
-let sharedGoogleDriveProvider: GoogleDriveProvider | null = null;
+import { getCloudStorageProvider } from "@/features/cloud-providers/provider-registry";
+import type { GoogleDriveProvider } from "@/features/drive/providers/google-drive-provider";
 
 export function useGoogleDriveProvider() {
   return useMemo(() => {
-    if (!sharedGoogleDriveProvider) {
-      sharedGoogleDriveProvider = new GoogleDriveProvider();
-    }
-
-    return sharedGoogleDriveProvider;
+    return getCloudStorageProvider("google_drive") as GoogleDriveProvider;
   }, []);
 }

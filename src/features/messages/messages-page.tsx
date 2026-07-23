@@ -8,20 +8,28 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAppViewer } from "@/hooks/use-app-viewer";
+import { useOfflineSnapshot } from "@/hooks/use-offline-snapshot";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 
 import { listConversations } from "@/features/messages/api";
 import { ConversationRail } from "@/features/messages/messages-shell";
 
 export function MessagesPage() {
   const viewer = useAppViewer();
+  const isOnline = useOnlineStatus();
   const [search, setSearch] = useState("");
   const conversationsQuery = useQuery({
     queryKey: ["conversations", viewer.userId],
     queryFn: () => listConversations(viewer.userId!),
     enabled: Boolean(viewer.userId),
   });
-  const unreadThreads = (conversationsQuery.data ?? []).filter((item) => item.unreadCount > 0).length;
-  const unreadMessages = (conversationsQuery.data ?? []).reduce((sum, item) => sum + item.unreadCount, 0);
+  const conversationsSnapshot = useOfflineSnapshot(
+    `mxshare:offline:v2:conversations:${viewer.userId ?? "guest"}`,
+    conversationsQuery.data,
+  );
+  const conversations = conversationsQuery.data ?? (!isOnline ? conversationsSnapshot : null) ?? [];
+  const unreadThreads = conversations.filter((item) => item.unreadCount > 0).length;
+  const unreadMessages = conversations.reduce((sum, item) => sum + item.unreadCount, 0);
 
   return (
     <div className="space-y-8">
@@ -35,10 +43,15 @@ export function MessagesPage() {
           </Link>
         }
       />
+      {!isOnline && conversationsSnapshot ? (
+        <div className="rounded-[18px] border border-warning/25 bg-warning/8 px-4 py-3 text-sm text-warning">
+          Showing the last saved inbox overview. Messages cannot be sent while offline.
+        </div>
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
         <ConversationRail
-          items={conversationsQuery.data ?? []}
+          items={conversations}
           search={search}
           onSearchChange={setSearch}
           title="Inbox"
@@ -47,10 +60,10 @@ export function MessagesPage() {
 
         <div className="space-y-6">
           <Card className="overflow-hidden">
-            <div className="rounded-[28px] border border-accent/18 bg-[radial-gradient(circle_at_top_right,rgba(157,92,255,0.24),rgba(255,255,255,0.02)_60%,rgba(255,255,255,0.01))] p-6">
+            <div className="rounded-[28px] border border-accent/18 bg-[radial-gradient(circle_at_top_right,rgba(var(--accent-rgb),0.24),rgba(255,255,255,0.02)_60%,rgba(255,255,255,0.01))] p-6">
               <div className="flex flex-wrap items-center gap-3">
                 <Badge variant="accent">Message flow</Badge>
-                <Badge variant="neutral">{conversationsQuery.data?.length ?? 0} active threads</Badge>
+                <Badge variant="neutral">{conversations.length} active threads</Badge>
                 <Badge variant="neutral">{unreadMessages} unread messages</Badge>
               </div>
               <p className="mt-5 max-w-3xl font-display text-4xl leading-[1.02] tracking-[-0.04em] md:text-[3.4rem]">

@@ -11,6 +11,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Tabs } from "@/components/ui/tabs";
+import { getCloudStorageProvider } from "@/features/cloud-providers/provider-registry";
 import {
   getCloudConnection,
   deleteAssetRecord,
@@ -99,7 +100,11 @@ export function LibraryPage() {
       }
 
       try {
-        await provider.deleteFile(asset.remote_file_id);
+        const assetProvider = getCloudStorageProvider(asset.provider);
+        if (!(await assetProvider.restoreSession())) {
+          await assetProvider.connect();
+        }
+        await assetProvider.deleteFile(asset.remote_file_id);
       } catch (error) {
         const message = error instanceof Error ? error.message.toLowerCase() : "";
         if (!message.includes("could not find") && !message.includes("not find")) {
@@ -507,6 +512,27 @@ export function LibraryPage() {
                     <Badge variant={asset.access_mode === "public" ? "accent" : "neutral"}>
                       {asset.access_mode}
                     </Badge>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        void (async () => {
+                          try {
+                            const assetProvider = getCloudStorageProvider(asset.provider);
+                            if (!(await assetProvider.restoreSession())) {
+                              await assetProvider.connect();
+                            }
+                            const url = asset.view_url ?? await assetProvider.getViewUrl(asset.remote_file_id);
+                            if (!url) throw new Error("This provider did not return a file view URL.");
+                            window.open(url, "_blank", "noopener,noreferrer");
+                          } catch (error) {
+                            toast.error(error instanceof Error ? error.message : "Could not open this cloud asset.");
+                          }
+                        })();
+                      }}
+                    >
+                      <ExternalLink className="size-4" />
+                      Open in {asset.provider === "google_drive" ? "Drive" : asset.provider === "dropbox" ? "Dropbox" : "OneDrive"}
+                    </Button>
                     <Button
                       variant="ghost"
                       onClick={() => {

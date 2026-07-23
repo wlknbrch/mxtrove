@@ -30,6 +30,28 @@ function getNotificationHeading(entry: ResolvedNotification) {
       return "Release update";
     case "message":
       return "Direct message";
+    case "project_invite":
+      return "Project invitation";
+    case "project_invite_accepted":
+      return "Invitation accepted";
+    case "project_member_removed":
+      return "Project member update";
+    case "project_role_changed":
+      return "Project role changed";
+    case "project_feedback":
+      return "New project feedback";
+    case "project_feedback_reply":
+      return "Feedback reply";
+    case "project_feedback_resolved":
+      return "Feedback resolved";
+    case "project_version_uploaded":
+      return "New project version";
+    case "project_status_changed":
+      return "Project status changed";
+    case "message_attachment":
+      return "New attachment";
+    case "share_link_review":
+      return "Share-link review";
     default:
       return "Notification";
   }
@@ -53,12 +75,41 @@ function getNotificationMessage(entry: ResolvedNotification) {
       return `${actorName} published or updated a release you might want to hear.`;
     case "message":
       return `${actorName} sent you a direct message.`;
+    case "project_invite":
+      return `${actorName} invited you to collaborate on a project.`;
+    case "project_invite_accepted":
+      return `${actorName} accepted a project invitation.`;
+    case "project_member_removed":
+      return "A collaboration project's membership changed.";
+    case "project_role_changed":
+      return "Your role in a collaboration project changed.";
+    case "project_feedback":
+      return `${actorName} left feedback in a collaboration project.`;
+    case "project_feedback_reply":
+      return `${actorName} replied to project feedback.`;
+    case "project_feedback_resolved":
+      return `${actorName} resolved a feedback thread.`;
+    case "project_version_uploaded":
+      return `${actorName} uploaded a new project version.`;
+    case "project_status_changed":
+      return "A collaboration project moved to a new stage.";
+    case "message_attachment":
+      return `${actorName} sent a protected attachment.`;
+    case "share_link_review":
+      return "Someone reviewed content through a private share link.";
     default:
       return `${actorName} triggered a notification.`;
   }
 }
 
 function getPrimaryNotificationTarget(entry: ResolvedNotification) {
+  if (entry.notification.project_id) {
+    return {
+      label: "Open project",
+      to: `/projects/${entry.notification.project_id}`,
+      icon: ArrowUpRight,
+    };
+  }
   if (entry.notification.conversation_id) {
     return {
       label: "Open conversation",
@@ -164,7 +215,7 @@ export function NotificationsPage() {
               key={entry.notification.id}
               className={cn(
                 "space-y-4",
-                !entry.notification.is_read && "border-accent/24 bg-[linear-gradient(180deg,rgba(157,92,255,0.08),rgba(255,255,255,0.02))]",
+                !entry.notification.is_read && "border-accent/24 bg-[linear-gradient(180deg,rgba(var(--accent-rgb),0.08),rgba(255,255,255,0.02))]",
               )}
             >
               <div className="flex flex-wrap items-start justify-between gap-4">

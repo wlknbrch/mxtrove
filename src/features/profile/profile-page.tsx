@@ -6,6 +6,7 @@ import {
   MapPin,
   MessageCircleMore,
   Music2,
+  Share2,
   Sparkles,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -104,7 +105,7 @@ function ProfileReleaseCard({
           alt={item.post.title}
           className="absolute inset-0 h-full w-full object-cover"
         />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.16),transparent_42%),linear-gradient(180deg,rgba(7,5,17,0.06),rgba(7,5,17,0.6))]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.16),transparent_42%),linear-gradient(180deg,rgba(7,5,17,0.06),rgba(7,5,17,0.6))]" />
       </div>
 
       <div className={cn("space-y-4", spotlight && "py-2")}>
@@ -172,12 +173,17 @@ export function ProfilePage() {
 
   const postsQuery = useQuery({
     queryKey: ["profile-posts", profileQuery.data?.id, viewer.userId],
-    queryFn: () =>
-      listResolvedPosts({
+    queryFn: async () => {
+      const resolvedPosts = await listResolvedPosts({
         ownerId: profileQuery.data!.id,
-        visibility: "public",
+        visibility: viewer.userId ? undefined : "public",
         viewerId: viewer.userId,
-      }),
+      });
+
+      return viewer.userId === profileQuery.data!.id
+        ? resolvedPosts.filter((item) => item.post.visibility === "public")
+        : resolvedPosts;
+    },
     enabled: Boolean(profileQuery.data?.id),
   });
 
@@ -226,6 +232,7 @@ export function ProfilePage() {
   const publicProfilePath = profile?.username ? `/@${profile.username}` : null;
   const followersPath = publicProfilePath ? `${publicProfilePath}/followers` : null;
   const followingPath = publicProfilePath ? `${publicProfilePath}/following` : null;
+  const followerCountsVisible = metrics.follower_counts_visible !== false;
 
   const createConversationMutation = useMutation({
     mutationFn: async () => {
@@ -291,7 +298,7 @@ export function ProfilePage() {
   return (
     <div className="space-y-8">
       <Card className="relative overflow-hidden p-0">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(157,92,255,0.12),transparent_36%,rgba(255,255,255,0.02)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(var(--accent-rgb),0.12),transparent_36%,rgba(255,255,255,0.02)_100%)]" />
         {hasFeaturedArtwork ? (
           <>
             <div className="pointer-events-none absolute inset-x-0 top-0 h-[72%] overflow-hidden">
@@ -304,21 +311,34 @@ export function ProfilePage() {
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,7,19,0.18)_0%,rgba(9,7,19,0.48)_48%,rgba(9,7,19,0.92)_100%)]" />
               <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,5,17,0.84)_10%,rgba(7,5,17,0.56)_44%,rgba(7,5,17,0.82)_100%)]" />
             </div>
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(157,92,255,0.34),transparent_28%),radial-gradient(circle_at_top_right,rgba(224,185,255,0.12),transparent_24%),linear-gradient(180deg,rgba(9,7,19,0.18),rgba(9,7,19,0.94)_82%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(var(--accent-rgb),0.34),transparent_28%),radial-gradient(circle_at_top_right,rgba(var(--accent-rgb),0.12),transparent_24%),linear-gradient(180deg,rgba(9,7,19,0.18),rgba(9,7,19,0.94)_82%)]" />
           </>
         ) : (
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(157,92,255,0.28),transparent_26%),radial-gradient(circle_at_top_right,rgba(224,185,255,0.14),transparent_22%),linear-gradient(180deg,rgba(9,7,19,0.82),rgba(9,7,19,0.96))]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(var(--accent-rgb),0.28),transparent_26%),radial-gradient(circle_at_top_right,rgba(var(--accent-rgb),0.14),transparent_22%),linear-gradient(180deg,rgba(9,7,19,0.82),rgba(9,7,19,0.96))]" />
         )}
 
         <div className="relative space-y-8 px-6 py-6 md:px-8 md:py-8 lg:px-10 lg:py-10">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Badge variant="neutral">Public profile</Badge>
-            {isOwnProfile ? (
-              <Link to="/settings/profile">
-                <Button variant="secondary">Edit profile</Button>
-              </Link>
-            ) : (
-              <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3">
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(
+                    `${window.location.origin}/social/profile/${encodeURIComponent(profile.username)}`,
+                  );
+                  toast.success("Profile link copied.");
+                }}
+              >
+                <Share2 className="size-4" />
+                Share profile
+              </Button>
+              {isOwnProfile ? (
+                <Link to="/settings/profile">
+                  <Button variant="secondary">Edit profile</Button>
+                </Link>
+              ) : (
+                <>
                 <FollowButton
                   profileId={profile.id}
                   isFollowing={followState.viewerFollowsProfile}
@@ -332,8 +352,9 @@ export function ProfilePage() {
                   <MessageCircleMore className="size-4" />
                   Message artist
                 </Button>
-              </div>
-            )}
+                </>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
@@ -344,7 +365,7 @@ export function ProfilePage() {
                     alt={profile.display_name}
                     src={getAvatarAssetUrls(avatarAssetQuery.data)}
                     initials={profile.display_name.slice(0, 2).toUpperCase()}
-                    className="size-28 border-accent/35 text-lg shadow-[0_24px_54px_rgba(99,45,205,0.26)] md:size-32"
+                    className="size-28 border-accent/35 text-lg shadow-[0_24px_54px_rgba(var(--accent-rgb),0.26)] md:size-32"
                   />
                   <div className="absolute inset-[-10px] -z-10 rounded-full bg-accent/18 blur-2xl" />
                 </div>
@@ -420,8 +441,16 @@ export function ProfilePage() {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-        <ProfileStat label="Followers" value={metrics.followers_count} to={followersPath ?? undefined} />
-        <ProfileStat label="Following" value={metrics.following_count} to={followingPath ?? undefined} />
+        <ProfileStat
+          label="Followers"
+          value={followerCountsVisible ? metrics.followers_count : "Private"}
+          to={followerCountsVisible ? followersPath ?? undefined : undefined}
+        />
+        <ProfileStat
+          label="Following"
+          value={followerCountsVisible ? metrics.following_count : "Private"}
+          to={followerCountsVisible ? followingPath ?? undefined : undefined}
+        />
         <ProfileStat label="Public releases" value={metrics.public_posts_count} />
         <ProfileStat label="Singles" value={metrics.single_count} />
         <ProfileStat label="EPs" value={metrics.ep_count} />

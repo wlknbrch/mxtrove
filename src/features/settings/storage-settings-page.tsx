@@ -1,25 +1,64 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { CheckCircle2, Cloud, FolderKanban, RefreshCcw, ShieldCheck, Unplug } from "lucide-react";
+import { ArrowRightLeft, CheckCircle2, Cloud, FolderKanban, RefreshCcw, ShieldCheck, Star, Unplug } from "lucide-react";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select } from "@/components/ui/select";
 import { getCurrentProfile } from "@/features/profile/api";
 import { SettingsSidebar } from "@/features/settings/settings-shell";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { envState } from "@/lib/env";
 import { queryClient } from "@/lib/query-client";
 
-import { getCloudConnection, upsertCloudConnection } from "@/features/drive/api";
+import {
+  getCloudConnection,
+  getCloudConnections,
+  getProtectedMediaQuota,
+  listOwnedAssets,
+  setDefaultCloudProvider,
+  updateAssetProviderReference,
+  upsertCloudConnection,
+} from "@/features/drive/api";
+import { getCloudStorageProvider } from "@/features/cloud-providers/provider-registry";
 import { buildCloudConnectionUpsert, getStoredDriveFolders } from "@/features/drive/google-drive-connection";
 import { useGoogleDriveProvider } from "@/features/drive/use-google-drive-provider";
+import type { CloudProvider } from "@/types/domain";
+
+const providerOptions: Array<{
+  id: CloudProvider;
+  name: string;
+  helper: string;
+  enabled: () => boolean;
+}> = [
+  {
+    id: "google_drive",
+    name: "Google Drive",
+    helper: "drive.file scope with public preview support.",
+    enabled: () => envState.hasGoogleDrive,
+  },
+  {
+    id: "dropbox",
+    name: "Dropbox",
+    helper: "PKCE, resumable uploads, direct shared preview links.",
+    enabled: () => envState.hasDropbox,
+  },
+  {
+    id: "onedrive",
+    name: "OneDrive",
+    helper: "Microsoft Graph PKCE and resumable upload sessions.",
+    enabled: () => envState.hasOneDrive,
+  },
+];
 
 export function StorageSettingsPage() {
   const viewer = useAppViewer();
   const provider = useGoogleDriveProvider();
+  const [migrationAssetId, setMigrationAssetId] = useState("");
+  const [migrationTarget, setMigrationTarget] = useState<CloudProvider>("dropbox");
   const profileQuery = useQuery({
     queryKey: ["profile", viewer.userId],
     queryFn: () => getCurrentProfile(viewer.userId),
@@ -29,6 +68,21 @@ export function StorageSettingsPage() {
   const connectionQuery = useQuery({
     queryKey: ["cloud-connection", viewer.userId],
     queryFn: () => getCloudConnection(viewer.userId!),
+    enabled: Boolean(viewer.userId),
+  });
+  const connectionsQuery = useQuery({
+    queryKey: ["cloud-connections", viewer.userId],
+    queryFn: () => getCloudConnections(viewer.userId!),
+    enabled: Boolean(viewer.userId),
+  });
+  const assetsQuery = useQuery({
+    queryKey: ["owned-assets", viewer.userId],
+    queryFn: () => listOwnedAssets(viewer.userId!),
+    enabled: Boolean(viewer.userId),
+  });
+  const quotaQuery = useQuery({
+    queryKey: ["protected-media-quota", viewer.userId],
+    queryFn: () => getProtectedMediaQuota(viewer.userId!),
     enabled: Boolean(viewer.userId),
   });
   const storedFolders = getStoredDriveFolders(connectionQuery.data);
@@ -72,20 +126,132 @@ export function StorageSettingsPage() {
   }, [connectionQuery.data?.provider_account_email, provider, storedFolders]);
 
   const connectMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (providerId: CloudProvider = "google_drive") => {
       if (!viewer.userId) {
         throw new Error("Please sign in first.");
       }
 
-      const result = await provider.connect();
-      return upsertCloudConnection(buildCloudConnectionUpsert(viewer.userId, result));
+      const activeProvider = getCloudStorageProvider(providerId);
+      const result = await activeProvider.connect();
+      return upsertCloudConnection({
+        ...buildCloudConnectionUpsert(viewer.userId, result),
+        is_default: (connectionsQuery.data ?? []).length === 0,
+      });
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["cloud-connection", viewer.userId] });
-      toast.success("Google Drive connected.");
+    onSuccess: async (connection) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["cloud-connection", viewer.userId] }),
+        queryClient.invalidateQueries({ queryKey: ["cloud-connections", viewer.userId] }),
+      ]);
+      toast.success(`${providerOptions.find((option) => option.id === connection.provider)?.name ?? "Cloud provider"} connected.`);
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Could not connect Google Drive.");
+    },
+  });
+  const defaultMutation = useMutation({
+    mutationFn: setDefaultCloudProvider,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["cloud-connections", viewer.userId] });
+      toast.success("Default upload provider updated.");
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update the default provider."),
+  });
+  const migrationMutation = useMutation({
+    mutationFn: async () => {
+      if (!viewer.userId) throw new Error("Please sign in first.");
+      const asset = (assetsQuery.data ?? []).find((entry) => entry.id === migrationAssetId);
+      if (!asset) throw new Error("Choose an asset to migrate.");
+      if (asset.provider === migrationTarget) throw new Error("Choose a different destination provider.");
+
+      const sourceProvider = getCloudStorageProvider(asset.provider);
+      const targetProvider = getCloudStorageProvider(migrationTarget);
+      const destinationConnection = (connectionsQuery.data ?? []).find(
+        (entry) => entry.provider === migrationTarget && entry.connection_status === "connected",
+      );
+      if (!destinationConnection) throw new Error("Connect the destination provider first.");
+
+      if (!(await sourceProvider.restoreSession())) {
+        const sourceResult = await sourceProvider.connect();
+        await upsertCloudConnection({
+          ...buildCloudConnectionUpsert(viewer.userId, sourceResult),
+          is_default: Boolean(
+            (connectionsQuery.data ?? []).find((entry) => entry.provider === asset.provider)?.is_default,
+          ),
+        });
+      }
+      let targetFolders;
+      if (!(await targetProvider.restoreSession())) {
+        const targetResult = await targetProvider.connect();
+        targetFolders = targetResult.folders;
+        await upsertCloudConnection({
+          ...buildCloudConnectionUpsert(viewer.userId, targetResult),
+          is_default: destinationConnection.is_default,
+        });
+      } else {
+        targetFolders = await targetProvider.ensureRootStructure();
+      }
+
+      if (!window.confirm(
+        `Move "${asset.display_name ?? asset.filename}" from ${asset.provider} to ${migrationTarget}? The source is deleted only after the new reference is saved.`,
+      )) {
+        throw new DOMException("Migration cancelled.", "AbortError");
+      }
+
+      const targetFolderId =
+        asset.asset_type === "audio_original"
+          ? targetFolders.audioOriginalsFolderId
+          : asset.asset_type === "audio_preview"
+            ? targetFolders.audioPreviewsFolderId
+            : asset.asset_type === "avatar"
+              ? targetFolders.avatarsFolderId
+              : targetFolders.artworkFolderId;
+      const sourceBlob = await sourceProvider.getPrivateFileBlob(asset.remote_file_id);
+      const file = new File([sourceBlob], asset.filename, {
+        type: asset.mime_type || sourceBlob.type || "application/octet-stream",
+        lastModified: Date.now(),
+      });
+      let upload = file.size > 20 * 1024 * 1024
+        ? await targetProvider.uploadResumable({ file, parentFolderId: targetFolderId })
+        : await targetProvider.uploadFile({ file, parentFolderId: targetFolderId });
+
+      if (asset.access_mode === "public") {
+        const publicPreview = await targetProvider.createPublicPreview(upload.fileId);
+        upload = {
+          ...upload,
+          shareUrl: publicPreview.shareUrl,
+          viewUrl: publicPreview.viewUrl,
+        };
+      }
+
+      await updateAssetProviderReference({
+        assetId: asset.id,
+        upload,
+        accessMode: asset.access_mode,
+      });
+      const sourceDeleted = await sourceProvider
+        .deleteFile(asset.remote_file_id)
+        .then(() => true)
+        .catch(() => false);
+      return { sourceDeleted };
+    },
+    onSuccess: async ({ sourceDeleted }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["owned-assets", viewer.userId] }),
+        queryClient.invalidateQueries({ queryKey: ["library", viewer.userId] }),
+        queryClient.invalidateQueries({ queryKey: ["asset"] }),
+        queryClient.invalidateQueries({ queryKey: ["post"] }),
+      ]);
+      setMigrationAssetId("");
+      if (sourceDeleted) {
+        toast.success("Asset moved and its references were preserved.");
+      } else {
+        toast.warning("Asset moved, but the old provider copy could not be deleted. Remove that copy manually.");
+      }
+    },
+    onError: (error) => {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      toast.error(error instanceof Error ? error.message : "Could not migrate this asset.");
     },
   });
 
@@ -93,14 +259,144 @@ export function StorageSettingsPage() {
     <div className="space-y-8">
       <PageHeader
         eyebrow="Settings"
-        title="Google Drive setup"
-        description="Connect once, let MxShare create its own Drive folder, and route future audio, artwork, and avatars into that structure."
+        title="Cloud storage"
+        description="Connect one or more personal providers, choose a default, and keep every private original in the account you control."
       />
 
       <div className="grid gap-6 2xl:grid-cols-[310px_minmax(0,1fr)_340px]">
         <SettingsSidebar driveReady={driveReady} />
 
         <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div>
+                <CardTitle>Connected providers</CardTitle>
+                <CardDescription className="mt-2">
+                  Tokens remain in this browser session. Supabase stores only account metadata, folder references, status, and capabilities.
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <div className="grid gap-4 lg:grid-cols-3">
+              {providerOptions.map((option) => {
+                const connection = (connectionsQuery.data ?? []).find((entry) => entry.provider === option.id);
+                return (
+                  <div key={option.id} className="rounded-[24px] border border-border bg-white/[0.025] p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex size-11 items-center justify-center rounded-[16px] bg-accent/12 text-accent-secondary">
+                        <Cloud className="size-5" />
+                      </div>
+                      {connection?.is_default ? <Badge variant="accent">Default</Badge> : null}
+                    </div>
+                    <h2 className="mt-4 font-display text-2xl">{option.name}</h2>
+                    <p className="mt-2 min-h-12 text-sm leading-6 text-muted-foreground">{option.helper}</p>
+                    <p className="mt-3 truncate text-xs text-subtle-foreground">
+                      {connection?.provider_account_email ?? (option.enabled() ? "Ready to connect" : "Client ID missing")}
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        disabled={!option.enabled() || connectMutation.isPending}
+                        onClick={() => connectMutation.mutate(option.id)}
+                      >
+                        {connection ? "Reconnect" : "Connect"}
+                      </Button>
+                      {connection && !connection.is_default ? (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => defaultMutation.mutate(option.id)}
+                          disabled={defaultMutation.isPending}
+                        >
+                          <Star className="size-3.5" />
+                          Set default
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mt-4 text-xs leading-6 text-muted-foreground">
+              Browser-to-browser provider migration is intentionally explicit: download from the current provider, confirm, then upload to another connected provider. No server-side master transfer is performed.
+            </p>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div>
+                <CardTitle className="inline-flex items-center gap-3">
+                  <ShieldCheck className="size-5 text-accent-secondary" />
+                  Protected derivative quota
+                </CardTitle>
+                <CardDescription className="mt-2">
+                  Collaboration previews and private attachments live on the MxShare VPS. Private originals never count here.
+                </CardDescription>
+              </div>
+            </CardHeader>
+            {quotaQuery.data ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                <QuotaMeter
+                  label="All protected media"
+                  used={quotaQuery.data.used_bytes + quotaQuery.data.reserved_bytes}
+                  limit={quotaQuery.data.protected_limit_bytes}
+                />
+                <QuotaMeter
+                  label="Message attachments"
+                  used={quotaQuery.data.attachment_used_bytes + quotaQuery.data.attachment_reserved_bytes}
+                  limit={quotaQuery.data.attachment_limit_bytes}
+                />
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">Quota usage will appear after the V2 migration is applied.</p>
+            )}
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div>
+                <CardTitle className="inline-flex items-center gap-3">
+                  <ArrowRightLeft className="size-5 text-accent-secondary" />
+                  Move an existing asset
+                </CardTitle>
+                <CardDescription className="mt-2">
+                  The transfer runs in this browser. MxShare keeps the existing asset ID so songs, posts, artwork, and avatars remain linked.
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_auto]">
+              <label className="grid gap-2">
+                <span className="text-sm font-medium">Asset</span>
+                <Select value={migrationAssetId} onChange={(event) => setMigrationAssetId(event.currentTarget.value)}>
+                  <option value="">Choose an asset</option>
+                  {(assetsQuery.data ?? []).map((asset) => (
+                    <option key={asset.id} value={asset.id}>
+                      {asset.display_name ?? asset.filename} · {asset.provider}
+                    </option>
+                  ))}
+                </Select>
+              </label>
+              <label className="grid gap-2">
+                <span className="text-sm font-medium">Destination</span>
+                <Select
+                  value={migrationTarget}
+                  onChange={(event) => setMigrationTarget(event.currentTarget.value as CloudProvider)}
+                >
+                  {providerOptions.map((option) => (
+                    <option key={option.id} value={option.id}>{option.name}</option>
+                  ))}
+                </Select>
+              </label>
+              <Button
+                className="self-end"
+                disabled={!migrationAssetId || migrationMutation.isPending}
+                onClick={() => migrationMutation.mutate()}
+              >
+                <ArrowRightLeft className="size-4" />
+                {migrationMutation.isPending ? "Moving…" : "Move asset"}
+              </Button>
+            </div>
+          </Card>
+
           <Card>
             <CardHeader>
               <div className="space-y-3">
@@ -197,7 +493,7 @@ export function StorageSettingsPage() {
 
             <div className="mt-6 flex flex-wrap gap-3">
               <Button
-                onClick={() => void connectMutation.mutateAsync()}
+                onClick={() => void connectMutation.mutateAsync("google_drive")}
                 disabled={connectMutation.isPending || !envState.hasGoogleDrive}
               >
                 <RefreshCcw className="size-4" />
@@ -281,6 +577,33 @@ export function StorageSettingsPage() {
           </Card>
         </div>
       </div>
+    </div>
+  );
+}
+
+function formatStorageBytes(bytes: number) {
+  if (bytes < 1024 ** 2) return `${Math.max(0, bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+  return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
+}
+
+function QuotaMeter({ label, used, limit }: { label: string; used: number; limit: number }) {
+  const ratio = limit > 0 ? Math.min(1, used / limit) : 0;
+  return (
+    <div className="rounded-[22px] border border-border bg-surface-soft p-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-medium">{label}</p>
+        <span className="text-xs text-muted-foreground">
+          {formatStorageBytes(used)} / {formatStorageBytes(limit)}
+        </span>
+      </div>
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-background-muted">
+        <div
+          className="h-full rounded-full bg-[linear-gradient(90deg,var(--accent),var(--accent-secondary))]"
+          style={{ width: `${Math.max(2, ratio * 100)}%` }}
+        />
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">{Math.round(ratio * 100)}% used or reserved</p>
     </div>
   );
 }

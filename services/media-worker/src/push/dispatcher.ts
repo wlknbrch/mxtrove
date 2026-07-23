@@ -13,12 +13,14 @@ interface ClaimedPushRow {
   auth: string;
   notification_type: string;
   post_id: string | null;
+  project_id: string | null;
   song_version_id: string | null;
   comment_id: string | null;
   conversation_id: string | null;
   actor_display_name: string | null;
   actor_username: string | null;
   post_title: string | null;
+  privacy_safe_push: boolean;
 }
 
 if (config.webPushPublicKey && config.webPushPrivateKey) {
@@ -29,7 +31,7 @@ function buildPushPayload(row: ClaimedPushRow) {
   const actorName = row.actor_display_name ?? row.actor_username ?? "Someone";
   const postTitle = row.post_title ?? "your post";
 
-  const body =
+  const detailedBody =
     row.notification_type === "follow"
       ? `${actorName} started following you.`
       : row.notification_type === "post_heart"
@@ -41,18 +43,46 @@ function buildPushPayload(row: ClaimedPushRow) {
             : row.notification_type === "comment_reply"
               ? `${actorName} replied in a comment thread.`
               : row.notification_type === "single_version"
-                ? `${actorName} uploaded a new public version of “${postTitle}”.`
-                : "You have a new message on MxShare.";
+              ? `${actorName} uploaded a new public version of “${postTitle}”.`
+                : row.notification_type === "project_invite"
+                  ? `${actorName} invited you to a private project.`
+                  : row.notification_type === "project_invite_accepted"
+                    ? `${actorName} accepted your project invitation.`
+                    : row.notification_type === "project_member_removed"
+                      ? "Your access to a project changed."
+                      : row.notification_type === "project_role_changed"
+                        ? "Your role in a private project changed."
+                        : row.notification_type === "project_feedback"
+                          ? `${actorName} added feedback in a private project.`
+                          : row.notification_type === "project_feedback_reply"
+                            ? `${actorName} replied to project feedback.`
+                            : row.notification_type === "project_feedback_resolved"
+                              ? `${actorName} resolved project feedback.`
+                              : row.notification_type === "project_version_uploaded"
+                                ? `${actorName} added a version to a private project.`
+                                : row.notification_type === "project_status_changed"
+                                  ? `${actorName} changed a project status.`
+                                  : row.notification_type === "message_attachment"
+                                    ? `${actorName} sent you an attachment.`
+                                    : row.notification_type === "share_link_review"
+                                      ? "A private review link received activity."
+                                      : "You have a new message on MxShare.";
+
+  const body = row.privacy_safe_push
+    ? "You have a new private activity update on MxShare."
+    : detailedBody;
 
   const url =
     row.notification_type === "follow"
       ? row.actor_username
         ? `/@${row.actor_username}`
         : "/explore"
-      : row.notification_type === "message"
+      : row.notification_type === "message" || row.notification_type === "message_attachment"
         ? row.conversation_id
           ? `/messages/${row.conversation_id}`
           : "/messages"
+        : row.project_id
+          ? `/projects/${row.project_id}`
         : row.post_id
           ? `/post/${row.post_id}`
           : "/notifications";

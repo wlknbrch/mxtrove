@@ -33,7 +33,7 @@ export async function getCurrentProfile(userId?: string | null): Promise<Profile
   }
 
   const client = requireSupabase();
-  const { data, error } = await client.from("profiles").select("*").eq("id", viewerId).maybeSingle();
+  const { data, error } = await client.rpc("get_current_profile_v2");
 
   if (error) {
     throw error;
@@ -99,11 +99,9 @@ export async function getProfileByUsername(username: string): Promise<Profile | 
   }
 
   const client = requireSupabase();
-  const { data, error } = await client
-    .from("profiles")
-    .select("*")
-    .eq("username", normalizedUsername)
-    .maybeSingle();
+  const { data, error } = await client.rpc("get_profile_by_username_v2", {
+    target_username: normalizedUsername,
+  });
 
   if (error) {
     throw error;
@@ -125,15 +123,18 @@ export async function saveProfile(userId: string, values: ProfileFormValues): Pr
   }
 
   const client = requireSupabase();
-  const payload = {
-    id: userId,
-    ...values,
-    bio: values.bio || null,
-    location: values.location || null,
-    onboarding_completed: true,
-  };
-
-  const { data, error } = await client.from("profiles").upsert(payload).select("*").single();
+  const { data, error } = await client.rpc("save_profile_v2", {
+    next_display_name: values.display_name,
+    next_username: values.username,
+    next_bio: values.bio || "",
+    next_location: values.location || "",
+    next_website_url: values.website_url || "",
+    next_instagram_url: values.instagram_url || "",
+    next_spotify_url: values.spotify_url || "",
+    next_youtube_url: values.youtube_url || "",
+    next_support_url: values.support_url || "",
+    next_avatar_asset_id: values.avatar_asset_id ?? null,
+  });
 
   if (error) {
     throw error;

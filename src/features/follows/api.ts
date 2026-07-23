@@ -84,11 +84,9 @@ export async function getProfileMetrics(profileId: string): Promise<ProfilePubli
   }
 
   const client = requireSupabase();
-  const { data, error } = await client
-    .from("profile_public_metrics")
-    .select("*")
-    .eq("profile_id", profileId)
-    .maybeSingle();
+  const { data, error } = await client.rpc("get_profile_metrics_v2", {
+    target_profile_id: profileId,
+  });
 
   if (error) {
     throw error;
@@ -123,32 +121,18 @@ export async function getFollowState(input: {
   }
 
   const client = requireSupabase();
-  const [viewerRelation, reverseRelation] = await Promise.all([
-    client
-      .from("follows")
-      .select("follower_id")
-      .eq("follower_id", viewerId)
-      .eq("followed_id", input.profileId)
-      .maybeSingle(),
-    client
-      .from("follows")
-      .select("follower_id")
-      .eq("follower_id", input.profileId)
-      .eq("followed_id", viewerId)
-      .maybeSingle(),
-  ]);
+  const { data, error } = await client.rpc("get_follow_state_v2", {
+    target_profile_id: input.profileId,
+  });
 
-  if (viewerRelation.error) {
-    throw viewerRelation.error;
+  if (error) {
+    throw error;
   }
 
-  if (reverseRelation.error) {
-    throw reverseRelation.error;
-  }
-
+  const state = Array.isArray(data) ? data[0] : data;
   return {
-    viewerFollowsProfile: Boolean(viewerRelation.data),
-    profileFollowsViewer: Boolean(reverseRelation.data),
+    viewerFollowsProfile: Boolean(state?.viewer_follows_profile),
+    profileFollowsViewer: Boolean(state?.profile_follows_viewer),
   };
 }
 

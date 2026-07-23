@@ -25,16 +25,34 @@ import { queryClient } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/utils";
 import { usePlayerStore } from "@/components/audio/player-store";
+import { useAppearance } from "@/features/appearance/appearance-provider";
 import { getResolvedPostById, togglePostHeart } from "@/features/posts/api";
+
+function normalizeMediaSource(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return new URL(value, window.location.origin).toString();
+  } catch {
+    return value;
+  }
+}
 
 export function GlobalPlayer() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const loadedTrackIdRef = useRef<string | null>(null);
   const navigate = useNavigate();
   const viewer = useAppViewer();
+  const { settings: appearance, updateSettings: updateAppearance } = useAppearance();
   const [currentTime, setCurrentTime] = useState(0);
   const [loadedDuration, setLoadedDuration] = useState<number | null>(null);
-  const [volume, setVolume] = useState(0.8);
+  const [volume, setVolume] = useState(() =>
+    appearance.remember_volume ? appearance.player_volume : 0.8,
+  );
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const hasAdjustedVolume = useRef(false);
   const {
     queue,
     activeTrackId,
@@ -46,9 +64,12 @@ export function GlobalPlayer() {
     playPrevious,
     toggle,
     setPlaying,
+    setCurrentTimeSeconds,
     cycleRepeatMode,
     toggleQueue,
     closeQueue,
+    requestedSeekSeconds,
+    consumeSeekRequest,
   } = usePlayerStore();
 
   const activeTrack = useMemo(
@@ -113,23 +134,49 @@ export function GlobalPlayer() {
   }, [volume]);
 
   useEffect(() => {
+    if (appearance.remember_volume && !hasAdjustedVolume.current) {
+      setVolume(appearance.player_volume);
+    }
+  }, [appearance.player_volume, appearance.remember_volume]);
+
+  useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !activeTrack) {
       return;
     }
 
     if (!resolvedAudioSrc) {
+      if (loadedTrackIdRef.current === activeTrack.id) {
+        if (isPlaying) {
+          void audio.play().catch(() => {
+            toast.error("This track could not be played in the browser.");
+          });
+        } else {
+          audio.pause();
+        }
+        return;
+      }
+
       audio.pause();
       audio.removeAttribute("src");
       audio.load();
+      loadedTrackIdRef.current = null;
       return;
     }
 
-    if (audio.src !== resolvedAudioSrc) {
+    const nextResolvedSrc = normalizeMediaSource(resolvedAudioSrc);
+    const currentLoadedSrc = normalizeMediaSource(audio.currentSrc || audio.src);
+    const shouldReloadTrack =
+      loadedTrackIdRef.current !== activeTrack.id
+      || currentLoadedSrc !== nextResolvedSrc;
+
+    if (shouldReloadTrack) {
       audio.pause();
       audio.src = resolvedAudioSrc;
       audio.load();
+      loadedTrackIdRef.current = activeTrack.id;
       setCurrentTime(0);
+      setCurrentTimeSeconds(0);
       setLoadedDuration(null);
     }
 
@@ -140,12 +187,38 @@ export function GlobalPlayer() {
     } else {
       audio.pause();
     }
-  }, [activeTrack, isPlaying, resolvedAudioSrc]);
+  }, [activeTrack, isPlaying, resolvedAudioSrc, setCurrentTimeSeconds]);
 
   useEffect(() => {
     setCurrentTime(0);
+    setCurrentTimeSeconds(0);
     setLoadedDuration(null);
   }, [activeTrackId]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || requestedSeekSeconds === null) {
+      return;
+    }
+
+    const applySeek = () => {
+      const nextTime = Number.isFinite(audio.duration)
+        ? Math.min(requestedSeekSeconds, audio.duration)
+        : requestedSeekSeconds;
+      audio.currentTime = nextTime;
+      setCurrentTime(nextTime);
+      setCurrentTimeSeconds(nextTime);
+      consumeSeekRequest();
+    };
+
+    if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) {
+      applySeek();
+      return;
+    }
+
+    audio.addEventListener("loadedmetadata", applySeek, { once: true });
+    return () => audio.removeEventListener("loadedmetadata", applySeek);
+  }, [consumeSeekRequest, requestedSeekSeconds, resolvedAudioSrc]);
 
   useEffect(() => {
     if (isCollapsed && isQueueOpen) {
@@ -183,6 +256,7 @@ export function GlobalPlayer() {
   function handleSeek(nextTime: number) {
     const audio = audioRef.current;
     setCurrentTime(nextTime);
+    setCurrentTimeSeconds(nextTime);
 
     if (audio) {
       audio.currentTime = nextTime;
@@ -209,6 +283,7 @@ export function GlobalPlayer() {
     if (audio && currentTime > 3) {
       audio.currentTime = 0;
       setCurrentTime(0);
+      setCurrentTimeSeconds(0);
       return;
     }
 
@@ -225,18 +300,23 @@ export function GlobalPlayer() {
     if (repeatMode === "one") {
       audio.currentTime = 0;
       setCurrentTime(0);
+      setCurrentTimeSeconds(0);
       void audio.play().catch(() => {
         toast.error("This track could not be replayed in the browser.");
       });
       return;
     }
 
-    if (activeTrackIndex >= 0 && activeTrackIndex < queue.length - 1) {
+    if (
+      appearance.autoplay_next &&
+      activeTrackIndex >= 0 &&
+      activeTrackIndex < queue.length - 1
+    ) {
       playNext();
       return;
     }
 
-    if (repeatMode === "all" && queue[0]) {
+    if (appearance.autoplay_next && repeatMode === "all" && queue[0]) {
       playTrack(queue[0].id);
       return;
     }
@@ -258,8 +338,26 @@ export function GlobalPlayer() {
     navigate(`/post/${activePostId}`);
   }
 
+  function changeVolume(nextVolume: number) {
+    hasAdjustedVolume.current = true;
+    setVolume(nextVolume);
+  }
+
+  function persistVolume() {
+    if (
+      !appearance.remember_volume ||
+      Math.abs(appearance.player_volume - volume) < 0.001
+    ) {
+      return;
+    }
+
+    void updateAppearance({ ...appearance, player_volume: volume }).catch(() => {
+      toast.error("MxShare could not remember this volume level.");
+    });
+  }
+
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[radial-gradient(circle_at_center_top,rgba(157,92,255,0.14),transparent_28%),linear-gradient(180deg,rgba(8,6,19,0.96),rgba(7,5,17,0.98))] shadow-[0_-24px_60px_rgba(0,0,0,0.42)] backdrop-blur-2xl">
+    <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-40 border-t border-white/10 bg-[radial-gradient(circle_at_center_top,rgba(var(--accent-rgb),0.14),transparent_28%),linear-gradient(180deg,rgba(8,6,19,0.96),rgba(7,5,17,0.98))] shadow-[0_-24px_60px_rgba(0,0,0,0.42)] backdrop-blur-2xl xl:bottom-0">
       {isQueueOpen && !isCollapsed ? (
         <div className="mx-auto max-w-[1600px] px-4 pt-4 md:px-8">
           <div className="rounded-[28px] border border-border bg-[linear-gradient(180deg,rgba(18,14,35,0.96),rgba(11,9,24,0.95))] p-5 shadow-[0_26px_64px_rgba(3,0,14,0.42)]">
@@ -328,7 +426,11 @@ export function GlobalPlayer() {
           setLoadedDuration(Number.isFinite(duration) ? duration : null);
         }}
         preload="metadata"
-        onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
+        onTimeUpdate={(event) => {
+          const nextTime = event.currentTarget.currentTime;
+          setCurrentTime(nextTime);
+          setCurrentTimeSeconds(nextTime);
+        }}
       />
       <div
         className={cn(
@@ -356,7 +458,7 @@ export function GlobalPlayer() {
               {canOpenActivePost ? (
                 <button
                   type="button"
-                  className="size-12 overflow-hidden rounded-[16px] border border-border bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_12px_28px_rgba(7,3,20,0.24)] transition-[transform,border-color] hover:scale-[1.02] hover:border-accent/25"
+                  className="size-12 overflow-hidden rounded-[16px] border border-border bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_12px_28px_rgba(7,3,20,0.24)] transition-[transform,border-color] hover:scale-[1.02] hover:border-accent/25"
                   onClick={openActivePost}
                   aria-label="Open current release"
                 >
@@ -369,7 +471,7 @@ export function GlobalPlayer() {
                   ) : null}
                 </button>
               ) : (
-                <div className="size-12 overflow-hidden rounded-[16px] border border-border bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_12px_28px_rgba(7,3,20,0.24)]">
+                <div className="size-12 overflow-hidden rounded-[16px] border border-border bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_12px_28px_rgba(7,3,20,0.24)]">
                   {activeTrack.artworkUrl ? (
                     <ResolvedImage
                       className="size-full object-cover"
@@ -405,7 +507,7 @@ export function GlobalPlayer() {
 
               <Button
                 size="sm"
-                className="size-11 rounded-full border-accent/35 p-0 shadow-[0_14px_34px_rgba(111,58,225,0.32)]"
+                className="size-11 rounded-full border-accent/35 p-0 shadow-[0_14px_34px_rgba(var(--accent-rgb),0.32)]"
                 onClick={toggle}
                 aria-label={isPlaying ? "Pause" : "Play"}
               >
@@ -437,12 +539,24 @@ export function GlobalPlayer() {
           </div>
         ) : (
           <div className="velvet-hero overflow-hidden rounded-[30px] border border-border bg-[linear-gradient(180deg,rgba(12,9,25,0.96),rgba(7,6,18,0.96))] px-4 py-4 shadow-[0_-10px_40px_rgba(0,0,0,0.12)] md:px-6 md:py-5">
+            <div className="mb-4 flex items-center justify-end xl:hidden">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-full border border-white/8 bg-white/[0.03] px-3"
+                onClick={toggleCollapsed}
+                aria-label="Collapse player"
+                aria-pressed={!isCollapsed}
+              >
+                <ChevronDown className="size-4" />
+              </Button>
+            </div>
             <div className="grid gap-5 xl:grid-cols-[1.05fr_minmax(520px,1.5fr)_0.95fr] xl:items-center">
               <div className="flex min-w-0 items-center gap-4">
                 {canOpenActivePost ? (
                   <button
                     type="button"
-                    className="size-18 overflow-hidden rounded-[24px] border border-border bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_16px_42px_rgba(7,3,20,0.32)] transition-[transform,border-color] hover:scale-[1.01] hover:border-accent/25"
+                    className="size-18 overflow-hidden rounded-[24px] border border-border bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_16px_42px_rgba(7,3,20,0.32)] transition-[transform,border-color] hover:scale-[1.01] hover:border-accent/25"
                     onClick={openActivePost}
                     aria-label="Open current release"
                   >
@@ -455,7 +569,7 @@ export function GlobalPlayer() {
                     ) : null}
                   </button>
                 ) : (
-                  <div className="size-18 overflow-hidden rounded-[24px] border border-border bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_16px_42px_rgba(7,3,20,0.32)]">
+                  <div className="size-18 overflow-hidden rounded-[24px] border border-border bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_16px_42px_rgba(7,3,20,0.32)]">
                     {activeTrack.artworkUrl ? (
                       <ResolvedImage
                         className="size-full object-cover"
@@ -489,7 +603,7 @@ export function GlobalPlayer() {
                   </Button>
                   <Button
                     size="sm"
-                    className="size-16 rounded-full border-accent/45 p-0 shadow-[0_18px_48px_rgba(111,58,225,0.44)]"
+                    className="size-16 rounded-full border-accent/45 p-0 shadow-[0_18px_48px_rgba(var(--accent-rgb),0.44)]"
                     onClick={toggle}
                     aria-label={isPlaying ? "Pause" : "Play"}
                   >
@@ -510,15 +624,34 @@ export function GlobalPlayer() {
                   <span className="min-w-10 text-right">{formatDuration(currentTime)}</span>
                   <div className="relative flex-1">
                     <div className="rounded-full border border-white/8 bg-white/[0.035] px-4 py-3">
-                      <Waveform
-                        waveform={activeTrack.waveform ?? null}
-                        durationSeconds={displayDuration}
-                        currentTime={currentTime}
-                        onSeek={handleSeek}
-                        disabled={!displayDuration}
-                        barCount={56}
-                        trackClassName="h-8"
-                      />
+                      {appearance.show_waveforms ? (
+                        <Waveform
+                          waveform={activeTrack.waveform ?? null}
+                          durationSeconds={displayDuration}
+                          currentTime={currentTime}
+                          onSeek={handleSeek}
+                          disabled={!displayDuration}
+                          barCount={56}
+                          trackClassName="h-8"
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          className="block h-8 w-full disabled:cursor-default"
+                          disabled={!displayDuration}
+                          onClick={(event) =>
+                            handleSeekFromPosition(event.clientX, event.currentTarget)
+                          }
+                          aria-label="Seek through the current track"
+                        >
+                          <span className="block h-2 overflow-hidden rounded-full bg-white/[0.08]">
+                            <span
+                              className="block h-full rounded-full bg-gradient-to-r from-accent to-accent-secondary"
+                              style={{ width: `${Math.max(progressPercent, 0)}%` }}
+                            />
+                          </span>
+                        </button>
+                      )}
                     </div>
                   </div>
                   <span className="min-w-10">{formatDuration(displayDuration)}</span>
@@ -571,7 +704,7 @@ export function GlobalPlayer() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="rounded-full border border-white/8 bg-white/[0.03]"
+                  className="hidden rounded-full border border-white/8 bg-white/[0.03] xl:inline-flex"
                   onClick={toggleCollapsed}
                   aria-label="Collapse player"
                   aria-pressed={!isCollapsed}
@@ -588,7 +721,11 @@ export function GlobalPlayer() {
                     max="1"
                     step="0.05"
                     value={volume}
-                    onChange={(event) => setVolume(Number(event.currentTarget.value))}
+                    onChange={(event) => changeVolume(Number(event.currentTarget.value))}
+                    onPointerUp={persistVolume}
+                    onKeyUp={persistVolume}
+                    onBlur={persistVolume}
+                    aria-label="Playback volume"
                   />
                 </div>
                 <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">

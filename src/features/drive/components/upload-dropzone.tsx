@@ -135,7 +135,7 @@ export function UploadDropzone({
           <div className="rounded-[24px] border border-white/[0.08] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-5">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-start gap-4">
-                <div className="flex size-12 items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.22),rgba(255,255,255,0.03)_62%)] text-accent-secondary">
+                <div className="flex size-12 items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.22),rgba(255,255,255,0.03)_62%)] text-accent-secondary">
                   {progress !== null && progress < 100 ? (
                     <LoaderCircle className="size-5 animate-spin" />
                   ) : (

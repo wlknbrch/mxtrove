@@ -3,7 +3,10 @@ import type {
   Comment,
   FeedEvent,
   Post,
+  PostCredit,
+  PostExternalLink,
   Profile,
+  ProtectedMediaAsset,
   ReleaseTrack,
   Song,
   SongVersion,
@@ -18,6 +21,10 @@ export interface ResolvedReleaseTrack {
   song: Song | null;
   version: SongVersion | null;
   previewAsset: Asset | null;
+  protectedPreview: {
+    asset: ProtectedMediaAsset;
+    readUrl: string;
+  } | null;
   versionHeartCount: number;
   viewerHasHeartedVersion: boolean;
 }
@@ -26,6 +33,10 @@ export interface ResolvedSingleInfo {
   song: Song | null;
   featuredVersion: SongVersion | null;
   previewAsset: Asset | null;
+  protectedPreview: {
+    asset: ProtectedMediaAsset;
+    readUrl: string;
+  } | null;
   previousVersion: SongVersion | null;
   versionHeartCount: number;
   viewerHasHeartedVersion: boolean;
@@ -43,5 +54,7 @@ export interface ResolvedPostCard {
   versionHeartCount: number;
   viewerHasHeartedVersion: boolean;
   commentCount: number;
+  credits: PostCredit[];
+  externalLinks: PostExternalLink[];
   feedEvent?: FeedEvent | null;
 }

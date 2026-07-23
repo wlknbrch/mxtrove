@@ -2,12 +2,26 @@ import { Suspense, lazy, type ReactElement } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { OptionalPublicShell } from "@/components/layout/optional-public-shell";
+import { RootLayout } from "@/components/layout/root-layout";
 
 import { ProtectedRoute } from "@/routes/protected-route";
 
 const LoginPage = lazy(async () => {
   const module = await import("@/features/auth/login-page");
   return { default: module.LoginPage };
+});
+const OAuthCallbackPage = lazy(async () => {
+  const module = await import("@/features/cloud-providers/oauth-callback-page");
+  return { default: module.OAuthCallbackPage };
+});
+const SharedPostPage = lazy(async () => {
+  const module = await import("@/features/posts/shared-post-page");
+  return { default: module.SharedPostPage };
+});
+const EmbedPostPage = lazy(async () => {
+  const module = await import("@/features/posts/embed-post-page");
+  return { default: module.EmbedPostPage };
 });
 const ExplorePage = lazy(async () => {
   const module = await import("@/features/feed/explore-page");
@@ -36,6 +50,26 @@ const MessagesPage = lazy(async () => {
 const NotificationsPage = lazy(async () => {
   const module = await import("@/features/notifications/notifications-page");
   return { default: module.NotificationsPage };
+});
+const ProjectsPage = lazy(async () => {
+  const module = await import("@/features/projects/projects-page");
+  return { default: module.ProjectsPage };
+});
+const NewProjectPage = lazy(async () => {
+  const module = await import("@/features/projects/new-project-page");
+  return { default: module.NewProjectPage };
+});
+const ProjectWorkspacePage = lazy(async () => {
+  const module = await import("@/features/projects/project-workspace-page");
+  return { default: module.ProjectWorkspacePage };
+});
+const InvitesPage = lazy(async () => {
+  const module = await import("@/features/projects/invites-page");
+  return { default: module.InvitesPage };
+});
+const InviteTokenPage = lazy(async () => {
+  const module = await import("@/features/projects/invite-token-page");
+  return { default: module.InviteTokenPage };
 });
 const CreateIndexPage = lazy(async () => {
   const module = await import("@/features/posts/create-index-page");
@@ -81,9 +115,41 @@ const StorageSettingsPage = lazy(async () => {
   const module = await import("@/features/settings/storage-settings-page");
   return { default: module.StorageSettingsPage };
 });
+const AppearanceSettingsPage = lazy(async () => {
+  const module = await import("@/features/settings/appearance-settings-page");
+  return { default: module.AppearanceSettingsPage };
+});
+const PrivacySettingsPage = lazy(async () => {
+  const module = await import("@/features/settings/privacy-settings-page");
+  return { default: module.PrivacySettingsPage };
+});
+const AccountSettingsPage = lazy(async () => {
+  const module = await import("@/features/settings/account-settings-page");
+  return { default: module.AccountSettingsPage };
+});
+const BlockedAccountsPage = lazy(async () => {
+  const module = await import("@/features/settings/blocked-accounts-page");
+  return { default: module.BlockedAccountsPage };
+});
+const DataExportPage = lazy(async () => {
+  const module = await import("@/features/settings/data-export-page");
+  return { default: module.DataExportPage };
+});
 const SongDetailPage = lazy(async () => {
   const module = await import("@/features/songs/song-detail-page");
   return { default: module.SongDetailPage };
+});
+const AdminReportsPage = lazy(async () => {
+  const module = await import("@/features/admin/reports-page");
+  return { default: module.AdminReportsPage };
+});
+const AdminReportDetailPage = lazy(async () => {
+  const module = await import("@/features/admin/report-detail-page");
+  return { default: module.AdminReportDetailPage };
+});
+const SearchPage = lazy(async () => {
+  const module = await import("@/features/search/search-page");
+  return { default: module.SearchPage };
 });
 
 function RouteFallback() {
@@ -105,53 +171,93 @@ function routeElement(element: ReactElement) {
 
 export const router = createBrowserRouter([
   {
-    path: "/login",
-    element: routeElement(<LoginPage />),
-  },
-  {
-    element: <ProtectedRoute />,
+    element: <RootLayout />,
     children: [
       {
-        path: "/onboarding",
-        element: routeElement(
-          <div className="page-shell mx-auto max-w-4xl px-4 py-8 md:px-6">
-            <OnboardingPage />
-          </div>,
-        ),
+        path: "/login",
+        element: routeElement(<LoginPage />),
       },
       {
-        element: <AppShell />,
+        path: "/oauth/callback/:provider",
+        element: routeElement(<OAuthCallbackPage />),
+      },
+      {
+        path: "/share/:token",
+        element: routeElement(<SharedPostPage />),
+      },
+      {
+        path: "/embed/post/:postId",
+        element: routeElement(<EmbedPostPage />),
+      },
+      {
+        element: <OptionalPublicShell />,
         children: [
-          { path: "/", element: routeElement(<HomePage />) },
-          { path: "/explore", element: routeElement(<ExplorePage />) },
-          { path: "/library", element: routeElement(<LibraryPage />) },
-          { path: "/library/songs", element: routeElement(<LibraryPage />) },
-          { path: "/library/songs/:songId", element: routeElement(<SongDetailPage />) },
-          { path: "/create", element: routeElement(<CreateIndexPage />) },
-          { path: "/create/single", element: routeElement(<CreateSinglePage />) },
-          { path: "/create/ep", element: routeElement(<CreateReleasePage kind="ep" />) },
-          { path: "/create/album", element: routeElement(<CreateReleasePage kind="album" />) },
           { path: "/post/:postId", element: routeElement(<PostDetailPage />) },
-          { path: "/post/:postId/edit", element: routeElement(<EditReleasePage />) },
-          { path: "/messages", element: routeElement(<MessagesPage />) },
-          { path: "/messages/:conversationId", element: routeElement(<ConversationPage />) },
-          { path: "/notifications", element: routeElement(<NotificationsPage />) },
-          { path: "/settings", element: routeElement(<SettingsIndexPage />) },
-          { path: "/settings/profile", element: routeElement(<ProfileSettingsPage />) },
-          { path: "/settings/storage", element: routeElement(<StorageSettingsPage />) },
-          {
-            path: "/settings/notifications",
-            element: routeElement(<NotificationSettingsPage />),
-          },
-          {
-            path: "/:username/followers",
-            element: routeElement(<ProfileConnectionsPage relation="followers" />),
-          },
-          {
-            path: "/:username/following",
-            element: routeElement(<ProfileConnectionsPage relation="following" />),
-          },
           { path: "/:username", element: routeElement(<ProfilePage />) },
+        ],
+      },
+      {
+        element: <ProtectedRoute />,
+        children: [
+          {
+            path: "/onboarding",
+            element: routeElement(
+              <div className="page-shell mx-auto max-w-4xl px-4 py-8 md:px-6">
+                <OnboardingPage />
+              </div>,
+            ),
+          },
+          {
+            element: <AppShell />,
+            children: [
+              { path: "/", element: routeElement(<HomePage />) },
+              { path: "/explore", element: routeElement(<ExplorePage />) },
+              { path: "/search", element: routeElement(<SearchPage />) },
+              { path: "/library", element: routeElement(<LibraryPage />) },
+              { path: "/library/songs", element: routeElement(<LibraryPage />) },
+              { path: "/library/songs/:songId", element: routeElement(<SongDetailPage />) },
+              { path: "/projects", element: routeElement(<ProjectsPage />) },
+              { path: "/projects/new", element: routeElement(<NewProjectPage />) },
+              { path: "/projects/:projectId", element: routeElement(<ProjectWorkspacePage />) },
+              { path: "/projects/:projectId/tracks", element: routeElement(<ProjectWorkspacePage />) },
+              { path: "/projects/:projectId/activity", element: routeElement(<ProjectWorkspacePage />) },
+              { path: "/projects/:projectId/members", element: routeElement(<ProjectWorkspacePage />) },
+              { path: "/projects/:projectId/settings", element: routeElement(<ProjectWorkspacePage />) },
+              { path: "/projects/:projectId/review", element: routeElement(<ProjectWorkspacePage />) },
+              { path: "/invites", element: routeElement(<InvitesPage />) },
+              { path: "/invites/:token", element: routeElement(<InviteTokenPage />) },
+              { path: "/create", element: routeElement(<CreateIndexPage />) },
+              { path: "/create/single", element: routeElement(<CreateSinglePage />) },
+              { path: "/create/ep", element: routeElement(<CreateReleasePage kind="ep" />) },
+              { path: "/create/album", element: routeElement(<CreateReleasePage kind="album" />) },
+              { path: "/post/:postId/edit", element: routeElement(<EditReleasePage />) },
+              { path: "/messages", element: routeElement(<MessagesPage />) },
+              { path: "/messages/:conversationId", element: routeElement(<ConversationPage />) },
+              { path: "/notifications", element: routeElement(<NotificationsPage />) },
+              { path: "/admin/reports", element: routeElement(<AdminReportsPage />) },
+              { path: "/admin/reports/:reportId", element: routeElement(<AdminReportDetailPage />) },
+              { path: "/settings", element: routeElement(<SettingsIndexPage />) },
+              { path: "/settings/profile", element: routeElement(<ProfileSettingsPage />) },
+              { path: "/settings/storage", element: routeElement(<StorageSettingsPage />) },
+              { path: "/settings/appearance", element: routeElement(<AppearanceSettingsPage />) },
+              { path: "/settings/privacy", element: routeElement(<PrivacySettingsPage />) },
+              { path: "/settings/account", element: routeElement(<AccountSettingsPage />) },
+              { path: "/settings/blocked", element: routeElement(<BlockedAccountsPage />) },
+              { path: "/settings/account/export", element: routeElement(<DataExportPage />) },
+              {
+                path: "/settings/notifications",
+                element: routeElement(<NotificationSettingsPage />),
+              },
+              {
+                path: "/:username/followers",
+                element: routeElement(<ProfileConnectionsPage relation="followers" />),
+              },
+              {
+                path: "/:username/following",
+                element: routeElement(<ProfileConnectionsPage relation="following" />),
+              },
+            ],
+          },
         ],
       },
     ],

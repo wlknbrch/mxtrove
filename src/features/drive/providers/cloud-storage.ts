@@ -1,5 +1,8 @@
+import type { CloudProvider } from "@/types/domain";
+
 export interface CloudConnectionResult {
-  provider: "google_drive";
+  provider: CloudProvider;
+  accountId: string | null;
   email: string | null;
   accessToken: string;
   expiresAt: number | null;
@@ -13,6 +16,7 @@ export interface CloudFolderStructure {
   audioPreviewsFolderId: string;
   artworkFolderId: string;
   avatarsFolderId: string;
+  exportsFolderId: string;
 }
 
 export interface UploadFileInput {
@@ -34,6 +38,7 @@ export interface CloudFileMetadata {
 }
 
 export interface CloudAssetResult {
+  provider?: CloudProvider;
   fileId: string;
   filename: string;
   mimeType: string;
@@ -51,14 +56,16 @@ export interface PublicAssetResult {
 }
 
 export interface CloudStorageProvider {
+  provider: CloudProvider;
   connect(): Promise<CloudConnectionResult>;
   disconnect(): Promise<void>;
+  restoreSession(): Promise<boolean>;
   ensureRootStructure(): Promise<CloudFolderStructure>;
   uploadFile(input: UploadFileInput): Promise<CloudAssetResult>;
   uploadResumable(input: UploadFileInput): Promise<CloudAssetResult>;
   getPrivateFileBlob(fileId: string): Promise<Blob>;
   getFileMetadata(fileId: string): Promise<CloudFileMetadata>;
-  makePublicPreview(fileId: string): Promise<PublicAssetResult>;
+  createPublicPreview(fileId: string): Promise<PublicAssetResult>;
   revokePublicPreview(fileId: string): Promise<void>;
   getPublicPreviewUrl(fileId: string): Promise<string | null>;
   getViewUrl(fileId: string): Promise<string | null>;

@@ -47,7 +47,6 @@ export function SettingsIndexPage() {
 
   const profile = profileQuery.data ?? null;
   const storedFolders = getStoredDriveFolders(connectionQuery.data);
-  const publicProfilePath = profile?.username ? `/@${profile.username}` : null;
   const connectedLinks = countConnectedLinks(profile);
   const driveReady = Boolean(storedFolders);
 
@@ -63,7 +62,7 @@ export function SettingsIndexPage() {
         <SettingsSidebar driveReady={driveReady} />
 
         <div className="min-w-0 space-y-6">
-          <div className="grid min-w-0 gap-6 2xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
+          <div className="grid min-w-0 gap-6 min-[1800px]:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
             <div className="space-y-6">
               <Card>
                 <CardHeader>
@@ -138,7 +137,7 @@ export function SettingsIndexPage() {
             </div>
 
             <Card className="min-w-0 overflow-hidden">
-              <div className="rounded-[28px] border border-accent/20 bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.28),rgba(255,255,255,0.02)_58%,rgba(255,255,255,0.01))] p-5">
+              <div className="rounded-[28px] border border-accent/20 bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.28),rgba(255,255,255,0.02)_58%,rgba(255,255,255,0.01))] p-5">
                 <div className="flex items-center gap-4">
                   <Avatar
                     alt={profile?.display_name ?? "Current profile"}
@@ -229,13 +228,6 @@ export function SettingsIndexPage() {
                   <Link to="/settings/profile">
                     <Button size="sm">Edit profile</Button>
                   </Link>
-                  {publicProfilePath ? (
-                    <Link to={publicProfilePath}>
-                      <Button variant="secondary" size="sm">
-                        View profile
-                      </Button>
-                    </Link>
-                  ) : null}
                 </div>
               </div>
 

@@ -29,6 +29,7 @@ COPY --from=build /app/dist ./dist
 ENV NODE_ENV=production
 ENV PORT=8080
 ENV MEDIA_TEMP_DIR=/tmp/mxshare
+ENV PROTECTED_MEDIA_DIR=/data/mxshare-protected-media
 
 EXPOSE 8080
 

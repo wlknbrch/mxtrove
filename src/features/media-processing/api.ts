@@ -72,6 +72,10 @@ export async function listMediaProcessingJobs(sourceAssetId?: string) {
 export async function createMediaProcessingJob(input: {
   sourceAssetId: string;
   songVersionId?: string | null;
+  outputMode?: "public_cloud" | "protected";
+  protectedPurpose?: "post_preview" | "collaboration_preview" | "message_audio" | null;
+  projectId?: string | null;
+  postId?: string | null;
 }) {
   if (isDemoModeEnabled()) {
     await createDemoDelay(180);
@@ -105,8 +109,30 @@ export async function createMediaProcessingJob(input: {
       ready_at: null,
       completed_at: null,
       expires_at: null,
+      output_mode: input.outputMode ?? "public_cloud",
+      protected_purpose: input.protectedPurpose ?? null,
+      target_project_id: input.projectId ?? null,
+      target_post_id: input.postId ?? null,
+      protected_asset_id: null,
       updated_at: new Date().toISOString(),
     } satisfies MediaProcessingJob;
+  }
+
+  if (input.outputMode === "protected") {
+    return workerRequest<MediaProcessingJob>("/v1/media/jobs", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sourceAssetId: input.sourceAssetId,
+        songVersionId: input.songVersionId ?? null,
+        outputMode: "protected",
+        protectedPurpose: input.protectedPurpose ?? "collaboration_preview",
+        projectId: input.projectId ?? null,
+        postId: input.postId ?? null,
+      }),
+    });
   }
 
   const client = requireSupabase();
@@ -282,4 +308,42 @@ export async function sendPushTestNotification() {
   await workerRequest("/v1/push/test", {
     method: "POST",
   });
+}
+
+export async function createProtectedMediaReadUrl(
+  assetId: string,
+  shareToken?: string | null,
+) {
+  if (shareToken) {
+    const client = requireSupabase();
+    const { data } = await client.auth.getSession();
+    const response = await fetch(
+      `${env.mediaWorkerUrl}/v1/protected-media/${encodeURIComponent(assetId)}/read-url`,
+      {
+        method: "POST",
+        headers: {
+          ...(data.session?.access_token
+            ? { Authorization: `Bearer ${data.session.access_token}` }
+            : {}),
+          "X-MxShare-Share-Token": shareToken,
+        },
+      },
+    );
+    if (!response.ok) {
+      throw new Error(await response.text() || "The protected shared preview is unavailable.");
+    }
+    const result = await response.json() as { url: string; expiresInSeconds: number };
+    return result.url;
+  }
+
+  const result = await workerRequest<{ url: string; expiresInSeconds: number }>(
+    `/v1/protected-media/${encodeURIComponent(assetId)}/read-url`,
+    {
+      method: "POST",
+      headers: shareToken
+        ? { "X-MxShare-Share-Token": shareToken }
+        : undefined,
+    },
+  );
+  return result.url;
 }

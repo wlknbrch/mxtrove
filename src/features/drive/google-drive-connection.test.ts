@@ -9,14 +9,21 @@ describe("stored drive folders", () => {
         id: "connection-1",
         profile_id: "profile-1",
         provider: "google_drive",
+        provider_account_id: "account-1",
         provider_account_email: "artist@example.com",
         root_folder_id: "root-1",
         audio_originals_folder_id: ".",
         audio_previews_folder_id: "previews-1",
         artwork_folder_id: "artwork-1",
         avatars_folder_id: "avatars-1",
+        exports_folder_id: "exports-1",
+        is_default: true,
+        connection_status: "connected",
+        capabilities: {},
+        last_error: null,
         connected_at: "2026-07-08T10:00:00.000Z",
         last_verified_at: "2026-07-08T10:00:00.000Z",
+        updated_at: "2026-07-08T10:00:00.000Z",
       }),
     ).toBeNull();
   });
@@ -26,6 +33,7 @@ describe("cloud connection upsert payload", () => {
   it("maps provider folders into the Supabase payload", () => {
     const payload = buildCloudConnectionUpsert("profile-1", {
       provider: "google_drive",
+      accountId: "account-1",
       email: "artist@example.com",
       accessToken: "token",
       expiresAt: null,
@@ -36,6 +44,7 @@ describe("cloud connection upsert payload", () => {
         audioPreviewsFolderId: "previews-1",
         artworkFolderId: "artwork-1",
         avatarsFolderId: "avatars-1",
+        exportsFolderId: "exports-1",
       },
     });
 

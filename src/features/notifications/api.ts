@@ -99,6 +99,11 @@ export async function getNotificationPreferences(profileId: string) {
       replies_enabled: true,
       messages_enabled: true,
       single_updates_enabled: true,
+      project_invites_enabled: true,
+      project_feedback_enabled: true,
+      project_activity_enabled: true,
+      message_attachments_enabled: true,
+      privacy_safe_push: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     } satisfies NotificationPreferences;
@@ -134,6 +139,11 @@ export async function updateNotificationPreferences(
       replies_enabled: updates.replies_enabled ?? true,
       messages_enabled: updates.messages_enabled ?? true,
       single_updates_enabled: updates.single_updates_enabled ?? true,
+      project_invites_enabled: updates.project_invites_enabled ?? true,
+      project_feedback_enabled: updates.project_feedback_enabled ?? true,
+      project_activity_enabled: updates.project_activity_enabled ?? true,
+      message_attachments_enabled: updates.message_attachments_enabled ?? true,
+      privacy_safe_push: updates.privacy_safe_push ?? true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     } satisfies NotificationPreferences;

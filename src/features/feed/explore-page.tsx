@@ -1,6 +1,6 @@
 import { useDeferredValue, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Clock3, Compass, Heart, Sparkles, UserRound } from "lucide-react";
+import { Clock3, Compass, Heart, Search, Sparkles, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { PageHeader } from "@/components/layout/page-header";
@@ -56,6 +56,11 @@ export function ExplorePage() {
         eyebrow="Explore"
         title="Explore"
         description="Public releases, active version updates, and a calmer editorial layer over the raw timeline."
+        actions={
+          <Link to="/search">
+            <Button variant="secondary"><Search className="size-4" /> Search everything</Button>
+          </Link>
+        }
       />
 
       <Card className="velvet-hero overflow-hidden border-accent/14 px-0 py-0">

@@ -63,6 +63,8 @@ export function Waveform({
   className,
   trackClassName,
   showFallbackLine = true,
+  markers = [],
+  onMarkerSelect,
 }: {
   waveform: WaveformDataV1 | null;
   durationSeconds: number | null;
@@ -74,6 +76,13 @@ export function Waveform({
   className?: string;
   trackClassName?: string;
   showFallbackLine?: boolean;
+  markers?: Array<{
+    id: string;
+    timeSeconds: number;
+    label: string;
+    status?: "open" | "in_progress" | "resolved" | "wont_fix";
+  }>;
+  onMarkerSelect?: (markerId: string, timeSeconds: number) => void;
 }) {
   const rawId = useId();
   const inputId = `${rawId}-seek`;
@@ -106,11 +115,11 @@ export function Waveform({
   const waveformPaths = useMemo(() => buildWaveformPaths(bars), [bars]);
   const palette = variant === "preview"
     ? {
-        idleStart: "rgba(196, 166, 255, 0.32)",
+        idleStart: "rgba(var(--accent-rgb), 0.32)",
         idleMid: "rgba(243, 233, 255, 0.62)",
-        idleEnd: "rgba(178, 133, 255, 0.28)",
-        playedStart: "rgba(157, 92, 255, 0.9)",
-        playedEnd: "rgba(231, 195, 255, 0.98)",
+        idleEnd: "rgba(var(--accent-rgb), 0.28)",
+        playedStart: "rgba(var(--accent-rgb), 0.9)",
+        playedEnd: "var(--accent-secondary)",
         upperIdle: "rgba(255,255,255,0.3)",
         lowerIdle: "rgba(238,228,255,0.2)",
         upperPlayed: "rgba(255,255,255,0.92)",
@@ -118,11 +127,11 @@ export function Waveform({
         centerLine: "rgba(255,255,255,0.08)",
       }
     : {
-        idleStart: "rgba(189, 153, 255, 0.18)",
+        idleStart: "rgba(var(--accent-rgb), 0.18)",
         idleMid: "rgba(233, 222, 255, 0.38)",
-        idleEnd: "rgba(170, 130, 255, 0.16)",
-        playedStart: "rgba(157, 92, 255, 0.78)",
-        playedEnd: "rgba(216, 176, 255, 0.94)",
+        idleEnd: "rgba(var(--accent-rgb), 0.16)",
+        playedStart: "rgba(var(--accent-rgb), 0.78)",
+        playedEnd: "var(--accent-secondary)",
         upperIdle: "rgba(255,255,255,0.18)",
         lowerIdle: "rgba(255,255,255,0.14)",
         upperPlayed: "rgba(255,255,255,0.78)",
@@ -160,7 +169,7 @@ export function Waveform({
   }, []);
 
   return (
-    <label htmlFor={inputId} className={cn("relative block", className)}>
+    <div className={cn("relative block", className)}>
       <input
         id={inputId}
         className="absolute inset-0 z-20 h-full w-full cursor-pointer opacity-0"
@@ -173,6 +182,30 @@ export function Waveform({
         aria-label="Seek playback"
         onChange={(event) => onSeek?.(Number(event.currentTarget.value))}
       />
+      {normalizedDuration
+        ? markers.map((marker) => {
+            const left = Math.min(100, Math.max(0, (marker.timeSeconds / normalizedDuration) * 100));
+            return (
+              <button
+                key={marker.id}
+                type="button"
+                title={`${marker.label} · ${Math.floor(marker.timeSeconds / 60)}:${String(Math.floor(marker.timeSeconds % 60)).padStart(2, "0")}`}
+                aria-label={`Open feedback ${marker.label}`}
+                className={cn(
+                  "absolute top-0 z-30 h-full w-5 -translate-x-1/2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                  marker.status === "resolved" || marker.status === "wont_fix"
+                    ? "text-success"
+                    : "text-accent-secondary",
+                )}
+                style={{ left: `${left}%` }}
+                onClick={() => onMarkerSelect?.(marker.id, marker.timeSeconds)}
+              >
+                <span className="absolute left-1/2 top-1 h-[calc(100%-0.5rem)] w-px -translate-x-1/2 bg-current/45" />
+                <span className="absolute left-1/2 top-0 size-2.5 -translate-x-1/2 rounded-full border border-background bg-current shadow-[0_0_14px_currentColor]" />
+              </button>
+            );
+          })
+        : null}
       <div ref={containerRef} className={cn("relative h-full overflow-hidden", trackClassName)}>
         {showFallbackLine ? (
           <>
@@ -238,6 +271,6 @@ export function Waveform({
           </div>
         ) : null}
       </div>
-    </label>
+    </div>
   );
 }

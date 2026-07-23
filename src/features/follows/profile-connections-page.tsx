@@ -77,7 +77,7 @@ export function ProfileConnectionsPage({
             className={cn(
               "rounded-full px-4 py-2 text-sm transition-colors",
               relation === "followers"
-                ? "bg-[linear-gradient(90deg,rgba(157,92,255,0.9),rgba(183,120,255,0.92))] text-white"
+                ? "bg-[linear-gradient(90deg,rgba(var(--accent-rgb),0.9),var(--accent-strong))] text-white"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
@@ -88,7 +88,7 @@ export function ProfileConnectionsPage({
             className={cn(
               "rounded-full px-4 py-2 text-sm transition-colors",
               relation === "following"
-                ? "bg-[linear-gradient(90deg,rgba(157,92,255,0.9),rgba(183,120,255,0.92))] text-white"
+                ? "bg-[linear-gradient(90deg,rgba(var(--accent-rgb),0.9),var(--accent-strong))] text-white"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >

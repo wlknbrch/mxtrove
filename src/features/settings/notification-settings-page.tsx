@@ -35,6 +35,11 @@ const notificationPreferenceRows: Array<{
     | "replies_enabled"
     | "messages_enabled"
     | "single_updates_enabled"
+    | "project_invites_enabled"
+    | "project_feedback_enabled"
+    | "project_activity_enabled"
+    | "message_attachments_enabled"
+    | "privacy_safe_push"
   >;
   label: string;
   description: string;
@@ -73,6 +78,31 @@ const notificationPreferenceRows: Array<{
     key: "single_updates_enabled",
     label: "Single updates",
     description: "Version updates and public release events.",
+  },
+  {
+    key: "project_invites_enabled",
+    label: "Project invitations",
+    description: "New collaboration invitations and accepted invites.",
+  },
+  {
+    key: "project_feedback_enabled",
+    label: "Project feedback",
+    description: "New feedback, replies, and resolved review threads.",
+  },
+  {
+    key: "project_activity_enabled",
+    label: "Project activity",
+    description: "Version uploads, role changes, and project status changes.",
+  },
+  {
+    key: "message_attachments_enabled",
+    label: "Message attachments",
+    description: "Protected media arriving in direct or project conversations.",
+  },
+  {
+    key: "privacy_safe_push",
+    label: "Private lock-screen copy",
+    description: "Keep project and message push text generic so private details stay out of lock-screen previews.",
   },
 ];
 

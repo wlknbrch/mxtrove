@@ -9,7 +9,7 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "border-accent/40 bg-gradient-to-r from-accent via-[#8d4eff] to-accent-strong px-4 py-2 text-white shadow-[0_16px_36px_rgba(125,67,255,0.35)] hover:-translate-y-0.5 hover:shadow-[0_20px_42px_rgba(125,67,255,0.42)]",
+          "border-accent/40 bg-gradient-to-r from-accent via-accent to-accent-strong px-4 py-2 text-white shadow-[0_16px_36px_rgba(var(--accent-rgb),0.35)] hover:-translate-y-0.5 hover:shadow-[0_20px_42px_rgba(var(--accent-rgb),0.42)]",
         secondary:
           "border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.025))] px-4 py-2 text-foreground hover:border-border-strong hover:bg-white/8",
         ghost:

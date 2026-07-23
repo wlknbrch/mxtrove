@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { FolderOpen, ImagePlus, Play, Trash2 } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/layout/page-header";
@@ -18,12 +18,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { UploadDropzone } from "@/features/drive/components/upload-dropzone";
 import {
   createAssetRecord,
-  getCloudConnection,
+  getCloudConnections,
   updateAssetPublicLinks,
   upsertCloudConnection,
 } from "@/features/drive/api";
 import { buildCloudConnectionUpsert, getStoredDriveFolders } from "@/features/drive/google-drive-connection";
-import { useGoogleDriveProvider } from "@/features/drive/use-google-drive-provider";
+import { getCloudStorageProvider } from "@/features/cloud-providers/provider-registry";
 import {
   createSongVersion,
   deleteSong,
@@ -35,6 +35,7 @@ import {
 import { MediaProcessingStatusCard } from "@/features/media-processing/media-processing-status-card";
 import {
   generateAutomaticPreviewFromSourceAsset,
+  generateProtectedPreviewFromSourceAsset,
   uploadOriginalWithAutomaticPreview,
 } from "@/features/media-processing/automatic-preview";
 import { useAppViewer } from "@/hooks/use-app-viewer";
@@ -46,15 +47,18 @@ import { isDemoModeEnabled } from "@/lib/service-utils";
 import { getAssetWaveform } from "@/lib/waveform";
 import { songSchema, type SongFormValues, versionSchema, type VersionFormValues } from "@/lib/validators";
 import { cn } from "@/lib/utils";
-import type { Asset, MediaProcessingJob } from "@/types/domain";
+import type { Asset, CloudProvider, MediaProcessingJob } from "@/types/domain";
 
 const privatePlaybackUrlCache = new Map<string, string>();
 
 export function SongDetailPage() {
   const { songId = "" } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const viewer = useAppViewer();
-  const provider = useGoogleDriveProvider();
+  const projectId = searchParams.get("project");
+  const projectTrackId = searchParams.get("track");
+  const isProjectVersionFlow = Boolean(projectId && projectTrackId);
   const enqueue = usePlayerStore((state) => state.enqueue);
   const artworkInputId = useId();
   const artworkInputRef = useRef<HTMLInputElement | null>(null);
@@ -67,9 +71,9 @@ export function SongDetailPage() {
     enabled: Boolean(songId),
   });
 
-  const connectionQuery = useQuery({
-    queryKey: ["cloud-connection", viewer.userId],
-    queryFn: () => getCloudConnection(viewer.userId!),
+  const connectionsQuery = useQuery({
+    queryKey: ["cloud-connections", viewer.userId],
+    queryFn: () => getCloudConnections(viewer.userId!),
     enabled: Boolean(viewer.userId),
   });
 
@@ -100,7 +104,13 @@ export function SongDetailPage() {
     () => new Map(assets.map((asset) => [asset.id, asset])),
     [assets],
   );
-  const storedFolders = getStoredDriveFolders(connectionQuery.data);
+  const activeConnection =
+    connectionsQuery.data?.find((connection) => connection.is_default && connection.connection_status === "connected") ??
+    connectionsQuery.data?.find((connection) => connection.connection_status === "connected") ??
+    null;
+  const activeProviderId: CloudProvider = activeConnection?.provider ?? "google_drive";
+  const provider = getCloudStorageProvider(activeProviderId);
+  const storedFolders = getStoredDriveFolders(activeConnection);
   const artworkAsset = song?.default_artwork_asset_id
     ? assetsById.get(song.default_artwork_asset_id) ?? null
     : null;
@@ -134,13 +144,6 @@ export function SongDetailPage() {
   );
 
   useEffect(() => {
-    provider.hydrateConnection({
-      email: connectionQuery.data?.provider_account_email ?? null,
-      folders: storedFolders,
-    });
-  }, [connectionQuery.data?.provider_account_email, provider, storedFolders]);
-
-  useEffect(() => {
     if (!song) {
       return;
     }
@@ -159,20 +162,25 @@ export function SongDetailPage() {
     ]);
   }
 
-  async function refreshDriveSetup() {
+  async function refreshCloudSetup() {
     if (!viewer.userId) {
       throw new Error("Please sign in first.");
     }
 
     const result = await provider.connect();
-    await upsertCloudConnection(buildCloudConnectionUpsert(viewer.userId, result));
-    await queryClient.invalidateQueries({ queryKey: ["cloud-connection", viewer.userId] });
+    await upsertCloudConnection({
+      ...buildCloudConnectionUpsert(viewer.userId, result),
+      is_default: activeConnection?.is_default ?? !(connectionsQuery.data?.length),
+    });
+    await queryClient.invalidateQueries({ queryKey: ["cloud-connections", viewer.userId] });
     return result.folders;
   }
 
-  async function resolveDriveFolder(target: "originals" | "previews" | "artwork") {
-    const cachedFolders = provider.getCachedFolders();
-    const activeFolders = cachedFolders ?? storedFolders ?? (await refreshDriveSetup());
+  async function resolveCloudFolder(target: "originals" | "previews" | "artwork") {
+    const restored = await provider.restoreSession();
+    const activeFolders = restored
+      ? await provider.ensureRootStructure()
+      : storedFolders ?? (await refreshCloudSetup());
 
     if (target === "originals") {
       return activeFolders.audioOriginalsFolderId;
@@ -206,9 +214,46 @@ export function SongDetailPage() {
   });
 
   const createVersionMutation = useMutation({
-    mutationFn: async (values: VersionFormValues) => createSongVersion(songId, values),
+    mutationFn: async (values: VersionFormValues) => {
+      const version = await createSongVersion(
+        songId,
+        {
+          ...values,
+          preview_asset_id: isProjectVersionFlow ? null : values.preview_asset_id,
+        },
+        projectId && projectTrackId
+          ? { projectId, trackId: projectTrackId }
+          : undefined,
+      );
+
+      if (projectId && projectTrackId) {
+        const sourceAsset = assetsById.get(values.source_asset_id);
+        if (!sourceAsset) {
+          throw new Error("The private source asset could not be found after creating the version.");
+        }
+        const sourceProvider = getCloudStorageProvider(sourceAsset.provider);
+        if (!(await sourceProvider.restoreSession())) {
+          throw new Error(
+            `Reconnect ${sourceAsset.provider.replace("_", " ")} in Storage settings before generating the protected collaboration preview.`,
+          );
+        }
+        await generateProtectedPreviewFromSourceAsset({
+          provider: sourceProvider,
+          sourceAsset,
+          songVersionId: version.id,
+          purpose: "collaboration_preview",
+          projectId,
+          onJobChange: setMediaProcessingJob,
+        });
+      }
+
+      return version;
+    },
     onSuccess: async () => {
       await refreshSongQueries();
+      if (projectId) {
+        await queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+      }
       versionForm.reset({
         version_label: "",
         production_stage: versionForm.getValues("production_stage") || "Demo",
@@ -260,8 +305,26 @@ export function SongDetailPage() {
 
     setMediaProcessingError(null);
     setMediaProcessingJob(null);
-    const originalsFolderId = await resolveDriveFolder("originals");
-    const previewsFolderId = await resolveDriveFolder("previews");
+    const originalsFolderId = await resolveCloudFolder("originals");
+    if (isProjectVersionFlow) {
+      const upload =
+        file.size > 20 * 1024 * 1024
+          ? await provider.uploadResumable({ file, parentFolderId: originalsFolderId, signal, onProgress })
+          : await provider.uploadFile({ file, parentFolderId: originalsFolderId, signal, onProgress });
+      const originalAsset = await createAssetRecord({
+        ownerId: viewer.userId,
+        assetType: "audio_original",
+        accessMode: "private",
+        upload,
+      });
+      versionForm.setValue("source_asset_id", originalAsset.id, { shouldDirty: true, shouldValidate: true });
+      versionForm.setValue("preview_asset_id", null, { shouldDirty: true, shouldValidate: true });
+      await refreshSongQueries();
+      toast.success("Private source uploaded. Its protected project preview will be created with the version.");
+      return upload;
+    }
+
+    const previewsFolderId = await resolveCloudFolder("previews");
     const result = await uploadOriginalWithAutomaticPreview({
       ownerId: viewer.userId,
       provider,
@@ -308,10 +371,17 @@ export function SongDetailPage() {
 
     setMediaProcessingError(null);
     setMediaProcessingJob(null);
-    const previewFolderId = await resolveDriveFolder("previews");
+    const assetProvider = getCloudStorageProvider(sourceAsset.provider);
+    if (!(await assetProvider.restoreSession())) {
+      throw new Error(`Reconnect ${sourceAsset.provider.replace("_", " ")} in Storage settings first.`);
+    }
+    const previewFolderId =
+      sourceAsset.provider === activeProviderId
+        ? await resolveCloudFolder("previews")
+        : (await assetProvider.ensureRootStructure()).audioPreviewsFolderId;
     const result = await generateAutomaticPreviewFromSourceAsset({
       ownerId: viewer.userId,
-      provider,
+      provider: assetProvider,
       sourceAsset,
       previewFolderId,
       onJobChange: setMediaProcessingJob,
@@ -346,12 +416,12 @@ export function SongDetailPage() {
         throw new Error("Please sign in first.");
       }
 
-      const artworkFolderId = await resolveDriveFolder("artwork");
+      const artworkFolderId = await resolveCloudFolder("artwork");
       const upload =
         file.size > 20 * 1024 * 1024
           ? await provider.uploadResumable({ file, parentFolderId: artworkFolderId })
           : await provider.uploadFile({ file, parentFolderId: artworkFolderId });
-      const publicArtwork = await provider.makePublicPreview(upload.fileId);
+      const publicArtwork = await provider.createPublicPreview(upload.fileId);
       const asset = await createAssetRecord({
         ownerId: viewer.userId,
         assetType: "cover_artwork",
@@ -416,7 +486,11 @@ export function SongDetailPage() {
       return privatePlaybackUrlCache.get(asset.remote_file_id)!;
     }
 
-    const blob = await provider.getPrivateFileBlob(asset.remote_file_id);
+    const assetProvider = getCloudStorageProvider(asset.provider);
+    if (!(await assetProvider.restoreSession())) {
+      throw new Error(`Reconnect ${asset.provider.replace("_", " ")} in Storage settings first.`);
+    }
+    const blob = await assetProvider.getPrivateFileBlob(asset.remote_file_id);
     const blobUrl = URL.createObjectURL(blob);
     privatePlaybackUrlCache.set(asset.remote_file_id, blobUrl);
     return blobUrl;
@@ -529,7 +603,7 @@ export function SongDetailPage() {
           >
             <div className="grid gap-5 lg:grid-cols-[200px_minmax(0,1fr)]">
               <div className="space-y-3">
-                <div className="relative aspect-square overflow-hidden rounded-[26px] border border-border bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))]">
+                <div className="relative aspect-square overflow-hidden rounded-[26px] border border-border bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))]">
                   {artworkUrls.length > 0 ? (
                     <ResolvedImage
                       src={artworkUrls}
@@ -610,10 +684,10 @@ export function SongDetailPage() {
                     Save song
                   </Button>
                   {storedFolders ? (
-                    <Badge variant="success">Drive ready</Badge>
+                    <Badge variant="success">Cloud storage ready</Badge>
                   ) : (
                     <Link to="/settings/storage">
-                      <Button variant="ghost" size="sm">Complete Drive setup</Button>
+                      <Button variant="ghost" size="sm">Complete storage setup</Button>
                     </Link>
                   )}
                 </div>
@@ -627,7 +701,7 @@ export function SongDetailPage() {
             <div>
               <CardTitle>Asset uploads</CardTitle>
               <CardDescription className="mt-2">
-                A quick-added song becomes usable here: add the private source once and let MxShare generate the browser-safe public playback file for you.
+                A quick-added song becomes usable here: add the private source once and let MxShare generate the browser-safe playback file for its context.
               </CardDescription>
             </div>
           </CardHeader>
@@ -635,15 +709,15 @@ export function SongDetailPage() {
           <div className="space-y-5">
             {!storedFolders ? (
               <div className="rounded-[22px] border border-accent/18 bg-accent/8 px-4 py-4">
-                <p className="font-medium">Google Drive setup required</p>
+                <p className="font-medium">Cloud storage setup required</p>
                 <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                  Connect Drive once in Settings so this workspace can route source audio, playback files, and artwork into the same dedicated folder system.
+                  Connect a provider once in Settings so this workspace can route source audio, playback files, and artwork into the same dedicated folder system.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-3">
                   <Link to="/settings/storage">
-                    <Button size="sm">Open Google Drive setup</Button>
+                    <Button size="sm">Open storage setup</Button>
                   </Link>
-                  <Button variant="ghost" size="sm" onClick={() => void connectionQuery.refetch()}>
+                  <Button variant="ghost" size="sm" onClick={() => void connectionsQuery.refetch()}>
                     Refresh status
                   </Button>
                 </div>
@@ -652,7 +726,11 @@ export function SongDetailPage() {
 
             <UploadDropzone
               title="Private source upload"
-              description="Keep the original private in Drive. MxShare will also generate the public MP3 preview automatically for the current workspace."
+              description={
+                isProjectVersionFlow
+                  ? "The original stays private in your provider. MxShare creates a protected project preview only after you add the version."
+                  : "The original stays private in your provider. MxShare also generates the public MP3 playback file automatically."
+              }
               parentFolderId={storedFolders?.audioOriginalsFolderId ?? ""}
               disabled={!storedFolders}
               onUpload={(input) => uploadOriginalWithAutomation(input.file, input.signal, input.onProgress)}

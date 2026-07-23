@@ -3,6 +3,7 @@ import { Suspense, lazy, type PropsWithChildren } from "react";
 import { Toaster } from "sonner";
 
 import { AuthProvider } from "@/hooks/use-auth";
+import { AppearanceProvider } from "@/features/appearance/appearance-provider";
 import { queryClient } from "@/lib/query-client";
 
 const ReactQueryDevtools = import.meta.env.DEV
@@ -16,8 +17,10 @@ export function AppProviders({ children }: PropsWithChildren) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        {children}
-        <Toaster richColors position="top-right" theme="dark" />
+        <AppearanceProvider>
+          {children}
+          <Toaster richColors position="top-right" theme="system" />
+        </AppearanceProvider>
       </AuthProvider>
       {ReactQueryDevtools ? (
         <Suspense fallback={null}>

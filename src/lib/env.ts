@@ -4,6 +4,8 @@ const requiredAppUrl = import.meta.env.VITE_APP_URL;
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const googleDriveClientId = import.meta.env.VITE_GOOGLE_DRIVE_CLIENT_ID;
+const dropboxClientId = import.meta.env.VITE_DROPBOX_CLIENT_ID;
+const oneDriveClientId = import.meta.env.VITE_ONEDRIVE_CLIENT_ID;
 const mediaWorkerUrl = import.meta.env.VITE_MEDIA_WORKER_URL;
 const webPushPublicKey = import.meta.env.VITE_WEB_PUSH_PUBLIC_KEY;
 
@@ -13,6 +15,8 @@ export const env = {
   supabaseUrl: supabaseUrl || "",
   supabasePublishableKey: supabasePublishableKey || "",
   googleDriveClientId: googleDriveClientId || "",
+  dropboxClientId: dropboxClientId || "",
+  oneDriveClientId: oneDriveClientId || "",
   mediaWorkerUrl: mediaWorkerUrl || "http://localhost:8080",
   webPushPublicKey: webPushPublicKey || "",
   pwaEnabled: import.meta.env.VITE_PWA_ENABLED !== "false",
@@ -22,6 +26,8 @@ export const env = {
 export const envState = {
   hasSupabase: Boolean(env.supabaseUrl && env.supabasePublishableKey),
   hasGoogleDrive: Boolean(env.googleDriveClientId),
+  hasDropbox: Boolean(env.dropboxClientId),
+  hasOneDrive: Boolean(env.oneDriveClientId),
   hasMediaWorker: Boolean(env.mediaWorkerUrl),
   hasWebPushKey: Boolean(env.webPushPublicKey),
 };

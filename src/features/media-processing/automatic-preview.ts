@@ -121,7 +121,7 @@ export async function generateAutomaticPreview(params: {
       params.onProgress?.(toProgress(88, 97, progress));
     },
   });
-  const publicPreview = await params.provider.makePublicPreview(upload.fileId);
+  const publicPreview = await params.provider.createPublicPreview(upload.fileId);
   const previewAsset = await createAssetRecord({
     ownerId: params.ownerId,
     assetType: "audio_preview",
@@ -197,6 +197,60 @@ export async function generateAutomaticPreviewFromSourceAsset(params: {
     onJobChange: params.onJobChange,
     onProgress: params.onProgress,
   });
+}
+
+export async function generateProtectedPreviewFromSourceAsset(params: {
+  provider: CloudStorageProvider;
+  sourceAsset: Asset;
+  songVersionId: string;
+  purpose: "post_preview" | "collaboration_preview";
+  postId?: string | null;
+  projectId?: string | null;
+  signal?: AbortSignal;
+  onJobChange?: (job: MediaProcessingJob | null) => void;
+  onProgress?: (progress: number) => void;
+}) {
+  params.onProgress?.(5);
+  const sourceBlob = await params.provider.getPrivateFileBlob(params.sourceAsset.remote_file_id);
+  const sourceFile = new File([sourceBlob], params.sourceAsset.filename, {
+    type: params.sourceAsset.mime_type || sourceBlob.type || "application/octet-stream",
+    lastModified: Date.now(),
+  });
+  params.onProgress?.(18);
+
+  const job = await createMediaProcessingJob({
+    sourceAssetId: params.sourceAsset.id,
+    songVersionId: params.songVersionId,
+    outputMode: "protected",
+    protectedPurpose: params.purpose,
+    projectId: params.projectId ?? null,
+    postId: params.postId ?? null,
+  });
+  params.onJobChange?.(job);
+
+  if (job.status === "created" || job.status === "uploading") {
+    await uploadMediaProcessingInput({
+      jobId: job.id,
+      file: sourceFile,
+      signal: params.signal,
+      onProgress: (progress) => params.onProgress?.(toProgress(18, 52, progress)),
+    });
+  }
+
+  const completedJob = job.status === "completed"
+    ? job
+    : await waitForJobToSettle({
+        jobId: job.id,
+        signal: params.signal,
+        onJobChange: params.onJobChange,
+        onProgress: (progress) => params.onProgress?.(toProgress(52, 100, progress)),
+      });
+
+  if (!completedJob.protected_asset_id) {
+    throw new Error("The media worker completed without a protected preview asset.");
+  }
+  params.onProgress?.(100);
+  return completedJob;
 }
 
 export async function uploadOriginalWithAutomaticPreview(params: {

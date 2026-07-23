@@ -7,4 +7,9 @@ services:
       - services/media-worker/.env
     ports:
       - "8080:8080"
+    volumes:
+      - mxshare-protected-media:/data/mxshare-protected-media
     restart: unless-stopped
+
+volumes:
+  mxshare-protected-media:

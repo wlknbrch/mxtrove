@@ -23,18 +23,35 @@ import { Tabs } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   createAssetRecord,
-  getCloudConnection,
   updateAssetPublicLinks,
-  upsertCloudConnection,
 } from "@/features/drive/api";
-import { buildCloudConnectionUpsert, getStoredDriveFolders } from "@/features/drive/google-drive-connection";
-import { useGoogleDriveProvider } from "@/features/drive/use-google-drive-provider";
+import { getCloudStorageProvider } from "@/features/cloud-providers/provider-registry";
+import { useCloudUploadProvider } from "@/features/cloud-providers/use-cloud-upload-provider";
 import { createSong, getLibraryDashboard } from "@/features/library/api";
+import { generateProtectedPreviewFromSourceAsset } from "@/features/media-processing/automatic-preview";
 import { createReleasePost } from "@/features/posts/api";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { getArtworkAssetUrls } from "@/lib/asset-urls";
 import { queryClient } from "@/lib/query-client";
-import type { SongVersion } from "@/types/domain";
+import type { CloudProvider, SongVersion, Visibility } from "@/types/domain";
+
+function getReleaseCreateErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof (error as { message?: unknown }).message === "string" &&
+    (error as { message: string }).message.trim()
+  ) {
+    return (error as { message: string }).message;
+  }
+
+  return "Could not create release.";
+}
 
 function getLatestSongVersion(songId: string, versions: SongVersion[]) {
   return (
@@ -110,7 +127,6 @@ export function CreateReleasePage({
   kind: "ep" | "album";
 }) {
   const viewer = useAppViewer();
-  const provider = useGoogleDriveProvider();
   const navigate = useNavigate();
   const artworkInputId = useId();
   const artworkInputRef = useRef<HTMLInputElement | null>(null);
@@ -118,10 +134,18 @@ export function CreateReleasePage({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [releaseUrl, setReleaseUrl] = useState("");
-  const [visibility, setVisibility] = useState<"private" | "public">("public");
+  const [visibility, setVisibility] = useState<Visibility>("public");
   const [selectedSongIds, setSelectedSongIds] = useState<string[]>([]);
   const [quickSongTitle, setQuickSongTitle] = useState("");
   const [artworkAssetId, setArtworkAssetId] = useState<string | null>(null);
+  const [uploadProviderId, setUploadProviderId] = useState<CloudProvider | null>(null);
+  const {
+    provider,
+    providerId,
+    storedFolders: storedDriveFolders,
+    connectionsQuery,
+    ensureFolders,
+  } = useCloudUploadProvider(viewer.userId, uploadProviderId);
   const sensors = useSensors(useSensor(PointerSensor));
 
   useEffect(() => {
@@ -133,16 +157,10 @@ export function CreateReleasePage({
     queryFn: () => getLibraryDashboard(viewer.userId!),
     enabled: Boolean(viewer.userId),
   });
-  const connectionQuery = useQuery({
-    queryKey: ["cloud-connection", viewer.userId],
-    queryFn: () => getCloudConnection(viewer.userId!),
-    enabled: Boolean(viewer.userId),
-  });
 
   const songs = libraryQuery.data?.songs ?? [];
   const versions = libraryQuery.data?.versions ?? [];
   const assets = libraryQuery.data?.assets ?? [];
-  const storedDriveFolders = getStoredDriveFolders(connectionQuery.data);
   const availableArtwork = useMemo(
     () => assets.filter((asset) => asset.asset_type === "cover_artwork"),
     [assets],
@@ -166,28 +184,8 @@ export function CreateReleasePage({
       : null;
   }, [artworkAssetId, availableArtwork, selectedSongs]);
 
-  useEffect(() => {
-    provider.hydrateConnection({
-      email: connectionQuery.data?.provider_account_email ?? null,
-      folders: storedDriveFolders,
-    });
-  }, [connectionQuery.data?.provider_account_email, provider, storedDriveFolders]);
-
-  async function refreshDriveSetup() {
-    if (!viewer.userId) {
-      throw new Error("Please sign in first.");
-    }
-
-    const result = await provider.connect();
-    await upsertCloudConnection(buildCloudConnectionUpsert(viewer.userId, result));
-    await queryClient.invalidateQueries({ queryKey: ["cloud-connection", viewer.userId] });
-    return result.folders;
-  }
-
-  async function resolveDriveFolder() {
-    const cachedFolders = provider.getCachedFolders();
-    const activeFolders = cachedFolders ?? storedDriveFolders ?? (await refreshDriveSetup());
-    return activeFolders.artworkFolderId;
+  async function resolveArtworkFolder() {
+    return (await ensureFolders()).artworkFolderId;
   }
 
   function handleArtworkPickerKeyDown(event: KeyboardEvent<HTMLLabelElement>) {
@@ -209,12 +207,12 @@ export function CreateReleasePage({
         throw new Error("Please sign in first.");
       }
 
-      const artworkFolderId = await resolveDriveFolder();
+      const artworkFolderId = await resolveArtworkFolder();
       const upload =
         file.size > 20 * 1024 * 1024
           ? await provider.uploadResumable({ file, parentFolderId: artworkFolderId })
           : await provider.uploadFile({ file, parentFolderId: artworkFolderId });
-      const publicArtwork = await provider.makePublicPreview(upload.fileId);
+      const publicArtwork = await provider.createPublicPreview(upload.fileId);
       const asset = await createAssetRecord({
         ownerId: viewer.userId,
         assetType: "cover_artwork",
@@ -292,8 +290,7 @@ export function CreateReleasePage({
         throw new Error("Public releases need a shared playback file for every selected track.");
       }
 
-      return createReleasePost({
-        ownerId: viewer.userId,
+      const post = await createReleasePost({
         postType,
         title: title.trim(),
         description: description.trim(),
@@ -309,6 +306,31 @@ export function CreateReleasePage({
           production_stage: latestVersion?.production_stage ?? null,
         })),
       });
+
+      if (visibility === "followers" || visibility === "unlisted") {
+        for (const { latestVersion } of resolvedTracks) {
+          if (!latestVersion || latestVersion.protected_preview_asset_id) continue;
+          const sourceAsset = assets.find((asset) => asset.id === latestVersion.source_asset_id);
+          if (!sourceAsset) {
+            throw new Error(`The private source for ${latestVersion.version_label} is missing.`);
+          }
+          const sourceProvider = getCloudStorageProvider(sourceAsset.provider);
+          if (!(await sourceProvider.restoreSession())) {
+            throw new Error(
+              `Reconnect ${sourceAsset.provider.replace("_", " ")} before generating protected playback.`,
+            );
+          }
+          await generateProtectedPreviewFromSourceAsset({
+            provider: sourceProvider,
+            sourceAsset,
+            songVersionId: latestVersion.id,
+            purpose: "post_preview",
+            postId: post.id,
+          });
+        }
+      }
+
+      return post;
     },
     onSuccess: async (post) => {
       await Promise.all([
@@ -320,7 +342,7 @@ export function CreateReleasePage({
       navigate(`/post/${post.id}`);
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Could not create release.");
+      toast.error(getReleaseCreateErrorMessage(error));
     },
   });
 
@@ -401,6 +423,8 @@ export function CreateReleasePage({
                 <span className="text-sm font-medium">Visibility</span>
                 <Select value={visibility} onChange={(event) => setVisibility(event.currentTarget.value as typeof visibility)}>
                   <option value="public">Public</option>
+                  <option value="followers">Followers only</option>
+                  <option value="unlisted">Invite link only</option>
                   <option value="private">Private</option>
                 </Select>
               </label>
@@ -429,6 +453,21 @@ export function CreateReleasePage({
               <Textarea value={description} onChange={(event) => setDescription(event.currentTarget.value)} />
             </label>
             <div className="mt-5 flex flex-wrap gap-3">
+              <Select
+                className="min-h-11 w-auto"
+                aria-label="Artwork upload provider"
+                value={providerId}
+                onChange={(event) => setUploadProviderId(event.currentTarget.value as CloudProvider)}
+              >
+                {(connectionsQuery.data ?? [])
+                  .filter((connection) => connection.connection_status === "connected")
+                  .map((connection) => (
+                    <option key={connection.provider} value={connection.provider}>
+                      {connection.provider.replace("_", " ")}
+                      {connection.is_default ? " · default" : ""}
+                    </option>
+                  ))}
+              </Select>
               <input
                 id={artworkInputId}
                 ref={artworkInputRef}
@@ -456,7 +495,7 @@ export function CreateReleasePage({
               </label>
               {!storedDriveFolders ? (
                 <Link to="/settings/storage">
-                  <Button variant="ghost">Connect Drive for artwork uploads</Button>
+                  <Button variant="ghost">Connect storage for artwork uploads</Button>
                 </Link>
               ) : null}
             </div>
@@ -570,7 +609,7 @@ export function CreateReleasePage({
         <div className="space-y-6">
           <Card>
             <div className="space-y-4">
-              <div className="overflow-hidden rounded-[26px] border border-white/[0.08] bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.22),rgba(255,255,255,0.02)_60%,rgba(255,255,255,0.01))] p-5">
+              <div className="overflow-hidden rounded-[26px] border border-white/[0.08] bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.22),rgba(255,255,255,0.02)_60%,rgba(255,255,255,0.01))] p-5">
                 {selectedArtwork ? (
                   <ResolvedImage
                     src={getArtworkAssetUrls(selectedArtwork)}

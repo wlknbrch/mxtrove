@@ -17,17 +17,19 @@ export function ResolvedImage({
   onError,
   ...props
 }: ResolvedImageProps) {
+  const normalizedCandidates = normalizeCandidates(src);
+  const candidatesKey = normalizedCandidates.join("|");
   const [failedSources, setFailedSources] = useState<string[]>([]);
   const filteredCandidates = useMemo(
-    () => normalizeCandidates(src).filter((candidate) => !failedSources.includes(candidate)),
-    [failedSources, src],
+    () => normalizedCandidates.filter((candidate) => !failedSources.includes(candidate)),
+    [failedSources, normalizedCandidates],
   );
   const resolvedSrc = useResolvedMediaUrl(filteredCandidates, "image");
   const activeCandidate = filteredCandidates[0] ?? null;
 
   useEffect(() => {
-    setFailedSources([]);
-  }, [src]);
+    setFailedSources((current) => (current.length > 0 ? [] : current));
+  }, [candidatesKey]);
 
   if (!resolvedSrc) {
     return null;

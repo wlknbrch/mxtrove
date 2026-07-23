@@ -69,6 +69,37 @@ export async function decodeToMonoPcm(
   ], onSpawn);
 }
 
+export async function transcodeImagePreview(
+  inputPath: string,
+  outputPath: string,
+  onSpawn?: (child: ChildProcess) => void,
+) {
+  return spawnWithCapture(
+    config.ffmpegPath,
+    [
+      "-hide_banner",
+      "-nostdin",
+      "-i",
+      inputPath,
+      "-map",
+      "0:v:0",
+      "-frames:v",
+      "1",
+      "-vf",
+      "scale='min(2048,iw)':'min(2048,ih)':force_original_aspect_ratio=decrease",
+      "-map_metadata",
+      "-1",
+      "-c:v",
+      "libwebp",
+      "-quality",
+      "82",
+      "-y",
+      outputPath,
+    ],
+    onSpawn,
+  );
+}
+
 function spawnWithCapture(
   command: string,
   args: string[],

@@ -1,6 +1,14 @@
 import { demoAssets, demoCloudConnection } from "@/lib/demo-data";
 import { createDemoDelay, isDemoModeEnabled, requireSupabase } from "@/lib/service-utils";
-import type { Asset, AssetType, CloudConnection, PreviewGeneration, Visibility, WaveformDataV1 } from "@/types/domain";
+import type {
+  Asset,
+  AssetType,
+  CloudConnection,
+  PreviewGeneration,
+  ProtectedMediaQuota,
+  Visibility,
+  WaveformDataV1,
+} from "@/types/domain";
 
 import type { CloudAssetResult } from "@/features/drive/providers/cloud-storage";
 
@@ -25,6 +33,113 @@ export async function getCloudConnection(profileId: string) {
   return data as CloudConnection | null;
 }
 
+export async function getCloudConnections(profileId: string) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay();
+    return [demoCloudConnection];
+  }
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from("cloud_connections")
+    .select("*")
+    .eq("profile_id", profileId)
+    .order("is_default", { ascending: false })
+    .order("connected_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as CloudConnection[];
+}
+
+export async function getProtectedMediaQuota(profileId: string) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay();
+    return {
+      profile_id: profileId,
+      used_bytes: 0,
+      reserved_bytes: 0,
+      attachment_used_bytes: 0,
+      attachment_reserved_bytes: 0,
+      protected_limit_bytes: 2 * 1024 ** 3,
+      attachment_limit_bytes: 500 * 1024 ** 2,
+      updated_at: new Date().toISOString(),
+    } satisfies ProtectedMediaQuota;
+  }
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from("protected_media_quotas")
+    .select("*")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+  if (error) throw error;
+  return data as ProtectedMediaQuota | null;
+}
+
+export async function setDefaultCloudProvider(provider: CloudConnection["provider"]) {
+  const client = requireSupabase();
+  const { data: authData, error: authError } = await client.auth.getUser();
+  if (authError) throw authError;
+  if (!authData.user) throw new Error("Please sign in first.");
+
+  const { data: connection, error: connectionError } = await client
+    .from("cloud_connections")
+    .select("id")
+    .eq("profile_id", authData.user.id)
+    .eq("provider", provider)
+    .eq("connection_status", "connected")
+    .maybeSingle();
+  if (connectionError) throw connectionError;
+  if (!connection?.id) throw new Error("Connected cloud provider not found.");
+
+  const { error } = await client.rpc("set_default_cloud_provider", {
+    target_connection_id: connection.id,
+  });
+  if (error) throw error;
+}
+
+export async function listOwnedAssets(ownerId: string) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay();
+    return demoAssets.filter((asset) => asset.owner_id === ownerId);
+  }
+
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from("assets")
+    .select("*")
+    .eq("owner_id", ownerId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as Asset[];
+}
+
+export async function updateAssetProviderReference(input: {
+  assetId: string;
+  upload: CloudAssetResult;
+  accessMode: Visibility;
+}) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay();
+    return;
+  }
+
+  const client = requireSupabase();
+  const { error } = await client
+    .from("assets")
+    .update({
+      provider: input.upload.provider,
+      remote_file_id: input.upload.fileId,
+      remote_parent_folder_id: input.upload.parentFolderId,
+      filename: input.upload.filename,
+      mime_type: input.upload.mimeType,
+      bytes: input.upload.bytes,
+      access_mode: input.accessMode,
+      share_url: input.upload.shareUrl,
+      view_url: input.upload.viewUrl,
+      thumbnail_url: input.upload.thumbnailUrl,
+    })
+    .eq("id", input.assetId);
+  if (error) throw error;
+}
+
 export async function upsertCloudConnection(input: Partial<CloudConnection> & { profile_id: string }) {
   if (isDemoModeEnabled()) {
     await createDemoDelay(200);
@@ -38,7 +153,7 @@ export async function upsertCloudConnection(input: Partial<CloudConnection> & { 
   const client = requireSupabase();
   const { data, error } = await client
     .from("cloud_connections")
-    .upsert(input)
+    .upsert(input, { onConflict: "profile_id,provider" })
     .select("*")
     .single();
 
@@ -73,7 +188,7 @@ export async function createAssetRecord(input: {
     return {
       id: crypto.randomUUID(),
       owner_id: input.ownerId,
-      provider: "google_drive",
+      provider: input.upload.provider ?? "google_drive",
       remote_file_id: input.upload.fileId,
       remote_parent_folder_id: input.upload.parentFolderId,
       filename: input.upload.filename,
@@ -109,7 +224,7 @@ export async function createAssetRecord(input: {
     .from("assets")
     .insert({
       owner_id: input.ownerId,
-      provider: "google_drive",
+      provider: input.upload.provider ?? "google_drive",
       remote_file_id: input.upload.fileId,
       remote_parent_folder_id: input.upload.parentFolderId,
       filename: input.upload.filename,

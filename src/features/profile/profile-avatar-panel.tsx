@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type KeyboardEvent } from "react";
+import { useId, useRef, type KeyboardEvent } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ImagePlus, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -16,12 +16,9 @@ import type { Profile } from "@/types/domain";
 import {
   createAssetRecord,
   getAssetById,
-  getCloudConnection,
   updateAssetPublicLinks,
-  upsertCloudConnection,
 } from "@/features/drive/api";
-import { buildCloudConnectionUpsert, getStoredDriveFolders } from "@/features/drive/google-drive-connection";
-import { useGoogleDriveProvider } from "@/features/drive/use-google-drive-provider";
+import { useCloudUploadProvider } from "@/features/cloud-providers/use-cloud-upload-provider";
 import { updateProfileAvatar } from "@/features/profile/api";
 
 export function ProfileAvatarPanel({
@@ -30,15 +27,14 @@ export function ProfileAvatarPanel({
   profile: Profile | null | undefined;
 }) {
   const viewer = useAppViewer();
-  const provider = useGoogleDriveProvider();
+  const {
+    provider,
+    providerId,
+    storedFolders,
+    ensureFolders,
+  } = useCloudUploadProvider(viewer.userId);
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
-
-  const connectionQuery = useQuery({
-    queryKey: ["cloud-connection", viewer.userId],
-    queryFn: () => getCloudConnection(viewer.userId!),
-    enabled: Boolean(viewer.userId),
-  });
 
   const avatarAssetQuery = useQuery({
     queryKey: ["asset", profile?.avatar_asset_id],
@@ -46,29 +42,14 @@ export function ProfileAvatarPanel({
     enabled: Boolean(profile?.avatar_asset_id),
   });
 
-  const storedFolders = getStoredDriveFolders(connectionQuery.data);
   const currentAvatar = avatarAssetQuery.data;
-
-  useEffect(() => {
-    provider.hydrateConnection({
-      email: connectionQuery.data?.provider_account_email ?? null,
-      folders: storedFolders,
-    });
-  }, [connectionQuery.data?.provider_account_email, provider, storedFolders]);
 
   async function ensureAvatarFolder() {
     if (!viewer.userId) {
       throw new Error("Please sign in first.");
     }
 
-    if (storedFolders?.avatarsFolderId) {
-      return storedFolders.avatarsFolderId;
-    }
-
-    const result = await provider.connect();
-    await upsertCloudConnection(buildCloudConnectionUpsert(viewer.userId, result));
-    await queryClient.invalidateQueries({ queryKey: ["cloud-connection", viewer.userId] });
-    return result.folders.avatarsFolderId;
+    return (await ensureFolders()).avatarsFolderId;
   }
 
   async function syncAvatar(assetId: string | null) {
@@ -95,7 +76,7 @@ export function ProfileAvatarPanel({
         file.size > 20 * 1024 * 1024
           ? await provider.uploadResumable({ file, parentFolderId })
           : await provider.uploadFile({ file, parentFolderId });
-      const publicPreview = await provider.makePublicPreview(upload.fileId);
+      const publicPreview = await provider.createPublicPreview(upload.fileId);
       const asset = await createAssetRecord({
         ownerId: viewer.userId,
         assetType: "avatar",
@@ -163,7 +144,7 @@ export function ProfileAvatarPanel({
         <div>
           <CardTitle>Avatar</CardTitle>
           <CardDescription className="mt-2">
-            Upload a public profile image. MxShare stores the file in your dedicated Drive avatar folder so the shell and public profile can reuse the same source.
+            Upload a public profile image. MxShare stores it in the avatar folder of your default cloud provider so every profile surface can reuse the same source.
           </CardDescription>
         </div>
       </CardHeader>
@@ -182,12 +163,12 @@ export function ProfileAvatarPanel({
             </p>
             <p className="text-sm text-muted-foreground">
               {storedFolders?.avatarsFolderId
-                ? "Public avatar ready for profile and shell surfaces."
-                : "Connect Google Drive once if you have not set up the avatar folder yet."}
+                ? `Public avatar ready in ${providerId.replace("_", " ")}.`
+                : "Connect a cloud provider once if you have not set up an avatar folder yet."}
             </p>
             {!storedFolders ? (
               <Link to="/settings/storage" className="text-sm text-accent hover:text-accent-strong">
-                Open Google Drive setup
+                Open cloud storage setup
               </Link>
             ) : null}
           </div>

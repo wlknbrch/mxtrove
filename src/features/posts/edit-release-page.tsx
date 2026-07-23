@@ -17,18 +17,26 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
   createAssetRecord,
-  getCloudConnection,
   updateAssetPublicLinks,
-  upsertCloudConnection,
 } from "@/features/drive/api";
-import { buildCloudConnectionUpsert, getStoredDriveFolders } from "@/features/drive/google-drive-connection";
-import { useGoogleDriveProvider } from "@/features/drive/use-google-drive-provider";
+import { useCloudUploadProvider } from "@/features/cloud-providers/use-cloud-upload-provider";
+import { getCloudStorageProvider } from "@/features/cloud-providers/provider-registry";
 import { getLibraryDashboard } from "@/features/library/api";
-import { getResolvedPostById, updateReleasePost, updateSinglePost } from "@/features/posts/api";
+import { generateProtectedPreviewFromSourceAsset } from "@/features/media-processing/automatic-preview";
+import {
+  getResolvedPostById,
+  replaceReleaseCredits,
+  replaceReleaseExternalLinks,
+  updateReleasePost,
+  updateReleasePresentation,
+  updatePostVisibility,
+  updateSinglePost,
+} from "@/features/posts/api";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { getArtworkAssetUrls } from "@/lib/asset-urls";
 import { queryClient } from "@/lib/query-client";
-import type { SongVersion } from "@/types/domain";
+import { requireSupabase } from "@/lib/service-utils";
+import type { CloudProvider, SongVersion, Visibility } from "@/types/domain";
 
 type EditableTrack = {
   songId: string;
@@ -109,14 +117,27 @@ function SortableTrackEditor({
 export function EditReleasePage() {
   const { postId = "" } = useParams();
   const viewer = useAppViewer();
-  const provider = useGoogleDriveProvider();
   const sensors = useSensors(useSensor(PointerSensor));
   const artworkInputId = useId();
   const artworkInputRef = useRef<HTMLInputElement | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [visibility, setVisibility] = useState<Visibility>("public");
+  const [revokeOldPublicPreviews, setRevokeOldPublicPreviews] = useState(false);
   const [releaseUrl, setReleaseUrl] = useState("");
+  const [releaseNotes, setReleaseNotes] = useState("");
+  const [allowEmbed, setAllowEmbed] = useState(true);
+  const [creditsText, setCreditsText] = useState("");
+  const [externalLinksText, setExternalLinksText] = useState("");
   const [artworkAssetId, setArtworkAssetId] = useState<string | null>(null);
+  const [uploadProviderId, setUploadProviderId] = useState<CloudProvider | null>(null);
+  const {
+    provider,
+    providerId,
+    storedFolders: storedDriveFolders,
+    connectionsQuery,
+    ensureFolders,
+  } = useCloudUploadProvider(viewer.userId, uploadProviderId);
   const [singleSongVersionId, setSingleSongVersionId] = useState<string | null>(null);
   const [tracks, setTracks] = useState<EditableTrack[]>([]);
 
@@ -131,17 +152,11 @@ export function EditReleasePage() {
     queryFn: () => getLibraryDashboard(viewer.userId!),
     enabled: Boolean(viewer.userId),
   });
-  const connectionQuery = useQuery({
-    queryKey: ["cloud-connection", viewer.userId],
-    queryFn: () => getCloudConnection(viewer.userId!),
-    enabled: Boolean(viewer.userId),
-  });
 
   const item = postQuery.data;
   const songs = libraryQuery.data?.songs ?? [];
   const versions = libraryQuery.data?.versions ?? [];
   const artworkAssets = (libraryQuery.data?.assets ?? []).filter((asset) => asset.asset_type === "cover_artwork");
-  const storedDriveFolders = getStoredDriveFolders(connectionQuery.data);
   const isOwner = Boolean(item?.owner?.id && item.owner.id === viewer.userId);
   const singleSong = item?.single?.song ?? null;
   const singleAvailableVersions = singleSong ? getSongVersions(singleSong.id, versions) : [];
@@ -152,15 +167,8 @@ export function EditReleasePage() {
     : null;
   const singleTrackStatus =
     item?.post.post_type === "single"
-      ? getTrackStatus(selectedSingleVersion, item.post.visibility === "public")
+      ? getTrackStatus(selectedSingleVersion, visibility === "public")
       : null;
-
-  useEffect(() => {
-    provider.hydrateConnection({
-      email: connectionQuery.data?.provider_account_email ?? null,
-      folders: storedDriveFolders,
-    });
-  }, [connectionQuery.data?.provider_account_email, provider, storedDriveFolders]);
 
   useEffect(() => {
     if (!item) {
@@ -169,7 +177,12 @@ export function EditReleasePage() {
 
     setTitle(item.post.title);
     setDescription(item.post.description ?? "");
+    setVisibility(item.post.visibility);
     setReleaseUrl(item.post.release_url ?? "");
+    setReleaseNotes(item.post.release_notes ?? "");
+    setAllowEmbed(item.post.allow_embed);
+    setCreditsText(item.credits.map((credit) => `${credit.display_name} | ${credit.role}`).join("\n"));
+    setExternalLinksText(item.externalLinks.map((link) => `${link.label} | ${link.url} | ${link.platform}`).join("\n"));
     setArtworkAssetId(item.post.artwork_asset_id ?? null);
     if (item.post.post_type === "single") {
       setSingleSongVersionId(item.single?.featuredVersion?.id ?? null);
@@ -187,21 +200,126 @@ export function EditReleasePage() {
     );
   }, [item]);
 
-  async function refreshDriveSetup() {
-    if (!viewer.userId) {
-      throw new Error("Please sign in first.");
-    }
-
-    const result = await provider.connect();
-    await upsertCloudConnection(buildCloudConnectionUpsert(viewer.userId, result));
-    await queryClient.invalidateQueries({ queryKey: ["cloud-connection", viewer.userId] });
-    return result.folders;
+  async function resolveArtworkFolder() {
+    return (await ensureFolders()).artworkFolderId;
   }
 
-  async function resolveDriveFolder() {
-    const cachedFolders = provider.getCachedFolders();
-    const activeFolders = cachedFolders ?? storedDriveFolders ?? (await refreshDriveSetup());
-    return activeFolders.artworkFolderId;
+  async function ensureProtectedPlayback(selectedVersions: SongVersion[]) {
+    if (visibility !== "followers" && visibility !== "unlisted") return;
+
+    for (const version of selectedVersions) {
+      if (version.protected_preview_asset_id) continue;
+      const sourceAsset = (libraryQuery.data?.assets ?? []).find(
+        (asset) => asset.id === version.source_asset_id,
+      );
+      if (!sourceAsset) {
+        throw new Error(`The private source for ${version.version_label} is unavailable.`);
+      }
+      const sourceProvider = getCloudStorageProvider(sourceAsset.provider);
+      if (!(await sourceProvider.restoreSession())) {
+        throw new Error(
+          `Reconnect ${sourceAsset.provider.replace("_", " ")} before protecting this release.`,
+        );
+      }
+      await generateProtectedPreviewFromSourceAsset({
+        provider: sourceProvider,
+        sourceAsset,
+        songVersionId: version.id,
+        purpose: "post_preview",
+        postId,
+      });
+    }
+  }
+
+  async function ensurePublicPlayback(selectedVersions: SongVersion[]) {
+    if (visibility !== "public") return;
+    for (const version of selectedVersions) {
+      if (!version.preview_asset_id) {
+        throw new Error("Public releases need a public playback file for every selected version.");
+      }
+      const previewAsset = (libraryQuery.data?.assets ?? []).find(
+        (asset) => asset.id === version.preview_asset_id,
+      );
+      if (!previewAsset) {
+        throw new Error(`The playback asset for ${version.version_label} is unavailable.`);
+      }
+      if (
+        previewAsset.access_mode === "public"
+        && (previewAsset.share_url || previewAsset.view_url)
+      ) {
+        continue;
+      }
+      const previewProvider = getCloudStorageProvider(previewAsset.provider);
+      if (!(await previewProvider.restoreSession())) {
+        throw new Error(
+          `Reconnect ${previewAsset.provider.replace("_", " ")} before publishing this release.`,
+        );
+      }
+      const publicPreview = await previewProvider.createPublicPreview(
+        previewAsset.remote_file_id,
+      );
+      await updateAssetPublicLinks({
+        assetId: previewAsset.id,
+        accessMode: "public",
+        shareUrl: publicPreview.shareUrl,
+        viewUrl: publicPreview.viewUrl,
+      });
+    }
+  }
+
+  async function revokePublicPreviewsWhenUnused(selectedVersions: SongVersion[]) {
+    if (!revokeOldPublicPreviews) return;
+    const client = requireSupabase();
+    let skipped = 0;
+
+    for (const version of selectedVersions) {
+      if (!version.preview_asset_id) continue;
+      const [singleResult, releaseResult] = await Promise.all([
+        client.from("single_posts").select("post_id").eq("featured_version_id", version.id),
+        client.from("release_tracks").select("post_id").eq("song_version_id", version.id),
+      ]);
+      if (singleResult.error) throw singleResult.error;
+      if (releaseResult.error) throw releaseResult.error;
+      const otherPostIds = Array.from(new Set([
+        ...(singleResult.data ?? []).map((row) => row.post_id),
+        ...(releaseResult.data ?? []).map((row) => row.post_id),
+      ])).filter((candidateId) => candidateId !== postId);
+      if (otherPostIds.length) {
+        const { count, error } = await client
+          .from("posts")
+          .select("id", { count: "exact", head: true })
+          .in("id", otherPostIds)
+          .eq("visibility", "public");
+        if (error) throw error;
+        if ((count ?? 0) > 0) {
+          skipped += 1;
+          continue;
+        }
+      }
+
+      const previewAsset = (libraryQuery.data?.assets ?? []).find(
+        (asset) => asset.id === version.preview_asset_id,
+      );
+      if (!previewAsset) continue;
+      const previewProvider = getCloudStorageProvider(previewAsset.provider);
+      if (!(await previewProvider.restoreSession())) {
+        skipped += 1;
+        continue;
+      }
+      await previewProvider.revokePublicPreview(previewAsset.remote_file_id);
+      await updateAssetPublicLinks({
+        assetId: previewAsset.id,
+        accessMode: "private",
+        shareUrl: null,
+        viewUrl: null,
+      });
+    }
+
+    if (skipped) {
+      toast.warning(
+        `${skipped} public preview ${skipped === 1 ? "share was" : "shares were"} kept because another public post uses it or its provider needs reconnecting.`,
+      );
+    }
   }
 
   function handleArtworkPickerKeyDown(event: KeyboardEvent<HTMLLabelElement>) {
@@ -223,12 +341,12 @@ export function EditReleasePage() {
         throw new Error("Please sign in first.");
       }
 
-      const artworkFolderId = await resolveDriveFolder();
+      const artworkFolderId = await resolveArtworkFolder();
       const upload =
         file.size > 20 * 1024 * 1024
           ? await provider.uploadResumable({ file, parentFolderId: artworkFolderId })
           : await provider.uploadFile({ file, parentFolderId: artworkFolderId });
-      const publicArtwork = await provider.makePublicPreview(upload.fileId);
+      const publicArtwork = await provider.createPublicPreview(upload.fileId);
       const asset = await createAssetRecord({
         ownerId: viewer.userId,
         assetType: "cover_artwork",
@@ -265,6 +383,35 @@ export function EditReleasePage() {
       if (!isOwner) {
         throw new Error("Only the release owner can edit this post.");
       }
+      const credits = creditsText
+        .split("\n")
+        .map((line) => line.split("|").map((part) => part.trim()))
+        .filter(([name]) => Boolean(name))
+        .map(([display_name, role], position) => ({
+          profile_id: null,
+          display_name,
+          role: role || "other",
+          position,
+        }));
+      const externalLinks = externalLinksText
+        .split("\n")
+        .map((line) => line.split("|").map((part) => part.trim()))
+        .filter(([, url]) => Boolean(url))
+        .map(([label, url, platform], position) => ({
+          label: label || "Release link",
+          url,
+          platform: platform || "other",
+          position,
+        }));
+      const savePresentation = () => Promise.all([
+        updateReleasePresentation({
+          postId,
+          releaseNotes,
+          allowEmbed,
+        }),
+        replaceReleaseCredits(postId, credits),
+        replaceReleaseExternalLinks(postId, externalLinks),
+      ]);
       if (item.post.post_type === "single") {
         if (!singleSong) {
           throw new Error("This post is no longer linked to a song.");
@@ -272,9 +419,11 @@ export function EditReleasePage() {
         if (!selectedSingleVersion) {
           throw new Error("Choose a version for this single before saving.");
         }
-        if (item.post.visibility === "public" && !selectedSingleVersion.preview_asset_id) {
+        if (visibility === "public" && !selectedSingleVersion.preview_asset_id) {
           throw new Error("Public singles need a playback-ready preview for the selected version.");
         }
+        await ensureProtectedPlayback([selectedSingleVersion]);
+        await ensurePublicPlayback([selectedSingleVersion]);
 
         await updateSinglePost({
           postId,
@@ -284,6 +433,11 @@ export function EditReleasePage() {
           artworkAssetId,
           featuredVersionId: selectedSingleVersion.id,
         });
+        await Promise.all([
+          savePresentation(),
+          updatePostVisibility(postId, visibility),
+        ]);
+        await revokePublicPreviewsWhenUnused([selectedSingleVersion]);
         return;
       }
 
@@ -300,7 +454,7 @@ export function EditReleasePage() {
         if (!version) {
           throw new Error("Every release track needs a linked version.");
         }
-        if (item.post.visibility === "public" && !version.preview_asset_id) {
+        if (visibility === "public" && !version.preview_asset_id) {
           throw new Error("Public releases need a playback file for every linked track version.");
         }
 
@@ -313,6 +467,11 @@ export function EditReleasePage() {
           production_stage: version.production_stage,
         };
       });
+      const resolvedVersions = resolvedTracks
+        .map((track) => versions.find((version) => version.id === track.song_version_id))
+        .filter((version): version is SongVersion => Boolean(version));
+      await ensureProtectedPlayback(resolvedVersions);
+      await ensurePublicPlayback(resolvedVersions);
 
       await updateReleasePost({
         postId,
@@ -322,6 +481,11 @@ export function EditReleasePage() {
         artworkAssetId,
         tracks: resolvedTracks,
       });
+      await Promise.all([
+        savePresentation(),
+        updatePostVisibility(postId, visibility),
+      ]);
+      await revokePublicPreviewsWhenUnused(resolvedVersions);
     },
     onSuccess: async () => {
       await Promise.all([
@@ -455,6 +619,18 @@ export function EditReleasePage() {
                 <span className="text-sm font-medium">External release URL</span>
                 <Input value={releaseUrl} onChange={(event) => setReleaseUrl(event.currentTarget.value)} />
               </label>
+              <label className="grid gap-2">
+                <span className="text-sm font-medium">Visibility</span>
+                <Select
+                  value={visibility}
+                  onChange={(event) => setVisibility(event.currentTarget.value as Visibility)}
+                >
+                  <option value="public">Public</option>
+                  <option value="followers">Followers only</option>
+                  <option value="unlisted">Invite link only</option>
+                  <option value="private">Private</option>
+                </Select>
+              </label>
               <label className="grid gap-2 md:col-span-2">
                 <span className="text-sm font-medium">Artwork</span>
                 <Select value={artworkAssetId ?? ""} onChange={(event) => setArtworkAssetId(event.currentTarget.value || null)}>
@@ -468,11 +644,65 @@ export function EditReleasePage() {
               </label>
             </div>
 
+            {item.post.visibility === "public" && (visibility === "followers" || visibility === "unlisted") ? (
+              <div className="mt-5 rounded-[20px] border border-warning/25 bg-warning/8 px-4 py-3 text-sm leading-6 text-warning">
+                <p>
+                  MxShare will create protected playback before saving. Previously public preview files may already
+                  have been copied or shared, so changing visibility cannot recall earlier copies.
+                </p>
+                <label className="mt-3 flex items-start gap-3 text-foreground">
+                  <input
+                    className="mt-1"
+                    type="checkbox"
+                    checked={revokeOldPublicPreviews}
+                    onChange={(event) => setRevokeOldPublicPreviews(event.currentTarget.checked)}
+                  />
+                  <span>
+                    Revoke old provider shares when no other public post still uses the same preview.
+                  </span>
+                </label>
+              </div>
+            ) : null}
+
             <label className="mt-5 grid gap-2">
               <span className="text-sm font-medium">Description</span>
               <Textarea value={description} onChange={(event) => setDescription(event.currentTarget.value)} />
             </label>
+            <label className="mt-5 grid gap-2">
+              <span className="text-sm font-medium">Release notes</span>
+              <Textarea
+                value={releaseNotes}
+                onChange={(event) => setReleaseNotes(event.currentTarget.value)}
+                placeholder="Longer context, production notes, or a statement about this release."
+              />
+            </label>
+            <label className="mt-5 flex items-center gap-3 rounded-[18px] border border-border px-4 py-3">
+              <input
+                type="checkbox"
+                checked={allowEmbed}
+                onChange={(event) => setAllowEmbed(event.currentTarget.checked)}
+              />
+              <span>
+                <span className="block text-sm font-medium">Allow public embed</span>
+                <span className="mt-1 block text-xs text-muted-foreground">Only public releases can render in the minimal iframe player.</span>
+              </span>
+            </label>
             <div className="mt-5 flex flex-wrap gap-3">
+              <Select
+                className="min-h-11 w-auto"
+                aria-label="Artwork upload provider"
+                value={providerId}
+                onChange={(event) => setUploadProviderId(event.currentTarget.value as CloudProvider)}
+              >
+                {(connectionsQuery.data ?? [])
+                  .filter((connection) => connection.connection_status === "connected")
+                  .map((connection) => (
+                    <option key={connection.provider} value={connection.provider}>
+                      {connection.provider.replace("_", " ")}
+                      {connection.is_default ? " · default" : ""}
+                    </option>
+                  ))}
+              </Select>
               <input
                 id={artworkInputId}
                 ref={artworkInputRef}
@@ -500,9 +730,38 @@ export function EditReleasePage() {
               </label>
               {!storedDriveFolders ? (
                 <Link to="/settings/storage">
-                  <Button variant="ghost">Connect Drive for artwork uploads</Button>
+                  <Button variant="ghost">Connect storage for artwork uploads</Button>
                 </Link>
               ) : null}
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div>
+                <CardTitle>Credits and release links</CardTitle>
+                <CardDescription className="mt-2">
+                  Use one entry per line. Credits: Name | role. Links: Label | URL | platform.
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <div className="grid gap-5 lg:grid-cols-2">
+              <label className="grid gap-2">
+                <span className="text-sm font-medium">Credits</span>
+                <Textarea
+                  value={creditsText}
+                  onChange={(event) => setCreditsText(event.currentTarget.value)}
+                  placeholder={"Ari Vega | producer\nMina Cole | mix_engineer"}
+                />
+              </label>
+              <label className="grid gap-2">
+                <span className="text-sm font-medium">External links</span>
+                <Textarea
+                  value={externalLinksText}
+                  onChange={(event) => setExternalLinksText(event.currentTarget.value)}
+                  placeholder={"Spotify | https://open.spotify.com/... | spotify\nWebsite | https://example.com | website"}
+                />
+              </label>
             </div>
           </Card>
 
@@ -624,7 +883,7 @@ export function EditReleasePage() {
                           (track.songVersionId
                             ? availableVersions.find((entry) => entry.id === track.songVersionId) ?? null
                             : availableVersions[0] ?? null) ?? null;
-                        const status = getTrackStatus(version, item.post.visibility === "public");
+                        const status = getTrackStatus(version, visibility === "public");
 
                         return (
                           <div key={track.songId} className="space-y-3">
@@ -708,7 +967,7 @@ export function EditReleasePage() {
         <div className="space-y-6">
           <Card>
             <div className="space-y-4">
-              <div className="overflow-hidden rounded-[26px] border border-white/[0.08] bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.22),rgba(255,255,255,0.02)_60%,rgba(255,255,255,0.01))] p-5">
+              <div className="overflow-hidden rounded-[26px] border border-white/[0.08] bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.22),rgba(255,255,255,0.02)_60%,rgba(255,255,255,0.01))] p-5">
                 {selectedArtwork ? (
                   <ResolvedImage
                     src={getArtworkAssetUrls(selectedArtwork)}

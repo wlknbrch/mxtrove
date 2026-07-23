@@ -125,7 +125,7 @@ export function FeedPostCard({
       className={cn(
         "overflow-hidden border-border/90 px-4 py-4 md:px-5",
         isSpotlight &&
-          "velvet-hero border-accent/20 bg-[radial-gradient(circle_at_top_right,rgba(157,92,255,0.18),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))]",
+          "velvet-hero border-accent/20 bg-[radial-gradient(circle_at_top_right,rgba(var(--accent-rgb),0.18),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))]",
       )}
     >
       <div className="flex items-start gap-4">
@@ -157,7 +157,7 @@ export function FeedPostCard({
           </div>
 
           {item.post.description ? (
-            <p className="mt-3 max-w-3xl text-sm leading-7 text-muted-foreground">{item.post.description}</p>
+            <p className="mt-3 max-w-3xl break-words text-sm leading-7 text-muted-foreground">{item.post.description}</p>
           ) : null}
 
           <div
@@ -178,7 +178,7 @@ export function FeedPostCard({
             >
               <div
                 className={cn(
-                  "relative overflow-hidden rounded-[26px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.32),rgba(255,255,255,0.03)_55%,rgba(10,8,24,0.92))]",
+                  "relative overflow-hidden rounded-[26px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.32),rgba(255,255,255,0.03)_55%,rgba(10,8,24,0.92))]",
                   isSpotlight ? "aspect-[0.96]" : "aspect-square",
                 )}
               >
@@ -197,7 +197,7 @@ export function FeedPostCard({
                   <div className="absolute inset-0 bg-gradient-to-br from-accent/40 via-accent-secondary/20 to-background" />
                 )}
                 <div className="absolute inset-x-3 bottom-3 z-10 flex items-center justify-between gap-3 rounded-full border border-white/10 bg-[rgba(10,8,24,0.7)] px-3 py-2 text-[0.7rem] uppercase tracking-[0.18em] text-accent-secondary/85 backdrop-blur-xl">
-                  <span className="truncate">{eventLabel}</span>
+                  <span className="min-w-0 flex-1 truncate">{eventLabel}</span>
                   <span className="shrink-0 text-white/70">
                     {playbackTracks.length > 0
                       ? `${playbackTracks.length} track${playbackTracks.length === 1 ? "" : "s"}${!item.single && releaseDurationSeconds ? ` • ${formatDuration(releaseDurationSeconds)}` : ""}`
@@ -208,11 +208,11 @@ export function FeedPostCard({
               <div className="flex min-w-0 flex-col justify-between gap-4">
                 <div className="space-y-4">
                   <p className="text-xs uppercase tracking-[0.28em] text-accent-secondary/82">{eventLabel}</p>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <Link
                       to={`/post/${item.post.id}`}
                       className={cn(
-                        "font-display font-semibold tracking-[-0.04em]",
+                        "min-w-0 break-words font-display font-semibold tracking-[-0.04em]",
                         isSpotlight ? "text-5xl leading-none md:text-6xl" : "text-3xl leading-none",
                       )}
                     >
@@ -226,17 +226,17 @@ export function FeedPostCard({
                     ) : null}
                   </div>
                   {item.single?.previousVersion ? (
-                    <p className="text-sm leading-7 text-muted-foreground">
+                    <p className="break-words text-sm leading-7 text-muted-foreground">
                       Version: {item.single.featuredVersion?.version_label} · Previous:{" "}
                       {item.single.previousVersion.version_label}
                     </p>
                   ) : item.releaseTracks.length > 0 ? (
-                    <p className="text-sm leading-7 text-muted-foreground">
+                    <p className="break-words text-sm leading-7 text-muted-foreground">
                       {item.releaseTracks.length} tracks ready for playback
                       {releaseDurationSeconds ? ` across ${formatDuration(releaseDurationSeconds)}.` : "."}
                     </p>
                   ) : playbackTracks.length > 0 ? (
-                    <p className="text-sm leading-7 text-muted-foreground">
+                    <p className="break-words text-sm leading-7 text-muted-foreground">
                       Playback is ready and stays tied to the exact version the artist published.
                     </p>
                   ) : null}
@@ -275,7 +275,7 @@ export function FeedPostCard({
 
                   <div
                     className={cn(
-                      "waveform rounded-[26px] border border-white/10 bg-[linear-gradient(90deg,rgba(112,58,214,0.18),rgba(255,255,255,0.04),rgba(112,58,214,0.1))] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
+                      "waveform rounded-[26px] border border-white/10 bg-[linear-gradient(90deg,rgba(var(--accent-rgb),0.18),rgba(255,255,255,0.04),rgba(var(--accent-rgb),0.1))] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]",
                       isSpotlight ? "h-28" : "h-20",
                     )}
                   >
@@ -359,7 +359,7 @@ export function FeedPostCard({
                       note ? (
                         <div
                           key={note}
-                          className="rounded-[18px] border border-white/6 bg-white/[0.025] px-3 py-3 text-sm leading-6 text-muted-foreground"
+                          className="break-words rounded-[18px] border border-white/6 bg-white/[0.025] px-3 py-3 text-sm leading-6 text-muted-foreground"
                         >
                           {note}
                         </div>

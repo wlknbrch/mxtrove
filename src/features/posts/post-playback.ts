@@ -5,11 +5,32 @@ import {
 } from "@/lib/asset-urls";
 import { hasUsablePreviewAsset } from "@/lib/playback-health";
 import { getAssetWaveform } from "@/lib/waveform";
+import { normalizeWaveformData } from "@/lib/waveform";
 
 import type { PlaybackTrack } from "@/components/audio/player-store";
 import type { ResolvedPostCard } from "@/features/posts/types";
 
 export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[] {
+  if (item.single?.protectedPreview) {
+    const { asset, readUrl } = item.single.protectedPreview;
+    return [
+      {
+        id: item.single.featuredVersion?.id ?? item.post.id,
+        postId: item.post.id,
+        versionId: item.single.featuredVersion?.id ?? null,
+        title: item.post.title,
+        artistName: item.owner?.display_name ?? "Unknown artist",
+        artworkUrl: getArtworkAssetUrls(item.artwork),
+        src: readUrl,
+        srcCandidates: [readUrl],
+        durationSeconds: asset.duration_seconds,
+        waveform: normalizeWaveformData(asset.waveform_data),
+        versionLabel: item.single.featuredVersion?.version_label ?? null,
+        queueGroupLabel: item.post.title,
+      },
+    ];
+  }
+
   if (item.single?.previewAsset && hasUsablePreviewAsset(item.single.previewAsset)) {
     const previewUrl = getPreviewPlaybackUrl(item.single.previewAsset);
     if (previewUrl) {
@@ -33,6 +54,25 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
   }
 
   return item.releaseTracks.reduce<PlaybackTrack[]>((tracks, track) => {
+    if (track.protectedPreview) {
+      const { asset, readUrl } = track.protectedPreview;
+      tracks.push({
+        id: track.track.id,
+        postId: item.post.id,
+        versionId: track.version?.id ?? track.track.song_version_id,
+        title: track.track.track_title,
+        artistName: item.owner?.display_name ?? "Unknown artist",
+        artworkUrl: getArtworkAssetUrls(item.artwork),
+        src: readUrl,
+        srcCandidates: [readUrl],
+        durationSeconds: asset.duration_seconds,
+        waveform: normalizeWaveformData(asset.waveform_data),
+        versionLabel: track.version?.version_label ?? track.track.production_stage,
+        queueGroupLabel: item.post.title,
+      });
+      return tracks;
+    }
+
     if (!hasUsablePreviewAsset(track.previewAsset)) {
       return tracks;
     }

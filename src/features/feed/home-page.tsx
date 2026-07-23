@@ -8,6 +8,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Card } from "@/components/ui/card";
 import { usePlayerStore } from "@/components/audio/player-store";
 import { useAppViewer } from "@/hooks/use-app-viewer";
+import { useOfflineSnapshot } from "@/hooks/use-offline-snapshot";
+import { useOnlineStatus } from "@/hooks/use-online-status";
 import { getArtworkAssetUrls } from "@/lib/asset-urls";
 import { env } from "@/lib/env";
 
@@ -18,11 +20,21 @@ import { buildPostPlaybackTracks } from "@/features/posts/post-playback";
 
 export function HomePage() {
   const viewer = useAppViewer();
+  const isOnline = useOnlineStatus();
   const feedQuery = useQuery({
     queryKey: ["home-feed", viewer.userId],
     queryFn: () => listHomeFeed(viewer.userId),
   });
-  const items = (feedQuery.data ?? []).filter((item): item is NonNullable<typeof item> => Boolean(item));
+  const publicFeedItems = useMemo(
+    () => feedQuery.data?.filter((item) => item.post.visibility === "public").slice(0, 18),
+    [feedQuery.data],
+  );
+  const feedSnapshot = useOfflineSnapshot(
+    `mxshare:offline:v2:public-feed:${viewer.userId ?? "guest"}`,
+    publicFeedItems,
+  );
+  const feedData = feedQuery.data ?? (!isOnline ? feedSnapshot : null) ?? [];
+  const items = feedData.filter((item): item is NonNullable<typeof item> => Boolean(item));
   const enqueue = usePlayerStore((state) => state.enqueue);
   const activeTrackId = usePlayerStore((state) => state.activeTrackId);
   const playableCount = items.filter((item) => buildPostPlaybackTracks(item).length > 0).length;
@@ -79,18 +91,23 @@ export function HomePage() {
         actions={
           <Link
             to="/create"
-            className="hidden min-w-[390px] items-center justify-between gap-4 rounded-full border border-border bg-[linear-gradient(90deg,rgba(255,255,255,0.04),rgba(157,92,255,0.14)_110%)] px-6 py-3 text-sm transition-colors hover:border-border-strong md:flex"
+            className="hidden min-w-[390px] items-center justify-between gap-4 rounded-full border border-border bg-[linear-gradient(90deg,rgba(255,255,255,0.04),rgba(var(--accent-rgb),0.14)_110%)] px-6 py-3 text-sm transition-colors hover:border-border-strong md:flex"
           >
             <span className="inline-flex items-center gap-3 text-muted-foreground">
               <Sparkles className="size-4 text-accent-secondary" />
               Share an update...
             </span>
-            <span className="rounded-full bg-[linear-gradient(90deg,rgba(157,92,255,0.92),rgba(183,120,255,0.94))] px-4 py-2 font-medium text-white shadow-[0_12px_26px_rgba(102,55,201,0.28)]">
+            <span className="rounded-full bg-[linear-gradient(90deg,rgba(var(--accent-rgb),0.92),var(--accent-strong))] px-4 py-2 font-medium text-white shadow-[0_12px_26px_rgba(var(--accent-rgb),0.28)]">
               Post
             </span>
           </Link>
         }
       />
+      {!isOnline && feedSnapshot ? (
+        <div className="rounded-[18px] border border-warning/25 bg-warning/8 px-4 py-3 text-sm text-warning">
+          Showing the last saved public feed. Playback and new activity need a connection.
+        </div>
+      ) : null}
 
       <Card className="velvet-hero overflow-hidden border-accent/14 px-0 py-0">
         <div className="grid gap-0 xl:grid-cols-[minmax(0,1.2fr)_320px]">

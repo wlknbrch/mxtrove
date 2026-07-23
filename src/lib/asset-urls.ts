@@ -16,6 +16,11 @@ export function isInlineAssetUrl(value: string | null | undefined) {
   return Boolean(value && (value.startsWith("data:") || value.startsWith("blob:")));
 }
 
+function looksLikeGoogleDriveFileId(fileId: string | null | undefined) {
+  const normalized = fileId?.trim() ?? "";
+  return /^[A-Za-z0-9_-]{20,}$/.test(normalized);
+}
+
 function encodeFileId(fileId: string) {
   return encodeURIComponent(fileId);
 }
@@ -76,13 +81,18 @@ export function buildDriveMediaProxyUrl(
   kind: "audio" | "image",
   options?: { size?: string | null },
 ) {
+  const normalizedFileId = fileId.trim();
+  if (!normalizedFileId) {
+    return null;
+  }
+
   const baseUrl = getDriveMediaProxyBaseUrl();
   if (!baseUrl) {
     return null;
   }
 
   const url = new URL(baseUrl);
-  url.searchParams.set("fileId", fileId);
+  url.searchParams.set("fileId", normalizedFileId);
   url.searchParams.set("kind", kind);
 
   if (kind === "image" && options?.size) {
@@ -101,7 +111,9 @@ export function buildGoogleDrivePublicAssetLinks(fileId: string) {
 }
 
 function shouldDeriveGoogleDriveUrl(asset: Pick<Asset, "provider" | "remote_file_id" | "share_url">) {
-  return asset.provider === "google_drive" && Boolean(asset.remote_file_id) && !isInlineAssetUrl(asset.share_url);
+  return asset.provider === "google_drive"
+    && looksLikeGoogleDriveFileId(asset.remote_file_id)
+    && !isInlineAssetUrl(asset.share_url);
 }
 
 function uniqueUrls(values: Array<string | null | undefined>) {

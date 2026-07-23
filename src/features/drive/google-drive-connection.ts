@@ -17,6 +17,7 @@ export function getStoredDriveFolders(connection: CloudConnection | null | undef
   const audioPreviewsFolderId = sanitizeDriveId(connection?.audio_previews_folder_id);
   const artworkFolderId = sanitizeDriveId(connection?.artwork_folder_id);
   const avatarsFolderId = sanitizeDriveId(connection?.avatars_folder_id);
+  const exportsFolderId = sanitizeDriveId(connection?.exports_folder_id);
 
   if (!rootFolderId || !audioOriginalsFolderId || !audioPreviewsFolderId || !artworkFolderId || !avatarsFolderId) {
     return null;
@@ -29,19 +30,31 @@ export function getStoredDriveFolders(connection: CloudConnection | null | undef
     audioPreviewsFolderId,
     artworkFolderId,
     avatarsFolderId,
+    exportsFolderId: exportsFolderId ?? rootFolderId,
   };
 }
 
 export function buildCloudConnectionUpsert(profileId: string, result: CloudConnectionResult) {
   return {
     profile_id: profileId,
-    provider: "google_drive" as const,
+    provider: result.provider,
+    provider_account_id: result.accountId,
     provider_account_email: result.email,
     root_folder_id: result.folders.rootFolderId,
     audio_originals_folder_id: result.folders.audioOriginalsFolderId,
     audio_previews_folder_id: result.folders.audioPreviewsFolderId,
     artwork_folder_id: result.folders.artworkFolderId,
     avatars_folder_id: result.folders.avatarsFolderId,
+    exports_folder_id: result.folders.exportsFolderId,
+    is_default: true,
+    connection_status: "connected" as const,
+    capabilities: {
+      private_upload: true,
+      resumable_upload: true,
+      public_preview: true,
+      browser_transfer: true,
+    },
+    last_error: null,
     connected_at: new Date().toISOString(),
     last_verified_at: new Date().toISOString(),
   };

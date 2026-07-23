@@ -38,7 +38,7 @@ export function CreateIndexPage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">
           <Card className="overflow-hidden">
-            <div className="rounded-[28px] border border-accent/18 bg-[radial-gradient(circle_at_top_right,rgba(157,92,255,0.24),rgba(255,255,255,0.02)_58%,rgba(255,255,255,0.01))] p-6 md:p-7">
+            <div className="rounded-[28px] border border-accent/18 bg-[radial-gradient(circle_at_top_right,rgba(var(--accent-rgb),0.24),rgba(255,255,255,0.02)_58%,rgba(255,255,255,0.01))] p-6 md:p-7">
               <div className="flex flex-wrap items-center gap-3">
                 <Badge variant="accent">Publishing flow</Badge>
                 <Badge variant="neutral">Drive-aware</Badge>
@@ -60,7 +60,7 @@ export function CreateIndexPage() {
                 <Link key={option.to} to={option.to}>
                   <Card className="h-full transition-transform hover:-translate-y-1">
                     <div className="mb-5 flex items-center justify-between gap-3">
-                      <div className="flex size-14 items-center justify-center rounded-[20px] bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.28),rgba(157,92,255,0.08)_60%,rgba(255,255,255,0.02))] text-accent-secondary">
+                      <div className="flex size-14 items-center justify-center rounded-[20px] bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.28),rgba(var(--accent-rgb),0.08)_60%,rgba(255,255,255,0.02))] text-accent-secondary">
                         <Icon className="size-6" />
                       </div>
                       {index === 0 ? <Badge variant="accent">Fastest</Badge> : <Badge variant="neutral">Structured</Badge>}

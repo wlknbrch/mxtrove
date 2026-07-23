@@ -53,7 +53,7 @@ export const versionSchema = z.object({
 export const singlePublishSchema = z.object({
   title: z.string().trim().min(1).max(120),
   description: z.string().trim().max(2000).optional().or(z.literal("")),
-  visibility: z.enum(["private", "public"]),
+  visibility: z.enum(["private", "followers", "unlisted", "public"]),
   artwork_asset_id: z.string().uuid().optional().nullable(),
 });
 

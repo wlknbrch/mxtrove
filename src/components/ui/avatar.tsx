@@ -20,18 +20,21 @@ export function Avatar({
   initials?: string;
   className?: string;
 }) {
+  const normalizedCandidates = normalizeCandidates(src);
+  const candidatesKey = normalizedCandidates.join("|");
   const [failedSources, setFailedSources] = useState<string[]>([]);
   const filteredCandidates = useMemo(
-    () => normalizeCandidates(src).filter((candidate) => !failedSources.includes(candidate)),
-    [failedSources, src],
+    () => normalizedCandidates.filter((candidate) => !failedSources.includes(candidate)),
+    [failedSources, normalizedCandidates],
   );
   const resolvedSrc = useResolvedMediaUrl(filteredCandidates, "image");
   const activeCandidate = filteredCandidates[0] ?? null;
   const [imageFailed, setImageFailed] = useState(false);
 
   useEffect(() => {
-    setFailedSources([]);
-  }, [src]);
+    setFailedSources((current) => (current.length > 0 ? [] : current));
+    setImageFailed(false);
+  }, [candidatesKey]);
 
   useEffect(() => {
     setImageFailed(false);
@@ -40,7 +43,7 @@ export function Avatar({
   return (
     <div
       className={cn(
-        "flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-accent/20 bg-[radial-gradient(circle_at_top,rgba(157,92,255,0.22),rgba(255,255,255,0.04))] text-xs font-semibold text-muted-foreground shadow-[0_10px_28px_rgba(7,2,20,0.28)]",
+        "flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-accent/20 bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.22),rgba(255,255,255,0.04))] text-xs font-semibold text-muted-foreground shadow-[0_10px_28px_rgba(7,2,20,0.28)]",
         className,
       )}
     >

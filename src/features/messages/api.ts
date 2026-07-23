@@ -1,11 +1,20 @@
 import { demoConversation, demoMessages, demoProfiles, demoViewerProfile } from "@/lib/demo-data";
 import { createDemoDelay, isDemoModeEnabled, requireSupabase } from "@/lib/service-utils";
 import type { MessageFormValues } from "@/lib/validators";
-import type { Conversation, ConversationMember, Message, Profile } from "@/types/domain";
+import type {
+  CollaborationProject,
+  Conversation,
+  ConversationMember,
+  Message,
+  MessageAttachment,
+  Profile,
+  ProtectedMediaAsset,
+} from "@/types/domain";
 
 export interface ConversationPreview {
   conversation: Conversation;
   counterpart: Profile | null;
+  project: CollaborationProject | null;
   lastMessage: Message | null;
   unreadCount: number;
 }
@@ -38,6 +47,7 @@ export async function listConversations(viewerId: string) {
       {
         conversation: demoConversation,
         counterpart: demoProfiles[1],
+        project: null,
         lastMessage: demoMessages[demoMessages.length - 1],
         unreadCount: 1,
       },
@@ -71,6 +81,14 @@ export async function listConversations(viewerId: string) {
   throwMessageError(conversations.error);
   throwMessageError(members.error);
   throwMessageError(messages.error);
+  const conversationRows = (conversations.data ?? []) as Conversation[];
+  const projectIds = conversationRows
+    .map((conversation) => conversation.project_id)
+    .filter((projectId): projectId is string => Boolean(projectId));
+  const { data: projects, error: projectsError } = projectIds.length
+    ? await client.from("collaboration_projects").select("*").in("id", projectIds)
+    : { data: [], error: null };
+  throwMessageError(projectsError);
 
   const otherProfileIds = Array.from(
     new Set(
@@ -83,7 +101,7 @@ export async function listConversations(viewerId: string) {
 
   throwMessageError(profileError);
 
-  return ((conversations.data ?? []) as Conversation[])
+  return conversationRows
     .map((conversation) => {
       const memberEntries = ((members.data ?? []) as Array<{ conversation_id: string; profile_id: string }>).filter(
         (member) => member.conversation_id === conversation.id && member.profile_id !== viewerId,
@@ -100,6 +118,9 @@ export async function listConversations(viewerId: string) {
 
       return {
         conversation,
+        project: ((projects ?? []) as CollaborationProject[]).find(
+          (project) => project.id === conversation.project_id,
+        ) ?? null,
         counterpart:
           ((profiles ?? []) as Profile[]).find((profile) => profile.id === memberEntries[0]?.profile_id) ?? null,
         lastMessage,
@@ -119,7 +140,10 @@ export async function getConversation(conversationId: string) {
     return {
       conversation: demoConversation,
       messages: demoMessages,
+      attachments: [] as MessageAttachment[],
+      attachmentAssets: [] as ProtectedMediaAsset[],
       members: [demoViewerProfile, demoProfiles[1]],
+      project: null as CollaborationProject | null,
     };
   }
 
@@ -133,6 +157,39 @@ export async function getConversation(conversationId: string) {
   throwMessageError(conversation.error);
   throwMessageError(members.error);
   throwMessageError(messages.error);
+  const messageRows = (messages.data ?? []) as Message[];
+  const messageIds = messageRows.map((message) => message.id);
+  const { data: attachments, error: attachmentsError } = messageIds.length
+    ? await client
+        .from("message_attachments")
+        .select("*")
+        .in("message_id", messageIds)
+        .is("deleted_at", null)
+        .order("created_at")
+    : { data: [], error: null };
+  throwMessageError(attachmentsError);
+  const protectedAssetIds = ((attachments ?? []) as MessageAttachment[])
+    .map((attachment) => attachment.protected_asset_id)
+    .filter((assetId): assetId is string => Boolean(assetId));
+  const { data: attachmentAssets, error: attachmentAssetsError } = protectedAssetIds.length
+    ? await client
+        .from("protected_media_assets")
+        .select("*")
+        .in("id", protectedAssetIds)
+        .eq("status", "ready")
+        .is("deleted_at", null)
+    : { data: [], error: null };
+  throwMessageError(attachmentAssetsError);
+
+  const conversationRow = conversation.data as Conversation | null;
+  const { data: project, error: projectError } = conversationRow?.project_id
+    ? await client
+        .from("collaboration_projects")
+        .select("*")
+        .eq("id", conversationRow.project_id)
+        .maybeSingle()
+    : { data: null, error: null };
+  throwMessageError(projectError);
 
   const profileIds = ((members.data ?? []) as Array<{ profile_id: string }>).map((member) => member.profile_id);
   const { data: profiles, error: profilesError } = profileIds.length
@@ -142,9 +199,12 @@ export async function getConversation(conversationId: string) {
   throwMessageError(profilesError);
 
   return {
-    conversation: conversation.data as Conversation | null,
-    messages: (messages.data ?? []) as Message[],
+    conversation: conversationRow,
+    messages: messageRows,
+    attachments: (attachments ?? []) as MessageAttachment[],
+    attachmentAssets: (attachmentAssets ?? []) as ProtectedMediaAsset[],
     members: (profiles ?? []) as Profile[],
+    project: project as CollaborationProject | null,
   };
 }
 
@@ -231,17 +291,29 @@ export async function sendMessage(input: {
 }) {
   if (isDemoModeEnabled()) {
     await createDemoDelay(150);
-    return;
+    return {
+      ...demoMessages[0],
+      id: crypto.randomUUID(),
+      conversation_id: input.conversationId,
+      sender_id: input.senderId,
+      body: input.values.body,
+      created_at: new Date().toISOString(),
+    } satisfies Message;
   }
 
   const client = requireSupabase();
-  const { error } = await client.from("messages").insert({
-    conversation_id: input.conversationId,
-    sender_id: input.senderId,
-    body: input.values.body,
-  });
+  const { data, error } = await client
+    .from("messages")
+    .insert({
+      conversation_id: input.conversationId,
+      sender_id: input.senderId,
+      body: input.values.body,
+    })
+    .select("*")
+    .single();
 
   throwMessageError(error);
+  return data as Message;
 }
 
 export async function markConversationRead(conversationId: string) {
@@ -256,4 +328,18 @@ export async function markConversationRead(conversationId: string) {
   });
 
   throwMessageError(error);
+}
+
+export async function deleteOwnMessage(messageId: string) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay(100);
+    return true;
+  }
+
+  const client = requireSupabase();
+  const { data, error } = await client.rpc("delete_own_message", {
+    target_message_id: messageId,
+  });
+  throwMessageError(error);
+  return Boolean(data);
 }

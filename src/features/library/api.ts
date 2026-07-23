@@ -139,7 +139,14 @@ export async function createSong(ownerId: string, values: SongFormValues) {
   return data as Song;
 }
 
-export async function createSongVersion(songId: string, values: VersionFormValues) {
+export async function createSongVersion(
+  songId: string,
+  values: VersionFormValues,
+  context?: {
+    projectId: string;
+    trackId: string;
+  },
+) {
   if (isDemoModeEnabled()) {
     await createDemoDelay(180);
     return {
@@ -151,6 +158,11 @@ export async function createSongVersion(songId: string, values: VersionFormValue
       changelog: values.changelog || null,
       source_asset_id: values.source_asset_id,
       preview_asset_id: values.preview_asset_id || null,
+      owner_id: demoSongVersions[2].owner_id,
+      collaboration_project_id: context?.projectId ?? null,
+      collaboration_track_id: context?.trackId ?? null,
+      sharing_mode: context ? "project_members" : "private",
+      review_status: "not_requested",
       is_published: false,
       published_at: null,
       created_at: new Date().toISOString(),
@@ -179,6 +191,10 @@ export async function createSongVersion(songId: string, values: VersionFormValue
       changelog: values.changelog || null,
       source_asset_id: values.source_asset_id,
       preview_asset_id: values.preview_asset_id || null,
+      collaboration_project_id: context?.projectId ?? null,
+      collaboration_track_id: context?.trackId ?? null,
+      sharing_mode: context ? "project_members" : "private",
+      review_status: "not_requested",
       is_published: false,
       published_at: null,
     })

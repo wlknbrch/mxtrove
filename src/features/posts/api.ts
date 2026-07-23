@@ -18,9 +18,46 @@ import {
   requireSupabase,
 } from "@/lib/service-utils";
 import type { CommentFormValues, SinglePublishValues } from "@/lib/validators";
-import type { PostType, Visibility } from "@/types/domain";
+import type {
+  Post,
+  PostCredit,
+  PostExternalLink,
+  PostType,
+  ShareLink,
+  Visibility,
+} from "@/types/domain";
+import { createProtectedMediaReadUrl } from "@/features/media-processing/api";
+import type { ProtectedMediaAsset } from "@/types/domain";
 
 import type { ResolvedComment, ResolvedPostCard, ResolvedReleaseTrack, ResolvedSingleInfo } from "@/features/posts/types";
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof (error as { message?: unknown }).message === "string" &&
+    (error as { message: string }).message.trim()
+  ) {
+    return (error as { message: string }).message;
+  }
+
+  if (
+    error &&
+    typeof error === "object" &&
+    "details" in error &&
+    typeof (error as { details?: unknown }).details === "string" &&
+    (error as { details: string }).details.trim()
+  ) {
+    return (error as { details: string }).details;
+  }
+
+  return fallback;
+}
 
 function resolveDemoPost(postId: string, viewerId?: string | null) {
   const post = demoPosts.find((entry) => entry.id === postId);
@@ -55,6 +92,7 @@ function resolveDemoPost(postId: string, viewerId?: string | null) {
       song: demoSongs.find((song) => song.id === track.song_id) ?? null,
       version: demoSongVersions.find((version) => version.id === track.song_version_id) ?? null,
       previewAsset: demoAssets.find((asset) => asset.id === track.preview_asset_id) ?? null,
+      protectedPreview: null,
       versionHeartCount: track.song_version_id === demoSongVersions[1]?.id ? 7 : 0,
       viewerHasHeartedVersion: Boolean(viewerId === demoViewerProfile.id && track.song_version_id === demoSongVersions[1]?.id),
     }));
@@ -69,6 +107,7 @@ function resolveDemoPost(postId: string, viewerId?: string | null) {
           featuredVersion,
           previousVersion,
           previewAsset,
+          protectedPreview: null,
           versionHeartCount: featuredVersion ? 9 : 0,
           viewerHasHeartedVersion: Boolean(viewerId === demoViewerProfile.id && featuredVersion),
         }
@@ -80,6 +119,18 @@ function resolveDemoPost(postId: string, viewerId?: string | null) {
     versionHeartCount: featuredVersion ? 9 : 0,
     viewerHasHeartedVersion: Boolean(viewerId === demoViewerProfile.id && featuredVersion),
     commentCount: comments.length,
+    credits: [],
+    externalLinks: post.release_url
+      ? [{
+          id: `demo-link-${post.id}`,
+          post_id: post.id,
+          platform: "website",
+          label: "Release link",
+          url: post.release_url,
+          position: 0,
+          created_at: post.created_at,
+        }]
+      : [],
     feedEvent: demoFeedEvents.find((event) => event.post_id === post.id) ?? null,
   } satisfies ResolvedPostCard;
 }
@@ -108,6 +159,8 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
     releaseTracksResult,
     metricsResult,
     viewerHeartResult,
+    creditsResult,
+    externalLinksResult,
   ] = await Promise.all([
     client.from("profiles").select("*").eq("id", post.owner_id).maybeSingle(),
     post.artwork_asset_id
@@ -135,6 +188,8 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
           .eq("profile_id", viewerId)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
+    client.from("post_credits").select("*").eq("post_id", post.id).order("position"),
+    client.from("post_external_links").select("*").eq("post_id", post.id).order("position"),
   ]);
 
   ownerResult.error && console.warn(ownerResult.error.message);
@@ -148,6 +203,8 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
   if (releaseTracksResult.error) {
     throw releaseTracksResult.error;
   }
+  if (creditsResult.error) throw creditsResult.error;
+  if (externalLinksResult.error) throw externalLinksResult.error;
 
   const singleLink = singleResult.data as { song_id: string; featured_version_id: string } | null;
   const [songResult, featuredVersionResult, previousVersionResult] = singleLink
@@ -200,6 +257,22 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
     song_version_id: string;
     profile_id: string;
   }>;
+  const protectedAssetsResult = versionIds.length
+    ? await client
+        .from("protected_media_assets")
+        .select("*")
+        .in("song_version_id", versionIds)
+        .eq("status", "ready")
+        .is("deleted_at", null)
+    : { data: [], error: null };
+  if (protectedAssetsResult.error) {
+    throw protectedAssetsResult.error;
+  }
+  const protectedAssets = (protectedAssetsResult.data ?? []) as ProtectedMediaAsset[];
+  const protectedReadUrls = new Map<string, string>();
+  await Promise.all(protectedAssets.map(async (asset) => {
+    protectedReadUrls.set(asset.id, await createProtectedMediaReadUrl(asset.id));
+  }));
   const versionHeartCounts = new Map<string, number>();
   const viewerHeartedVersionIds = new Set<string>();
 
@@ -227,6 +300,11 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
         song: song.data as ResolvedReleaseTrack["song"],
         version: version.data as ResolvedReleaseTrack["version"],
         previewAsset: previewAsset.data as ResolvedReleaseTrack["previewAsset"],
+        protectedPreview: (() => {
+          const asset = protectedAssets.find((entry) => entry.song_version_id === track.song_version_id);
+          const readUrl = asset ? protectedReadUrls.get(asset.id) : null;
+          return asset && readUrl ? { asset, readUrl } : null;
+        })(),
         versionHeartCount: track.song_version_id ? versionHeartCounts.get(track.song_version_id) ?? 0 : 0,
         viewerHasHeartedVersion: track.song_version_id ? viewerHeartedVersionIds.has(track.song_version_id) : false,
       };
@@ -243,6 +321,11 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
           featuredVersion: featuredVersionResult.data as ResolvedSingleInfo["featuredVersion"],
           previousVersion: previousVersionResult.data as ResolvedSingleInfo["previousVersion"],
           previewAsset: previewAssetResult.data as ResolvedSingleInfo["previewAsset"],
+          protectedPreview: (() => {
+            const asset = protectedAssets.find((entry) => entry.song_version_id === singleLink.featured_version_id);
+            const readUrl = asset ? protectedReadUrls.get(asset.id) : null;
+            return asset && readUrl ? { asset, readUrl } : null;
+          })(),
           versionHeartCount: singleLink?.featured_version_id
             ? versionHeartCounts.get(singleLink.featured_version_id) ?? 0
             : 0,
@@ -266,6 +349,8 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
       ? viewerHeartedVersionIds.has(singleLink.featured_version_id)
       : false,
     commentCount: Number((metricsResult.data as { comment_count?: number } | null)?.comment_count ?? 0),
+    credits: (creditsResult.data ?? []) as PostCredit[],
+    externalLinks: (externalLinksResult.data ?? []) as PostExternalLink[],
     feedEvent: null,
   };
 }
@@ -415,8 +500,8 @@ export async function createSinglePost(input: {
       description: input.values.description || null,
       visibility: input.values.visibility,
       artwork_asset_id: input.values.artwork_asset_id || null,
-      is_published: input.values.visibility === "public",
-      published_at: input.values.visibility === "public" ? now : null,
+      is_published: input.values.visibility !== "private",
+      published_at: input.values.visibility !== "private" ? now : null,
       activity_at: now,
     })
     .select("*")
@@ -440,7 +525,6 @@ export async function createSinglePost(input: {
 }
 
 export async function createReleasePost(input: {
-  ownerId: string;
   postType: Exclude<PostType, "single">;
   title: string;
   description?: string;
@@ -462,40 +546,57 @@ export async function createReleasePost(input: {
   }
 
   const client = requireSupabase();
-  const now = new Date().toISOString();
-  const { data: post, error } = await client
-    .from("posts")
-    .insert({
-      owner_id: input.ownerId,
-      post_type: input.postType,
-      title: input.title,
-      description: input.description || null,
-      release_url: input.releaseUrl || null,
-      artwork_asset_id: input.artworkAssetId ?? null,
-      visibility: input.visibility,
-      is_published: input.visibility === "public",
-      published_at: input.visibility === "public" ? now : null,
-      activity_at: now,
-    })
-    .select("*")
-    .single();
+  const { data: post, error } = await client.rpc("create_release_post", {
+    next_post_type: input.postType,
+    next_title: input.title,
+    next_description: input.description ?? "",
+    next_release_url: input.releaseUrl ?? "",
+    next_artwork_asset_id: input.artworkAssetId ?? null,
+    next_visibility: input.visibility,
+    next_tracks: input.tracks,
+  });
 
   if (error) {
-    throw error;
+    throw new Error(getApiErrorMessage(error, "Could not create the release."));
   }
 
-  const { error: tracksError } = await client.from("release_tracks").insert(
-    input.tracks.map((track) => ({
-      post_id: post.id,
-      ...track,
-    })),
-  );
+  return post as Post;
+}
 
-  if (tracksError) {
-    throw tracksError;
+export async function updateSinglePostForPublish(input: {
+  postId: string;
+  featuredVersionId: string;
+  title: string;
+  description?: string;
+  artworkAssetId?: string | null;
+  visibility: Visibility;
+}) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay(180);
+    return;
   }
 
-  return post;
+  const client = requireSupabase();
+  const published = input.visibility !== "private";
+  const { error: postError } = await client
+    .from("posts")
+    .update({
+      title: input.title.trim(),
+      description: input.description?.trim() || null,
+      artwork_asset_id: input.artworkAssetId ?? null,
+      visibility: input.visibility,
+      is_published: published,
+      published_at: published ? new Date().toISOString() : null,
+      activity_at: new Date().toISOString(),
+    })
+    .eq("id", input.postId);
+  if (postError) throw postError;
+
+  const { error: singleError } = await client
+    .from("single_posts")
+    .update({ featured_version_id: input.featuredVersionId })
+    .eq("post_id", input.postId);
+  if (singleError) throw singleError;
 }
 
 export async function updateReleasePost(input: {
@@ -531,6 +632,25 @@ export async function updateReleasePost(input: {
   if (error) {
     throw error;
   }
+}
+
+export async function updatePostVisibility(postId: string, visibility: Visibility) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay(120);
+    return;
+  }
+  const client = requireSupabase();
+  const published = visibility !== "private";
+  const { error } = await client
+    .from("posts")
+    .update({
+      visibility,
+      is_published: published,
+      published_at: published ? new Date().toISOString() : null,
+      activity_at: new Date().toISOString(),
+    })
+    .eq("id", postId);
+  if (error) throw error;
 }
 
 export async function updateSinglePost(input: {
@@ -913,4 +1033,174 @@ export async function deletePost(postId: string) {
   if (error) {
     throw error;
   }
+}
+
+export async function listPostShareLinks(postId: string) {
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from("share_links")
+    .select("*")
+    .eq("target_type", "post")
+    .eq("target_id", postId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as ShareLink[];
+}
+
+export async function createPostShareLink(input: {
+  postId: string;
+  permission?: "view" | "review";
+  expiresAt?: string | null;
+  maxUses?: number | null;
+}) {
+  const client = requireSupabase();
+  const { data, error } = await client.rpc("create_share_link", {
+    target_kind: "post",
+    target_entity_id: input.postId,
+    target_permission: input.permission ?? "view",
+    target_expires_at: input.expiresAt ?? null,
+    target_max_uses: input.maxUses ?? null,
+  });
+  if (error) throw error;
+  const row = (data as Array<{ share_link_id: string; share_token: string }> | null)?.[0];
+  if (!row) throw new Error("The share token was not returned.");
+  return row;
+}
+
+export async function revokePostShareLink(shareLinkId: string) {
+  const client = requireSupabase();
+  const { error } = await client.rpc("revoke_share_link", {
+    target_share_link_id: shareLinkId,
+  });
+  if (error) throw error;
+}
+
+export async function replaceReleaseCredits(postId: string, credits: Array<{
+  profile_id?: string | null;
+  display_name: string;
+  role: string;
+  position: number;
+}>) {
+  const client = requireSupabase();
+  const { error } = await client.rpc("replace_release_credits", {
+    target_post_id: postId,
+    next_credits: credits,
+  });
+  if (error) throw error;
+}
+
+export async function replaceReleaseExternalLinks(postId: string, links: Array<{
+  platform: string;
+  label: string;
+  url: string;
+  position: number;
+}>) {
+  const client = requireSupabase();
+  const { error } = await client.rpc("replace_release_external_links", {
+    target_post_id: postId,
+    next_links: links,
+  });
+  if (error) throw error;
+}
+
+export async function updateReleasePresentation(input: {
+  postId: string;
+  releaseNotes?: string;
+  allowEmbed: boolean;
+}) {
+  const client = requireSupabase();
+  const { error } = await client
+    .from("posts")
+    .update({
+      release_notes: input.releaseNotes?.trim() || null,
+      allow_embed: input.allowEmbed,
+    })
+    .eq("id", input.postId);
+  if (error) throw error;
+}
+
+interface SharedPostPayload {
+  post: ResolvedPostCard["post"];
+  owner: ResolvedPostCard["owner"];
+  artwork: ResolvedPostCard["artwork"];
+  single: null | {
+    song: ResolvedSingleInfo["song"];
+    featuredVersion: ResolvedSingleInfo["featuredVersion"];
+    previewAsset: ResolvedSingleInfo["previewAsset"];
+    protectedAsset: ProtectedMediaAsset | null;
+  };
+  releaseTracks: Array<{
+    track: ResolvedReleaseTrack["track"];
+    song: ResolvedReleaseTrack["song"];
+    version: ResolvedReleaseTrack["version"];
+    previewAsset: ResolvedReleaseTrack["previewAsset"];
+    protectedAsset: ProtectedMediaAsset | null;
+  }>;
+  credits: PostCredit[];
+  externalLinks: PostExternalLink[];
+}
+
+export async function getSharedPostByToken(token: string): Promise<ResolvedPostCard> {
+  const client = requireSupabase();
+  const { data, error } = await client.rpc("resolve_shared_post", {
+    supplied_token: token,
+  });
+  if (error) throw error;
+  const payload = data as SharedPostPayload | null;
+  if (!payload?.post) {
+    throw new Error("This shared release is unavailable.");
+  }
+
+  async function resolveProtected(asset: ProtectedMediaAsset | null) {
+    if (!asset) return null;
+    return {
+      asset,
+      readUrl: await createProtectedMediaReadUrl(asset.id, token),
+    };
+  }
+
+  return {
+    post: payload.post,
+    owner: payload.owner,
+    artwork: payload.artwork,
+    single: payload.single
+      ? {
+          song: payload.single.song,
+          featuredVersion: payload.single.featuredVersion,
+          previousVersion: null,
+          previewAsset: payload.single.previewAsset,
+          protectedPreview: await resolveProtected(payload.single.protectedAsset),
+          versionHeartCount: 0,
+          viewerHasHeartedVersion: false,
+        }
+      : null,
+    releaseTracks: await Promise.all(payload.releaseTracks.map(async (track) => ({
+      track: track.track,
+      song: track.song,
+      version: track.version,
+      previewAsset: track.previewAsset,
+      protectedPreview: await resolveProtected(track.protectedAsset),
+      versionHeartCount: 0,
+      viewerHasHeartedVersion: false,
+    }))),
+    comments: [],
+    heartCount: 0,
+    viewerHasHearted: false,
+    versionHeartCount: 0,
+    viewerHasHeartedVersion: false,
+    commentCount: 0,
+    credits: payload.credits ?? [],
+    externalLinks: payload.externalLinks ?? [],
+    feedEvent: null,
+  };
+}
+
+export async function resolveSharedLinkTarget(token: string) {
+  const client = requireSupabase();
+  const { data, error } = await client.rpc("resolve_share_link_target", {
+    supplied_token: token,
+  });
+  if (error) throw error;
+  if (!data) throw new Error("This share link is invalid, expired, revoked, or fully used.");
+  return data as ShareLink["target_type"];
 }

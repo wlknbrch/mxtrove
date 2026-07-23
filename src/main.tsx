@@ -8,16 +8,31 @@ import "@fontsource/jetbrains-mono/400.css";
 import "@fontsource/jetbrains-mono/500.css";
 import "@/styles/globals.css";
 
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
+import { registerAppServiceWorker, resetDevelopmentServiceWorkers } from "@/lib/pwa";
 
-import { App } from "@/app/App";
-import { registerAppServiceWorker } from "@/lib/pwa";
+async function bootstrap() {
+  if (import.meta.env.DEV) {
+    const reloadingForWorkerReset = await resetDevelopmentServiceWorkers();
+    if (reloadingForWorkerReset) {
+      return;
+    }
+  }
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+  const [{ StrictMode }, { createRoot }, { App }] = await Promise.all([
+    import("react"),
+    import("react-dom/client"),
+    import("@/app/App"),
+  ]);
 
-void registerAppServiceWorker();
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+
+  if (!import.meta.env.DEV) {
+    void registerAppServiceWorker();
+  }
+}
+
+void bootstrap();

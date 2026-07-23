@@ -36,10 +36,12 @@ export function ConversationRail({
 
       const counterpartName = item.counterpart?.display_name.toLowerCase() ?? "";
       const counterpartHandle = item.counterpart?.username.toLowerCase() ?? "";
+      const projectTitle = item.project?.title.toLowerCase() ?? "";
       const lastMessage = item.lastMessage?.body.toLowerCase() ?? "";
       return (
         counterpartName.includes(normalized) ||
         counterpartHandle.includes(normalized) ||
+        projectTitle.includes(normalized) ||
         lastMessage.includes(normalized)
       );
     });
@@ -84,23 +86,27 @@ export function ConversationRail({
                   className={cn(
                     "flex items-start gap-3 rounded-[24px] border px-3 py-3 transition-[background-color,border-color,transform]",
                     selected
-                      ? "border-accent/28 bg-[linear-gradient(90deg,rgba(157,92,255,0.18),rgba(157,92,255,0.05))]"
+                      ? "border-accent/28 bg-[linear-gradient(90deg,rgba(var(--accent-rgb),0.18),rgba(var(--accent-rgb),0.05))]"
                       : "border-transparent hover:border-white/[0.06] hover:bg-white/[0.03]",
                   )}
                 >
                   <Avatar
-                    alt={item.counterpart?.display_name ?? "Conversation"}
-                    initials={item.counterpart?.display_name?.slice(0, 2).toUpperCase()}
+                    alt={item.project?.title ?? item.counterpart?.display_name ?? "Conversation"}
+                    initials={(item.project?.title ?? item.counterpart?.display_name)?.slice(0, 2).toUpperCase()}
                     className="size-12"
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate font-medium text-foreground">
-                          {item.counterpart?.display_name ?? "Conversation"}
+                          {item.project?.title ?? item.counterpart?.display_name ?? "Conversation"}
                         </p>
                         <p className="truncate text-xs text-muted-foreground">
-                          {item.counterpart?.username ? `@${item.counterpart.username}` : "Direct thread"}
+                          {item.project
+                            ? "Project room"
+                            : item.counterpart?.username
+                              ? `@${item.counterpart.username}`
+                              : "Direct thread"}
                         </p>
                       </div>
                       <span className="shrink-0 text-xs text-muted-foreground">
