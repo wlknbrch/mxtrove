@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PlaybackDuration } from "@/components/ui/playback-duration";
 import { ResolvedImage } from "@/components/ui/resolved-image";
+import { shouldReportPlaybackError } from "@/components/audio/playback-error";
 import { Waveform } from "@/components/audio/waveform";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { useResolvedMediaUrl } from "@/hooks/use-resolved-media-url";
@@ -43,6 +44,8 @@ function normalizeMediaSource(value: string | null | undefined) {
 export function GlobalPlayer() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const loadedTrackIdRef = useRef<string | null>(null);
+  const playbackErrorTimeoutRef = useRef<number | null>(null);
+  const lastPlaybackErrorKeyRef = useRef<string | null>(null);
   const navigate = useNavigate();
   const viewer = useAppViewer();
   const { settings: appearance, updateSettings: updateAppearance } = useAppearance();
@@ -124,6 +127,54 @@ export function GlobalPlayer() {
     },
   });
 
+  function clearPendingPlaybackError() {
+    if (playbackErrorTimeoutRef.current !== null) {
+      window.clearTimeout(playbackErrorTimeoutRef.current);
+      playbackErrorTimeoutRef.current = null;
+    }
+  }
+
+  function schedulePlaybackError(message: string, error?: unknown) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return;
+    }
+
+    clearPendingPlaybackError();
+    const expectedTrackId = activeTrackId;
+    const expectedSource = normalizeMediaSource(resolvedAudioSrc);
+
+    playbackErrorTimeoutRef.current = window.setTimeout(() => {
+      playbackErrorTimeoutRef.current = null;
+      const audio = audioRef.current;
+      const playerState = usePlayerStore.getState();
+
+      if (!audio) {
+        return;
+      }
+
+      const currentSource = normalizeMediaSource(audio.currentSrc || audio.src);
+      if (!shouldReportPlaybackError({
+        expectedTrackId,
+        activeTrackId: playerState.activeTrackId,
+        loadedTrackId: loadedTrackIdRef.current,
+        expectedSource,
+        currentSource,
+        isPlaying: playerState.isPlaying,
+        isPaused: audio.paused,
+      })) {
+        return;
+      }
+
+      const errorKey = `${expectedTrackId}:${currentSource ?? "unresolved"}`;
+      if (lastPlaybackErrorKeyRef.current === errorKey) {
+        return;
+      }
+
+      lastPlaybackErrorKeyRef.current = errorKey;
+      toast.error(message);
+    }, 700);
+  }
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) {
@@ -148,8 +199,8 @@ export function GlobalPlayer() {
     if (!resolvedAudioSrc) {
       if (loadedTrackIdRef.current === activeTrack.id) {
         if (isPlaying) {
-          void audio.play().catch(() => {
-            toast.error("This track could not be played in the browser.");
+          void audio.play().catch((error) => {
+            schedulePlaybackError("This track could not be played in the browser.", error);
           });
         } else {
           audio.pause();
@@ -171,6 +222,8 @@ export function GlobalPlayer() {
       || currentLoadedSrc !== nextResolvedSrc;
 
     if (shouldReloadTrack) {
+      clearPendingPlaybackError();
+      lastPlaybackErrorKeyRef.current = null;
       audio.pause();
       audio.src = resolvedAudioSrc;
       audio.load();
@@ -181,8 +234,8 @@ export function GlobalPlayer() {
     }
 
     if (isPlaying) {
-      void audio.play().catch(() => {
-        toast.error("This track could not be played in the browser.");
+      void audio.play().catch((error) => {
+        schedulePlaybackError("This track could not be played in the browser.", error);
       });
     } else {
       audio.pause();
@@ -190,10 +243,14 @@ export function GlobalPlayer() {
   }, [activeTrack, isPlaying, resolvedAudioSrc, setCurrentTimeSeconds]);
 
   useEffect(() => {
+    clearPendingPlaybackError();
+    lastPlaybackErrorKeyRef.current = null;
     setCurrentTime(0);
     setCurrentTimeSeconds(0);
     setLoadedDuration(null);
   }, [activeTrackId]);
+
+  useEffect(() => () => clearPendingPlaybackError(), []);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -301,8 +358,8 @@ export function GlobalPlayer() {
       audio.currentTime = 0;
       setCurrentTime(0);
       setCurrentTimeSeconds(0);
-      void audio.play().catch(() => {
-        toast.error("This track could not be replayed in the browser.");
+      void audio.play().catch((error) => {
+        schedulePlaybackError("This track could not be replayed in the browser.", error);
       });
       return;
     }
@@ -415,9 +472,17 @@ export function GlobalPlayer() {
         ref={audioRef}
         onEnded={handleEnded}
         onError={() => {
-          toast.error("MxShare could not load this audio source.");
+          schedulePlaybackError("MxShare could not load this audio source.");
+        }}
+        onCanPlay={() => {
+          clearPendingPlaybackError();
+        }}
+        onPlaying={() => {
+          clearPendingPlaybackError();
+          lastPlaybackErrorKeyRef.current = null;
         }}
         onLoadedMetadata={(event) => {
+          clearPendingPlaybackError();
           const duration = event.currentTarget.duration;
           setLoadedDuration(Number.isFinite(duration) ? duration : null);
         }}

@@ -308,6 +308,7 @@ export function LibraryPage() {
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
+        wrap
         items={[
           { value: "songs", label: `Songs (${songs.length})` },
           { value: "versions", label: `Versions (${versions.length})` },

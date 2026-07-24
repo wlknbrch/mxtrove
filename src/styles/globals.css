@@ -381,6 +381,10 @@ img {
 }
 
 @media (max-width: 900px) {
+  button[aria-label="Open Tanstack query devtools"] {
+    display: none !important;
+  }
+
   .glass-panel {
     backdrop-filter: blur(16px);
     box-shadow:

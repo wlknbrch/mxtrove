@@ -24,7 +24,7 @@ export function AppProviders({ children }: PropsWithChildren) {
       </AuthProvider>
       {ReactQueryDevtools ? (
         <Suspense fallback={null}>
-          <ReactQueryDevtools initialIsOpen={false} />
+          <ReactQueryDevtools initialIsOpen={false} buttonPosition="top-right" />
         </Suspense>
       ) : null}
     </QueryClientProvider>

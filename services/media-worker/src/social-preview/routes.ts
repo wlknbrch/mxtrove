@@ -34,6 +34,10 @@ interface PublicProfileCard {
   avatar: PublicAssetRow | null;
 }
 
+const GOOGLE_DRIVE_HOST = "https://drive.google.com";
+const GOOGLE_DRIVE_USERCONTENT_HOST = "https://drive.usercontent.google.com";
+const GOOGLE_DRIVE_IMAGE_HOST = "https://lh3.googleusercontent.com";
+
 function escapeMarkup(value: string) {
   return value
     .replaceAll("&", "&amp;")
@@ -50,35 +54,91 @@ function truncate(value: string | null | undefined, maxLength: number) {
     : normalized;
 }
 
-function getPublicAssetUrl(asset: PublicAssetRow | null) {
-  if (!asset) return null;
-  if (asset.thumbnail_url) return asset.thumbnail_url;
-  if (asset.provider === "google_drive") {
-    return `https://drive.google.com/thumbnail?id=${encodeURIComponent(asset.remote_file_id)}&sz=w1200`;
+function looksLikeGoogleDriveFileId(fileId: string | null | undefined) {
+  const normalized = fileId?.trim() ?? "";
+  return /^[A-Za-z0-9_-]{20,}$/.test(normalized);
+}
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return values.filter((value, index, entries): value is string => {
+    if (!value?.trim()) {
+      return false;
+    }
+
+    return entries.indexOf(value) === index;
+  });
+}
+
+function buildGoogleDriveThumbnailUrl(fileId: string, size = "w1200") {
+  return `${GOOGLE_DRIVE_HOST}/thumbnail?id=${encodeURIComponent(fileId)}&sz=${encodeURIComponent(size)}`;
+}
+
+function buildGoogleDriveEmbeddableImageUrl(fileId: string, size = "w1200") {
+  return `${GOOGLE_DRIVE_IMAGE_HOST}/d/${encodeURIComponent(fileId)}=${encodeURIComponent(size)}`;
+}
+
+function buildGoogleDrivePublicImageUrl(fileId: string) {
+  return `${GOOGLE_DRIVE_HOST}/uc?export=view&id=${encodeURIComponent(fileId)}`;
+}
+
+function buildGoogleDriveUserContentUrl(fileId: string) {
+  return `${GOOGLE_DRIVE_USERCONTENT_HOST}/download?id=${encodeURIComponent(fileId)}&export=view&authuser=0`;
+}
+
+export function getPublicAssetUrls(asset: PublicAssetRow | null) {
+  if (!asset) return [];
+
+  if (asset.provider === "google_drive" && looksLikeGoogleDriveFileId(asset.remote_file_id)) {
+    return uniqueStrings([
+      asset.thumbnail_url,
+      buildGoogleDriveThumbnailUrl(asset.remote_file_id),
+      buildGoogleDriveEmbeddableImageUrl(asset.remote_file_id),
+      buildGoogleDriveUserContentUrl(asset.remote_file_id),
+      buildGoogleDrivePublicImageUrl(asset.remote_file_id),
+      asset.share_url,
+      asset.view_url,
+    ]);
   }
+
   if (asset.provider === "dropbox" && asset.share_url) {
     const url = new URL(asset.share_url);
     url.searchParams.delete("dl");
     url.searchParams.set("raw", "1");
-    return url.toString();
+    return uniqueStrings([asset.thumbnail_url, url.toString(), asset.share_url, asset.view_url]);
   }
-  return asset.share_url ?? asset.view_url;
+
+  return uniqueStrings([asset.thumbnail_url, asset.share_url, asset.view_url]);
 }
 
-async function fetchImageDataUrl(url: string | null) {
-  if (!url) return null;
+async function fetchImageDataUrl(candidates: string[] | string | null) {
+  const urls = Array.isArray(candidates) ? candidates : candidates ? [candidates] : [];
+  for (const url of urls) {
+    const imageDataUrl = await fetchImageDataUrlCandidate(url);
+    if (imageDataUrl) {
+      return imageDataUrl;
+    }
+  }
+
+  return null;
+}
+
+async function fetchImageDataUrlCandidate(url: string) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 6000);
   try {
     const response = await fetch(url, {
       signal: controller.signal,
+      redirect: "follow",
       headers: { "User-Agent": "MxShare-Social-Preview/2.0" },
     });
+
     if (!response.ok) return null;
-    const contentType = response.headers.get("content-type") ?? "";
-    if (!contentType.startsWith("image/") || contentType.includes("svg")) return null;
     const buffer = Buffer.from(await response.arrayBuffer());
     if (buffer.byteLength === 0 || buffer.byteLength > 12 * 1024 * 1024) return null;
+
+    const metadata = await sharp(buffer).metadata().catch(() => null);
+    if (!metadata || metadata.format === "svg") return null;
+
     const normalized = await sharp(buffer)
       .rotate()
       .resize(720, 720, { fit: "cover" })
@@ -90,6 +150,24 @@ async function fetchImageDataUrl(url: string | null) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function buildAssetCacheKey(asset: PublicAssetRow | null) {
+  if (!asset) {
+    return "no-asset";
+  }
+
+  return [
+    asset.provider,
+    asset.remote_file_id,
+    asset.thumbnail_url ?? "",
+    asset.share_url ?? "",
+    asset.view_url ?? "",
+  ].join("|");
+}
+
+export async function resolvePublicAssetImageDataUrl(asset: PublicAssetRow | null) {
+  return fetchImageDataUrl(getPublicAssetUrls(asset));
 }
 
 async function getPublicPost(postId: string): Promise<PublicPostCard | null> {
@@ -257,9 +335,9 @@ export async function registerSocialPreviewRoutes(app: FastifyInstance) {
     const { postId } = request.params as { postId: string };
     const post = await getPublicPost(postId);
     if (!post) return reply.code(404).send({ error: "Public release not found." });
-    const imageDataUrl = await fetchImageDataUrl(getPublicAssetUrl(post.artwork));
+    const imageDataUrl = await resolvePublicAssetImageDataUrl(post.artwork);
     const png = await renderCachedPng({
-      cacheKey: `post:${post.id}:${post.updated_at}:${Boolean(imageDataUrl)}`,
+      cacheKey: `post:v3:${post.id}:${post.updated_at}:${buildAssetCacheKey(post.artwork)}:${Boolean(imageDataUrl)}`,
       svg: buildCardSvg({
         eyebrow: `${post.post_type} release`,
         title: post.title,
@@ -279,9 +357,9 @@ export async function registerSocialPreviewRoutes(app: FastifyInstance) {
     const { username } = request.params as { username: string };
     const profile = await getPublicProfile(username);
     if (!profile) return reply.code(404).send({ error: "Public profile not found." });
-    const imageDataUrl = await fetchImageDataUrl(getPublicAssetUrl(profile.avatar));
+    const imageDataUrl = await resolvePublicAssetImageDataUrl(profile.avatar);
     const png = await renderCachedPng({
-      cacheKey: `profile:${profile.id}:${profile.updated_at}:${Boolean(imageDataUrl)}`,
+      cacheKey: `profile:v3:${profile.id}:${profile.updated_at}:${buildAssetCacheKey(profile.avatar)}:${Boolean(imageDataUrl)}`,
       svg: buildCardSvg({
         eyebrow: "Creator profile",
         title: profile.display_name,
