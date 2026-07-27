@@ -26,6 +26,7 @@ function buildRelease(overrides: Partial<ResolvedPostCard> = {}): ResolvedPostCa
         track: demoReleaseTracks[0],
         song: demoSongs[0],
         version: demoSongVersions[1],
+        versionLabel: demoSongVersions[1].version_label,
         previewAsset: demoAssets[1],
         protectedPreview: null,
         versionHeartCount: 0,
@@ -72,6 +73,23 @@ describe("post playback queues", () => {
       durationSeconds: 222,
     });
     expect(tracks[0].src).toBeTruthy();
+  });
+
+  it("keeps a public release version label when the private version row is hidden", () => {
+    const release = buildRelease({
+      releaseTracks: [
+        {
+          ...buildRelease().releaseTracks[0],
+          version: null,
+          versionLabel: "Master candidate",
+        },
+      ],
+    });
+
+    expect(buildPostPlaybackTracks(release)[0]).toMatchObject({
+      versionId: demoReleaseTracks[0].song_version_id,
+      versionLabel: "Master candidate",
+    });
   });
 
   it("uses a protected derivative for a non-public release", () => {

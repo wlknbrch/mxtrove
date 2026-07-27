@@ -586,7 +586,7 @@ export function PostDetailPage() {
                         <div className="min-w-0">
                           <div className="flex min-w-0 flex-wrap items-center gap-2">
                             <p className="break-words font-medium">{track.track.track_title}</p>
-                            <Badge variant="neutral">{track.version?.version_label ?? "Unmapped"}</Badge>
+                            <Badge variant="neutral">{track.versionLabel ?? "Unmapped"}</Badge>
                           </div>
                           <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                             <span>{track.version?.production_stage ?? track.track.production_stage ?? "Playback"}</span>

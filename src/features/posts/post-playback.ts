@@ -118,7 +118,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
           waveform:
             getAssetWaveform(track.previewAsset)
             ?? normalizeWaveformData(track.protectedPreview?.asset.waveform_data),
-          versionLabel: track.version?.version_label ?? track.track.production_stage,
+          versionLabel: track.versionLabel ?? track.track.production_stage,
           queueGroupLabel: item.post.title,
         });
         return tracks;
@@ -138,7 +138,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
         srcCandidates: [readUrl],
         durationSeconds: asset.duration_seconds,
         waveform: normalizeWaveformData(asset.waveform_data),
-        versionLabel: track.version?.version_label ?? track.track.production_stage,
+        versionLabel: track.versionLabel ?? track.track.production_stage,
         queueGroupLabel: item.post.title,
       });
       return tracks;
@@ -164,7 +164,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
       srcCandidates: getPreviewPlaybackUrls(track.previewAsset),
       durationSeconds: track.previewAsset?.duration_seconds ?? null,
       waveform: getAssetWaveform(track.previewAsset),
-      versionLabel: track.version?.version_label ?? track.track.production_stage,
+      versionLabel: track.versionLabel ?? track.track.production_stage,
       queueGroupLabel: item.post.title,
     });
 

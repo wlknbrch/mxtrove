@@ -91,6 +91,9 @@ function resolveDemoPost(postId: string, viewerId?: string | null) {
       track,
       song: demoSongs.find((song) => song.id === track.song_id) ?? null,
       version: demoSongVersions.find((version) => version.id === track.song_version_id) ?? null,
+      versionLabel:
+        demoSongVersions.find((version) => version.id === track.song_version_id)?.version_label
+        ?? null,
       previewAsset: demoAssets.find((asset) => asset.id === track.preview_asset_id) ?? null,
       protectedPreview: null,
       versionHeartCount: track.song_version_id === demoSongVersions[1]?.id ? 7 : 0,
@@ -161,6 +164,7 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
     viewerHeartResult,
     creditsResult,
     externalLinksResult,
+    releaseVersionLabelsResult,
   ] = await Promise.all([
     client.from("profiles").select("*").eq("id", post.owner_id).maybeSingle(),
     post.artwork_asset_id
@@ -190,6 +194,9 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
       : Promise.resolve({ data: null, error: null }),
     client.from("post_credits").select("*").eq("post_id", post.id).order("position"),
     client.from("post_external_links").select("*").eq("post_id", post.id).order("position"),
+    post.post_type === "single"
+      ? Promise.resolve({ data: [], error: null })
+      : client.rpc("get_release_track_version_labels", { target_post_id: post.id }),
   ]);
 
   ownerResult.error && console.warn(ownerResult.error.message);
@@ -205,6 +212,14 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
   }
   if (creditsResult.error) throw creditsResult.error;
   if (externalLinksResult.error) throw externalLinksResult.error;
+  if (releaseVersionLabelsResult.error) throw releaseVersionLabelsResult.error;
+
+  const releaseVersionLabels = new Map(
+    ((releaseVersionLabelsResult.data ?? []) as Array<{
+      track_id: string;
+      version_label: string;
+    }>).map((entry) => [entry.track_id, entry.version_label]),
+  );
 
   const singleLink = singleResult.data as { song_id: string; featured_version_id: string } | null;
   const [songResult, featuredVersionResult, previousVersionResult] = singleLink
@@ -299,6 +314,10 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
         track: track as ResolvedReleaseTrack["track"],
         song: song.data as ResolvedReleaseTrack["song"],
         version: version.data as ResolvedReleaseTrack["version"],
+        versionLabel:
+          (version.data as ResolvedReleaseTrack["version"])?.version_label
+          ?? releaseVersionLabels.get(track.id)
+          ?? null,
         previewAsset: previewAsset.data as ResolvedReleaseTrack["previewAsset"],
         protectedPreview: (() => {
           const asset = protectedAssets.find((entry) => entry.song_version_id === track.song_version_id);
@@ -1094,6 +1113,7 @@ export async function getSharedPostByToken(token: string): Promise<ResolvedPostC
       track: track.track,
       song: track.song,
       version: track.version,
+      versionLabel: track.version?.version_label ?? null,
       previewAsset: track.previewAsset,
       protectedPreview: await resolveProtected(track.protectedAsset),
       versionHeartCount: 0,

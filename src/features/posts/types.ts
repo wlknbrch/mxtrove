@@ -20,6 +20,7 @@ export interface ResolvedReleaseTrack {
   track: ReleaseTrack;
   song: Song | null;
   version: SongVersion | null;
+  versionLabel: string | null;
   previewAsset: Asset | null;
   protectedPreview: {
     asset: ProtectedMediaAsset;
