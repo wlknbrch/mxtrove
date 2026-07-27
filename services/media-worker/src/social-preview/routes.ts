@@ -37,6 +37,7 @@ interface PublicProfileCard {
 const GOOGLE_DRIVE_HOST = "https://drive.google.com";
 const GOOGLE_DRIVE_USERCONTENT_HOST = "https://drive.usercontent.google.com";
 const GOOGLE_DRIVE_IMAGE_HOST = "https://lh3.googleusercontent.com";
+const SOCIAL_PREVIEW_RENDER_VERSION = "v5";
 
 function escapeMarkup(value: string) {
   return value
@@ -85,11 +86,35 @@ function buildGoogleDriveUserContentUrl(fileId: string) {
   return `${GOOGLE_DRIVE_USERCONTENT_HOST}/download?id=${encodeURIComponent(fileId)}&export=view&authuser=0`;
 }
 
+function buildPublicMediaProxyUrl(asset: PublicAssetRow) {
+  if (!config.supabaseUrl) {
+    return null;
+  }
+
+  const proxyUrl = new URL("/functions/v1/drive-media", config.supabaseUrl);
+  proxyUrl.searchParams.set("kind", "image");
+
+  if (asset.provider === "google_drive" && looksLikeGoogleDriveFileId(asset.remote_file_id)) {
+    proxyUrl.searchParams.set("fileId", asset.remote_file_id);
+    proxyUrl.searchParams.set("size", "w1200");
+    return proxyUrl.toString();
+  }
+
+  if (asset.provider === "dropbox" && asset.share_url) {
+    proxyUrl.searchParams.set("provider", "dropbox");
+    proxyUrl.searchParams.set("url", asset.share_url);
+    return proxyUrl.toString();
+  }
+
+  return null;
+}
+
 export function getPublicAssetUrls(asset: PublicAssetRow | null) {
   if (!asset) return [];
 
   if (asset.provider === "google_drive" && looksLikeGoogleDriveFileId(asset.remote_file_id)) {
     return uniqueStrings([
+      buildPublicMediaProxyUrl(asset),
       asset.thumbnail_url,
       buildGoogleDriveThumbnailUrl(asset.remote_file_id),
       buildGoogleDriveEmbeddableImageUrl(asset.remote_file_id),
@@ -104,7 +129,13 @@ export function getPublicAssetUrls(asset: PublicAssetRow | null) {
     const url = new URL(asset.share_url);
     url.searchParams.delete("dl");
     url.searchParams.set("raw", "1");
-    return uniqueStrings([asset.thumbnail_url, url.toString(), asset.share_url, asset.view_url]);
+    return uniqueStrings([
+      buildPublicMediaProxyUrl(asset),
+      asset.thumbnail_url,
+      url.toString(),
+      asset.share_url,
+      asset.view_url,
+    ]);
   }
 
   return uniqueStrings([asset.thumbnail_url, asset.share_url, asset.view_url]);
@@ -142,9 +173,9 @@ async function fetchImageDataUrlCandidate(url: string) {
     const normalized = await sharp(buffer)
       .rotate()
       .resize(720, 720, { fit: "cover" })
-      .webp({ quality: 82 })
+      .png({ compressionLevel: 9, adaptiveFiltering: true })
       .toBuffer();
-    return `data:image/webp;base64,${normalized.toString("base64")}`;
+    return `data:image/png;base64,${normalized.toString("base64")}`;
   } catch {
     return null;
   } finally {
@@ -338,7 +369,7 @@ export async function registerSocialPreviewRoutes(app: FastifyInstance) {
     if (!post) return reply.code(404).send({ error: "Public release not found." });
     const imageDataUrl = await resolvePublicAssetImageDataUrl(post.artwork);
     const png = await renderCachedPng({
-      cacheKey: `post:v3:${post.id}:${post.updated_at}:${buildAssetCacheKey(post.artwork)}:${Boolean(imageDataUrl)}`,
+      cacheKey: `${SOCIAL_PREVIEW_RENDER_VERSION}:post:${post.id}:${post.updated_at}:${buildAssetCacheKey(post.artwork)}:${Boolean(imageDataUrl)}`,
       svg: buildCardSvg({
         eyebrow: `${post.post_type} release`,
         title: post.title,
@@ -360,7 +391,7 @@ export async function registerSocialPreviewRoutes(app: FastifyInstance) {
     if (!profile) return reply.code(404).send({ error: "Public profile not found." });
     const imageDataUrl = await resolvePublicAssetImageDataUrl(profile.avatar);
     const png = await renderCachedPng({
-      cacheKey: `profile:v3:${profile.id}:${profile.updated_at}:${buildAssetCacheKey(profile.avatar)}:${Boolean(imageDataUrl)}`,
+      cacheKey: `${SOCIAL_PREVIEW_RENDER_VERSION}:profile:${profile.id}:${profile.updated_at}:${buildAssetCacheKey(profile.avatar)}:${Boolean(imageDataUrl)}`,
       svg: buildCardSvg({
         eyebrow: "Creator profile",
         title: profile.display_name,
@@ -383,7 +414,7 @@ export async function registerSocialPreviewRoutes(app: FastifyInstance) {
     if (!post) return reply.code(404).send({ error: "Public release not found." });
     const origin = config.publicAppUrl;
     const imageVersion = createHash("sha256")
-      .update(`${post.updated_at}:${buildAssetCacheKey(post.artwork)}`)
+      .update(`${SOCIAL_PREVIEW_RENDER_VERSION}:${post.updated_at}:${buildAssetCacheKey(post.artwork)}`)
       .digest("hex")
       .slice(0, 12);
     return sendSocialHtml(reply, {
@@ -399,10 +430,14 @@ export async function registerSocialPreviewRoutes(app: FastifyInstance) {
     const profile = await getPublicProfile(username);
     if (!profile) return reply.code(404).send({ error: "Public profile not found." });
     const origin = config.publicAppUrl;
+    const imageVersion = createHash("sha256")
+      .update(`${SOCIAL_PREVIEW_RENDER_VERSION}:${profile.updated_at}:${buildAssetCacheKey(profile.avatar)}`)
+      .digest("hex")
+      .slice(0, 12);
     return sendSocialHtml(reply, {
       title: `${profile.display_name} (@${profile.username}) · MxShare`,
       description: profile.bio ?? "Discover this creator on MxShare.",
-      imageUrl: `${origin}/og/profile/${encodeURIComponent(profile.username)}.png`,
+      imageUrl: `${origin}/og/profile/${encodeURIComponent(profile.username)}.png?v=${imageVersion}`,
       canonicalUrl: `${origin}/@${encodeURIComponent(profile.username)}`,
     });
   });

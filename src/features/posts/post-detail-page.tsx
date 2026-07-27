@@ -69,6 +69,12 @@ function buildCommentThreads(comments: ResolvedComment[]) {
     .filter((entry) => !entry.comment.deleted_at || entry.replies.some((reply) => !reply.deleted_at));
 }
 
+function buildPublicReleaseShareUrl(origin: string, postId: string, updatedAt: string) {
+  const shareUrl = new URL(`/social/post/${encodeURIComponent(postId)}`, origin);
+  shareUrl.searchParams.set("v", updatedAt);
+  return shareUrl.toString();
+}
+
 function VersionHeartButton({
   postId,
   ownerId,
@@ -340,6 +346,9 @@ export function PostDetailPage() {
   const playableTrackCount = playbackTracks.length;
   const releaseDurationSeconds = getPlaybackQueueDurationSeconds(playbackTracks);
   const editPath = item ? `/post/${item.post.id}/edit` : null;
+  const publicReleaseShareUrl = item
+    ? buildPublicReleaseShareUrl(window.location.origin, item.post.id, item.post.updated_at)
+    : "";
 
   if (postQuery.isPending) {
     return (
@@ -413,7 +422,7 @@ export function PostDetailPage() {
                   return;
                 }
                 const shareUrl = item.post.visibility === "public"
-                  ? `${window.location.origin}/social/post/${item.post.id}`
+                  ? publicReleaseShareUrl
                   : window.location.href;
                 await navigator.clipboard.writeText(shareUrl);
                 toast.success("Release link copied.");
@@ -949,9 +958,7 @@ export function PostDetailPage() {
                 <Button
                   variant="secondary"
                   onClick={async () => {
-                    await navigator.clipboard.writeText(
-                      `${window.location.origin}/social/post/${item.post.id}`,
-                    );
+                    await navigator.clipboard.writeText(publicReleaseShareUrl);
                     toast.success("Release link copied.");
                   }}
                 >
@@ -974,7 +981,7 @@ export function PostDetailPage() {
               </div>
             </div>
             <ReleaseQrCode
-              url={`${window.location.origin}/social/post/${item.post.id}`}
+              url={publicReleaseShareUrl}
               title={item.post.title}
             />
           </div>

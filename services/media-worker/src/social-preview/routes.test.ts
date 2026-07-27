@@ -44,6 +44,32 @@ describe("social preview cards", () => {
     });
   });
 
+  it("renders embedded artwork into the final PNG", async () => {
+    const artwork = await sharp({
+      create: {
+        width: 40,
+        height: 40,
+        channels: 3,
+        background: "#ff2100",
+      },
+    }).png().toBuffer();
+    const svg = buildCardSvg({
+      eyebrow: "album release",
+      title: "Visible artwork",
+      subtitle: "MxShare artist",
+      description: "The cover must survive the SVG-to-PNG render.",
+      imageDataUrl: `data:image/png;base64,${artwork.toString("base64")}`,
+    });
+    const png = await sharp(Buffer.from(svg)).png().toBuffer();
+    const pixel = await sharp(png)
+      .extract({ left: 278, top: 314, width: 1, height: 1 })
+      .removeAlpha()
+      .raw()
+      .toBuffer();
+
+    expect([...pixel]).toEqual([255, 33, 0]);
+  });
+
   it("builds multiple public artwork candidates for Google Drive releases", () => {
     const urls = getPublicAssetUrls({
       provider: "google_drive",
@@ -53,7 +79,13 @@ describe("social preview cards", () => {
       thumbnail_url: "https://lh3.googleusercontent.com/stale-private-thumb",
     });
 
-    expect(urls[0]).toBe("https://lh3.googleusercontent.com/stale-private-thumb");
+    const proxyUrl = new URL(urls[0]!);
+    expect(proxyUrl.origin).toBe("https://example.supabase.co");
+    expect(proxyUrl.pathname).toBe("/functions/v1/drive-media");
+    expect(proxyUrl.searchParams.get("fileId")).toBe("1AbCdEfGhIjKlMnOpQrStUvwxYZ");
+    expect(proxyUrl.searchParams.get("kind")).toBe("image");
+    expect(proxyUrl.searchParams.get("size")).toBe("w1200");
+    expect(urls).toContain("https://lh3.googleusercontent.com/stale-private-thumb");
     expect(urls).toContain(
       "https://drive.google.com/thumbnail?id=1AbCdEfGhIjKlMnOpQrStUvwxYZ&sz=w1200",
     );
@@ -63,6 +95,24 @@ describe("social preview cards", () => {
     expect(urls).toContain(
       "https://drive.usercontent.google.com/download?id=1AbCdEfGhIjKlMnOpQrStUvwxYZ&export=view&authuser=0",
     );
+  });
+
+  it("routes Dropbox artwork through the public media proxy first", () => {
+    const sourceUrl = "https://www.dropbox.com/scl/fi/abc123/cover.png?rlkey=public&raw=1";
+    const urls = getPublicAssetUrls({
+      provider: "dropbox",
+      remote_file_id: "id:dropbox-cover",
+      share_url: sourceUrl,
+      view_url: "https://www.dropbox.com/scl/fi/abc123/cover.png?rlkey=public&dl=0",
+      thumbnail_url: null,
+    });
+
+    const proxyUrl = new URL(urls[0]!);
+    expect(proxyUrl.origin).toBe("https://example.supabase.co");
+    expect(proxyUrl.pathname).toBe("/functions/v1/drive-media");
+    expect(proxyUrl.searchParams.get("provider")).toBe("dropbox");
+    expect(proxyUrl.searchParams.get("kind")).toBe("image");
+    expect(proxyUrl.searchParams.get("url")).toBe(sourceUrl);
   });
 
   it("falls back to the next artwork candidate when the first link is stale", async () => {
@@ -98,9 +148,13 @@ describe("social preview cards", () => {
       thumbnail_url: "https://lh3.googleusercontent.com/stale-private-thumb",
     });
 
-    expect(imageDataUrl).toMatch(/^data:image\/webp;base64,/);
+    expect(imageDataUrl).toMatch(/^data:image\/png;base64,/);
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("lh3.googleusercontent.com/stale-private-thumb");
-    expect(String(fetchMock.mock.calls[1]?.[0])).toContain("drive.google.com/thumbnail?id=1AbCdEfGhIjKlMnOpQrStUvwxYZ");
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain(
+      "example.supabase.co/functions/v1/drive-media",
+    );
+    expect(String(fetchMock.mock.calls[1]?.[0])).toContain(
+      "lh3.googleusercontent.com/stale-private-thumb",
+    );
   });
 });
