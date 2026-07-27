@@ -70,7 +70,7 @@ export function LoginPage() {
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <CardTitle>{mode === "login" ? "Sign in to MxShare" : "Create your MxShare account"}</CardTitle>
+              <CardTitle>{mode === "login" ? "Sign in to MxTrove" : "Create your MxTrove account"}</CardTitle>
               <CardDescription className="mt-2">
                 Auth is powered by Supabase. Storage stays in each user’s own Google Drive.
               </CardDescription>
@@ -105,7 +105,7 @@ export function LoginPage() {
 
           <label className="grid gap-2">
             <span className="text-sm font-medium">Email</span>
-            <Input type="email" placeholder="you@mxshare.app" {...form.register("email")} />
+            <Input type="email" placeholder="you@example.com" {...form.register("email")} />
             {form.formState.errors.email ? <span className="text-xs text-danger">{form.formState.errors.email.message}</span> : null}
           </label>
 

@@ -610,7 +610,7 @@ export function ConversationPage() {
                   type="button"
                   variant="secondary"
                   className="px-3"
-                  aria-label="Attach MxShare reference"
+                  aria-label="Attach MxTrove reference"
                   onClick={() => setReferencePickerOpen((current) => !current)}
                   disabled={!isOnline || pendingFiles.length + pendingReferences.length >= 5 || sendMutation.isPending}
                 >

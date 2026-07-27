@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /settings/
+Disallow: /messages/
+Disallow: /notifications/
+Disallow: /library/
+Disallow: /projects/
+Disallow: /admin/
+
+Sitemap: https://mxtrove.wlknbrch.com/sitemap.xml

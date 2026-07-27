@@ -158,7 +158,7 @@ function RouteFallback() {
       <div className="glass-panel rounded-[28px] border border-border px-6 py-5 text-center">
         <p className="text-sm font-medium text-foreground">Loading the next screen…</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Pulling in the lighter route bundle for this part of MxShare.
+          Pulling in the lighter route bundle for this part of MxTrove.
         </p>
       </div>
     </div>

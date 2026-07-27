@@ -251,7 +251,7 @@ export function NotificationSettingsPage() {
                 <div>
                   <CardTitle className="text-3xl md:text-[2.2rem]">Delivery controls</CardTitle>
                   <CardDescription className="mt-3 max-w-3xl text-base leading-7">
-                    MxShare keeps unread badges in-app, but push should stay deliberate. Enable it per device, then
+                    MxTrove keeps unread badges in-app, but push should stay deliberate. Enable it per device, then
                     decide which events deserve a real interruption.
                   </CardDescription>
                 </div>

@@ -18,6 +18,8 @@ const SESSION_KEY = "mxshare:dropbox:session";
 const DROPBOX_API = "https://api.dropboxapi.com/2";
 const DROPBOX_CONTENT = "https://content.dropboxapi.com/2";
 const UPLOAD_CHUNK_BYTES = 8 * 1024 * 1024;
+const ROOT_FOLDER_PATH = "/MxTrove";
+const LEGACY_ROOT_FOLDER_PATH = "/MxShare";
 
 interface DropboxSession {
   accessToken: string;
@@ -30,6 +32,7 @@ interface DropboxMetadata {
   id: string;
   name: string;
   path_display: string;
+  path_lower?: string;
   size?: number;
 }
 
@@ -157,16 +160,60 @@ export class DropboxProvider implements CloudStorageProvider {
     return path;
   }
 
+  private async findFolder(path: string) {
+    try {
+      return await this.api<DropboxMetadata>("/files/get_metadata", { path });
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("path/not_found")) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  private async ensureRootFolder() {
+    const [currentRoot, legacyRoot] = await Promise.all([
+      this.findFolder(ROOT_FOLDER_PATH),
+      this.findFolder(LEGACY_ROOT_FOLDER_PATH),
+    ]);
+
+    if (currentRoot && legacyRoot && currentRoot.id !== legacyRoot.id) {
+      throw new Error(
+        `Dropbox contains both “${LEGACY_ROOT_FOLDER_PATH}” and “${ROOT_FOLDER_PATH}”. MxTrove will not merge them automatically because that could overwrite existing files. Rename or move the extra folder, then reconnect.`,
+      );
+    }
+
+    if (currentRoot) {
+      return ROOT_FOLDER_PATH;
+    }
+
+    if (legacyRoot) {
+      await this.api("/files/move_v2", {
+        from_path: LEGACY_ROOT_FOLDER_PATH,
+        to_path: ROOT_FOLDER_PATH,
+        autorename: false,
+        allow_shared_folder: true,
+      });
+      return ROOT_FOLDER_PATH;
+    }
+
+    return this.ensureFolder(ROOT_FOLDER_PATH);
+  }
+
+  private normalizeFolderPath(path: string) {
+    return path.replace(/^\/MxShare(?=\/|$)/i, ROOT_FOLDER_PATH);
+  }
+
   async ensureRootStructure() {
     if (this.folders) return this.folders;
-    const root = await this.ensureFolder("/MxShare");
-    const audio = await this.ensureFolder("/MxShare/Audio");
-    const originals = await this.ensureFolder("/MxShare/Audio/Originals");
-    const previews = await this.ensureFolder("/MxShare/Audio/Previews");
-    await this.ensureFolder("/MxShare/Artwork");
-    const artwork = await this.ensureFolder("/MxShare/Artwork/Covers");
-    const avatars = await this.ensureFolder("/MxShare/Artwork/Avatars");
-    const exportsFolder = await this.ensureFolder("/MxShare/Exports");
+    const root = await this.ensureRootFolder();
+    const audio = await this.ensureFolder(`${root}/Audio`);
+    const originals = await this.ensureFolder(`${audio}/Originals`);
+    const previews = await this.ensureFolder(`${audio}/Previews`);
+    const artworkRoot = await this.ensureFolder(`${root}/Artwork`);
+    const artwork = await this.ensureFolder(`${artworkRoot}/Covers`);
+    const avatars = await this.ensureFolder(`${artworkRoot}/Avatars`);
+    const exportsFolder = await this.ensureFolder(`${root}/Exports`);
     this.folders = {
       rootFolderId: root,
       audioFolderId: audio,
@@ -182,7 +229,8 @@ export class DropboxProvider implements CloudStorageProvider {
   async uploadFile(input: UploadFileInput): Promise<CloudAssetResult> {
     const token = await this.getToken();
     const filename = input.filename ?? input.file.name;
-    const path = `${input.parentFolderId.replace(/\/$/, "")}/${filename}`;
+    const parentFolderId = this.normalizeFolderPath(input.parentFolderId);
+    const path = `${parentFolderId.replace(/\/$/, "")}/${filename}`;
     const response = await fetch(`${DROPBOX_CONTENT}/files/upload`, {
       method: "POST",
       headers: {
@@ -195,7 +243,7 @@ export class DropboxProvider implements CloudStorageProvider {
     });
     if (!response.ok) throw new Error(await response.text() || "Dropbox upload failed.");
     input.onProgress?.(100);
-    return this.toAsset(await response.json() as DropboxMetadata, input.file.type, input.parentFolderId);
+    return this.toAsset(await response.json() as DropboxMetadata, input.file.type, parentFolderId);
   }
 
   async uploadResumable(input: UploadFileInput): Promise<CloudAssetResult> {
@@ -222,6 +270,7 @@ export class DropboxProvider implements CloudStorageProvider {
       const isLast = end === input.file.size;
       const endpoint = isLast ? "/files/upload_session/finish" : "/files/upload_session/append_v2";
       const filename = input.filename ?? input.file.name;
+      const parentFolderId = this.normalizeFolderPath(input.parentFolderId);
       const response = await fetch(`${DROPBOX_CONTENT}${endpoint}`, {
         method: "POST",
         headers: {
@@ -232,7 +281,7 @@ export class DropboxProvider implements CloudStorageProvider {
               ? {
                   cursor: { session_id: sessionId, offset },
                   commit: {
-                    path: `${input.parentFolderId.replace(/\/$/, "")}/${filename}`,
+                    path: `${parentFolderId.replace(/\/$/, "")}/${filename}`,
                     mode: "add",
                     autorename: true,
                     mute: true,
@@ -251,7 +300,7 @@ export class DropboxProvider implements CloudStorageProvider {
       offset = end;
       input.onProgress?.(Math.round((offset / input.file.size) * 100));
       if (isLast) {
-        return this.toAsset(await response.json() as DropboxMetadata, input.file.type, input.parentFolderId);
+        return this.toAsset(await response.json() as DropboxMetadata, input.file.type, parentFolderId);
       }
     }
     return this.uploadFile(input);

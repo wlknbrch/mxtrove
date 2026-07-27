@@ -1300,7 +1300,7 @@ export function ProjectWorkspacePage() {
                 className="size-10"
               />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{profile?.display_name ?? "MxShare member"}</p>
+                <p className="truncate text-sm font-medium">{profile?.display_name ?? "MxTrove member"}</p>
                 <p className="truncate text-xs text-muted-foreground">@{profile?.username ?? member.profile_id.slice(0, 8)}</p>
               </div>
               {canManageMembers && member.role !== "owner" ? (
@@ -1535,7 +1535,7 @@ export function ProjectWorkspacePage() {
             <option value="all">All members</option>
             {project.members.map(({ member, profile }) => (
               <option key={member.profile_id} value={member.profile_id}>
-                {profile?.display_name ?? profile?.username ?? "MxShare member"}
+                {profile?.display_name ?? profile?.username ?? "MxTrove member"}
               </option>
             ))}
           </Select>
@@ -1575,7 +1575,7 @@ export function ProjectWorkspacePage() {
                 <div className="min-w-0">
                   <p className="capitalize">{entry.activity_type.replaceAll("_", " ")}</p>
                   <p className="mt-1 truncate text-xs text-muted-foreground">
-                    {actor?.display_name ?? (entry.actor_id ? "Project member" : "MxShare")}
+                    {actor?.display_name ?? (entry.actor_id ? "Project member" : "MxTrove")}
                     {track ? ` · ${track.track_title}` : ""}
                   </p>
                   <p className="mt-1 text-xs text-subtle-foreground">{formatRelativeTime(entry.created_at)}</p>

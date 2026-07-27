@@ -32,13 +32,13 @@
 
   <rect x="74" y="318" width="1052" height="564" rx="42" fill="rgba(255,255,255,0.028)" stroke="url(#panelStroke)" stroke-width="2"/>
 
-  <image href="mxshare-icon-no-bg.png" x="94" y="382" width="216" height="216" preserveAspectRatio="xMidYMid meet"/>
+  <image href="mxtrove-icon-no-bg.png" x="94" y="382" width="216" height="216" preserveAspectRatio="xMidYMid meet"/>
 
   <rect x="344" y="392" width="300" height="48" rx="24" fill="rgba(255,255,255,0.028)" stroke="rgba(255,255,255,0.08)"/>
   <circle cx="360" cy="416" r="6" fill="#68E2FF"/>
   <text x="387" y="425" fill="#D8C3FF" font-size="18" font-family="Arial, Helvetica, sans-serif" letter-spacing="4">SOCIAL WORKING ARCHIVE</text>
 
-  <text x="344" y="568" fill="#FFF7FF" font-size="110" font-weight="700" font-family="Arial, Helvetica, sans-serif">MxShare</text>
+  <text x="344" y="568" fill="#FFF7FF" font-size="110" font-weight="700" font-family="Arial, Helvetica, sans-serif">MxTrove</text>
   <text x="346" y="638" fill="#D7C9EC" font-size="33" font-family="Arial, Helvetica, sans-serif">Share music. Share versions.</text>
   <text x="346" y="694" fill="#ADA0C7" font-size="24" font-family="Arial, Helvetica, sans-serif">Private originals in Drive. Public posts, messaging, and waveform playback.</text>
 
@@ -52,5 +52,5 @@
   <text x="914" y="786" fill="#FFFFFF" font-size="22" font-weight="600" font-family="Arial, Helvetica, sans-serif">Feedback loops</text>
 
   <rect x="110" y="836" width="944" height="1" fill="rgba(255,255,255,0.08)"/>
-  <text x="110" y="876" fill="#F1E7FF" font-size="26" font-weight="600" font-family="Arial, Helvetica, sans-serif">mxshare.wlknbrch.com</text>
+  <text x="110" y="876" fill="#F1E7FF" font-size="26" font-weight="600" font-family="Arial, Helvetica, sans-serif">mxtrove.wlknbrch.com</text>
 </svg>

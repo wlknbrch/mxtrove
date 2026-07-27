@@ -647,7 +647,7 @@ export function EditReleasePage() {
             {item.post.visibility === "public" && (visibility === "followers" || visibility === "unlisted") ? (
               <div className="mt-5 rounded-[20px] border border-warning/25 bg-warning/8 px-4 py-3 text-sm leading-6 text-warning">
                 <p>
-                  MxShare will create protected playback before saving. Previously public preview files may already
+                  MxTrove will create protected playback before saving. Previously public preview files may already
                   have been copied or shared, so changing visibility cannot recall earlier copies.
                 </p>
                 <label className="mt-3 flex items-start gap-3 text-foreground">

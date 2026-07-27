@@ -27,7 +27,7 @@ describe("social preview cards", () => {
       eyebrow: "single release",
       title: `<script>alert("x")</script>`,
       subtitle: "Kai & Luna",
-      description: "A public release with its own MxShare card.",
+      description: "A public release with its own MxTrove card.",
       imageDataUrl: null,
     });
 
@@ -56,7 +56,7 @@ describe("social preview cards", () => {
     const svg = buildCardSvg({
       eyebrow: "album release",
       title: "Visible artwork",
-      subtitle: "MxShare artist",
+      subtitle: "MxTrove artist",
       description: "The cover must survive the SVG-to-PNG render.",
       imageDataUrl: `data:image/png;base64,${artwork.toString("base64")}`,
     });

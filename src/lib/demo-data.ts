@@ -21,7 +21,7 @@ export const demoViewerProfile: Profile = {
   display_name: "Kai Orion",
   bio: "Producer and late-night sketch collector.",
   location: "Berlin, Germany",
-  website_url: "https://mxshare.example.com",
+  website_url: "https://mxtrove.example.com",
   instagram_url: "https://instagram.com/kaiorion",
   spotify_url: "https://open.spotify.com/artist/demo",
   youtube_url: "https://youtube.com/@kaiorion",

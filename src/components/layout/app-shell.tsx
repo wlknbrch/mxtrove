@@ -152,7 +152,7 @@ export function AppShell() {
       await signOut();
       navigate("/login", { replace: true });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "MxShare could not log you out.");
+      toast.error(error instanceof Error ? error.message : "MxTrove could not log you out.");
     }
   }
 
@@ -181,7 +181,7 @@ export function AppShell() {
                 <CircleDot className="size-3 fill-current stroke-none" />
                  V{env.appVersion}
               </div>
-              <p className="font-body text-[2rem] font-semibold tracking-[-0.04em]">MxShare</p>
+              <p className="font-body text-[2rem] font-semibold tracking-[-0.04em]">MxTrove</p>
               <p className="max-w-[11rem] text-sm leading-6 text-muted-foreground">
                 Share music. Share versions.
               </p>
@@ -247,8 +247,8 @@ export function AppShell() {
             </div>
             <p className="mt-2 text-sm leading-7 text-muted-foreground">
               {envState.hasGoogleDrive
-                ? "Connected once, then future audio, artwork, and avatars flow into the MxShare folder structure."
-                : "Connect your Drive once in Settings and keep every upload routed into your private MxShare structure."}
+                ? "Connected once, then future audio, artwork, and avatars flow into the MxTrove folder structure."
+                : "Connect your Drive once in Settings and keep every upload routed into your private MxTrove structure."}
             </p>
             <div className="mt-5">
               <Link to="/settings/storage">
@@ -358,7 +358,7 @@ export function AppShell() {
                 />
                 <div className="min-w-0">
                   <p className="truncate font-medium">
-                    {currentProfile?.display_name ?? user?.email ?? viewer.email ?? "MxShare"}
+                    {currentProfile?.display_name ?? user?.email ?? viewer.email ?? "MxTrove"}
                   </p>
                   <p className="truncate text-sm text-muted-foreground">
                     {currentProfile ? `@${currentProfile.username}` : "Your mobile control room"}

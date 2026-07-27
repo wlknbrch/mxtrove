@@ -10,7 +10,7 @@ export function AuthLayout({ children }: PropsWithChildren) {
         <section className="glass-panel hidden rounded-[36px] border border-border p-10 lg:flex lg:flex-col lg:justify-between">
           <div className="flex items-center gap-3 text-lg font-semibold">
             <MxShareMark className="size-11" />
-            <span className="font-display text-2xl">MxShare</span>
+            <span className="font-display text-2xl">MxTrove</span>
           </div>
           <div className="space-y-5">
             <p className="max-w-xl font-display text-5xl font-semibold leading-[1.02] tracking-[-0.04em]">

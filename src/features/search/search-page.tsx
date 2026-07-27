@@ -55,7 +55,7 @@ export function SearchPage() {
       />
       <Card className="velvet-hero">
         <label className="grid gap-3">
-          <span className="text-xs uppercase tracking-[0.24em] text-accent-secondary">Search MxShare</span>
+          <span className="text-xs uppercase tracking-[0.24em] text-accent-secondary">Search MxTrove</span>
           <Input
             autoFocus
             value={query}

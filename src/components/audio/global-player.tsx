@@ -298,10 +298,10 @@ export function GlobalPlayer() {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: activeTrack.title,
       artist: activeTrack.artistName,
-      album: activeTrack.queueGroupLabel ?? "MxShare",
+      album: activeTrack.queueGroupLabel ?? "MxTrove",
       artwork: [
         {
-          src: resolvedArtworkUrl ?? `${window.location.origin}/mxshare-icon-512.png`,
+          src: resolvedArtworkUrl ?? `${window.location.origin}/mxtrove-icon-512.png`,
           sizes: "512x512",
         },
       ],
@@ -529,7 +529,7 @@ export function GlobalPlayer() {
     }
 
     void updateAppearance({ ...appearance, player_volume: volume }).catch(() => {
-      toast.error("MxShare could not remember this volume level.");
+      toast.error("MxTrove could not remember this volume level.");
     });
   }
 
@@ -664,7 +664,7 @@ export function GlobalPlayer() {
         ref={audioRef}
         onEnded={handleEnded}
         onError={() => {
-          schedulePlaybackError("MxShare could not load this audio source.");
+          schedulePlaybackError("MxTrove could not load this audio source.");
         }}
         onCanPlay={() => {
           clearPendingPlaybackError();

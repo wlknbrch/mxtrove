@@ -78,7 +78,7 @@ export function SharedPostPage() {
             {item.post.title}
           </h1>
           <p className="mt-4 text-lg text-muted-foreground">
-            {item.owner?.display_name ?? "MxShare artist"}
+            {item.owner?.display_name ?? "MxTrove artist"}
           </p>
           {item.post.description ? (
             <p className="mt-6 max-w-2xl text-base leading-8 text-muted-foreground">{item.post.description}</p>
@@ -94,7 +94,7 @@ export function SharedPostPage() {
             </Button>
             <Link to="/login">
               <Button size="lg" variant="secondary">
-                Open MxShare
+                Open MxTrove
                 <ArrowUpRight className="size-4" />
               </Button>
             </Link>
@@ -166,7 +166,7 @@ function SharedShell({ children }: { children: React.ReactNode }) {
         <Link to="/login" className="flex items-center gap-3">
           <MxShareMark className="size-11" />
           <div>
-            <p className="font-display text-2xl">MxShare</p>
+            <p className="font-display text-2xl">MxTrove</p>
             <p className="text-xs text-muted-foreground">Protected listening link</p>
           </div>
         </Link>

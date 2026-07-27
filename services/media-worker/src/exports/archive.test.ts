@@ -19,12 +19,12 @@ describe("data export archive", () => {
 
   it("builds JSON and ZIP artifacts with the expected contents", () => {
     const json = buildExportArchive(payload, "json");
-    expect(json.filename).toBe("mxshare-export.json");
+    expect(json.filename).toBe("mxtrove-export.json");
     expect(JSON.parse(json.bytes.toString("utf8"))).toMatchObject({ format_version: 2 });
 
     const zip = buildExportArchive(payload, "json_csv");
     const files = unzipSync(zip.bytes);
-    expect(files["mxshare-export.json"]).toBeDefined();
+    expect(files["mxtrove-export.json"]).toBeDefined();
     expect(files["csv/profile.csv"]).toBeDefined();
   });
 });

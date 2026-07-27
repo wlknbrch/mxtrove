@@ -1,6 +1,6 @@
 import type { AssetType, PostType, Visibility } from "@/types/domain";
 
-export const APP_NAME = "MxShare";
+export const APP_NAME = "MxTrove";
 
 export const productionStages = [
   "Idea",

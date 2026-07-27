@@ -37,7 +37,7 @@ export function MediaProcessingStatusCard({
   job,
   error,
   title = "Automatic preview generation",
-  emptyMessage = "Upload a private original and MxShare will generate the browser-safe MP3 preview for you.",
+  emptyMessage = "Upload a private original and MxTrove will generate the browser-safe MP3 preview for you.",
 }: {
   job: MediaProcessingJob | null;
   error?: string | null;

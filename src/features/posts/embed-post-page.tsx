@@ -46,7 +46,7 @@ export function EmbedPostPage() {
             </Button>
             <Link to={`/post/${item.post.id}`} target="_blank" className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
               <MxShareMark className="size-7" />
-              MxShare
+              MxTrove
             </Link>
           </div>
         </div>

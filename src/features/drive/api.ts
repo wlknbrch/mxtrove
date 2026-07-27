@@ -140,6 +140,53 @@ export async function updateAssetProviderReference(input: {
   if (error) throw error;
 }
 
+export async function rewriteLegacyDropboxAssetPaths(ownerId: string) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay();
+    return 0;
+  }
+
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from("assets")
+    .select("id, remote_parent_folder_id, view_url")
+    .eq("owner_id", ownerId)
+    .eq("provider", "dropbox");
+  if (error) throw error;
+
+  let updatedCount = 0;
+  for (const asset of data ?? []) {
+    const remoteParentFolderId = asset.remote_parent_folder_id?.replace(
+      /^\/MxShare(?=\/|$)/i,
+      "/MxTrove",
+    ) ?? null;
+    const viewUrl = asset.view_url?.replace(
+      /\/home\/MxShare(?=\/|$)/i,
+      "/home/MxTrove",
+    ) ?? null;
+
+    if (
+      remoteParentFolderId === asset.remote_parent_folder_id
+      && viewUrl === asset.view_url
+    ) {
+      continue;
+    }
+
+    const { error: updateError } = await client
+      .from("assets")
+      .update({
+        remote_parent_folder_id: remoteParentFolderId,
+        view_url: viewUrl,
+      })
+      .eq("id", asset.id)
+      .eq("owner_id", ownerId);
+    if (updateError) throw updateError;
+    updatedCount += 1;
+  }
+
+  return updatedCount;
+}
+
 export async function upsertCloudConnection(input: Partial<CloudConnection> & { profile_id: string }) {
   if (isDemoModeEnabled()) {
     await createDemoDelay(200);

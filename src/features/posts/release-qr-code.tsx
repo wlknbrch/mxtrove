@@ -52,13 +52,13 @@ export function ReleaseQrCode({
     <a
       className="group block w-40 overflow-hidden rounded-[24px] border border-accent/25 bg-[#f7f0ff] p-2 shadow-[0_18px_42px_rgba(var(--accent-rgb),0.2)] transition-transform hover:scale-[1.02]"
       href={dataUrl}
-      download={`${title.trim().replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "mxshare-release"}-qr.png`}
+      download={`${title.trim().replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "mxtrove-release"}-qr.png`}
       aria-label={`Download QR code for ${title}`}
     >
       <img
         className="aspect-square w-full rounded-[17px]"
         src={dataUrl}
-        alt={`QR code linking to ${title} on MxShare`}
+        alt={`QR code linking to ${title} on MxTrove`}
       />
     </a>
   );

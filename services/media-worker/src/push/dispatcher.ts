@@ -66,10 +66,10 @@ function buildPushPayload(row: ClaimedPushRow) {
                                     ? `${actorName} sent you an attachment.`
                                     : row.notification_type === "share_link_review"
                                       ? "A private review link received activity."
-                                      : "You have a new message on MxShare.";
+                                      : "You have a new message on MxTrove.";
 
   const body = row.privacy_safe_push
-    ? "You have a new private activity update on MxShare."
+    ? "You have a new private activity update on MxTrove."
     : detailedBody;
 
   const url =
@@ -88,7 +88,7 @@ function buildPushPayload(row: ClaimedPushRow) {
           : "/notifications";
 
   return {
-    title: "MxShare",
+    title: "MxTrove",
     body,
     url,
     tag: `${row.notification_type}:${row.notification_id}`,
@@ -271,7 +271,7 @@ export async function sendImmediateTestPush(recipientId: string) {
           },
         },
         JSON.stringify({
-          title: "MxShare",
+          title: "MxTrove",
           body: "Push notifications are enabled on this device.",
           url: "/settings/notifications",
           tag: "push-test",

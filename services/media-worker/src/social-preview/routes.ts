@@ -37,7 +37,7 @@ interface PublicProfileCard {
 const GOOGLE_DRIVE_HOST = "https://drive.google.com";
 const GOOGLE_DRIVE_USERCONTENT_HOST = "https://drive.usercontent.google.com";
 const GOOGLE_DRIVE_IMAGE_HOST = "https://lh3.googleusercontent.com";
-const SOCIAL_PREVIEW_RENDER_VERSION = "v5";
+const SOCIAL_PREVIEW_RENDER_VERSION = "mxtrove-v1";
 
 function escapeMarkup(value: string) {
   return value
@@ -160,7 +160,7 @@ async function fetchImageDataUrlCandidate(url: string) {
     const response = await fetch(url, {
       signal: controller.signal,
       redirect: "follow",
-      headers: { "User-Agent": "MxShare-Social-Preview/2.0" },
+      headers: { "User-Agent": "MxTrove-Social-Preview/1.0" },
     });
 
     if (!response.ok) return null;
@@ -307,7 +307,7 @@ export function buildCardSvg(input: {
         <circle cx="24" cy="24" r="23" fill="#9d5cff"/>
         <path d="M15 31V15l22-6v16" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
         <circle cx="12" cy="33" r="5" fill="#fff"/><circle cx="34" cy="27" r="5" fill="#fff"/>
-        <text x="64" y="34" fill="#fff9ff" font-size="31" font-weight="700" font-family="Arial, sans-serif">MxShare</text>
+        <text x="64" y="34" fill="#fff9ff" font-size="31" font-weight="700" font-family="Arial, sans-serif">MxTrove</text>
         <text x="205" y="33" fill="#a99bb8" font-size="20" font-family="Arial, sans-serif">Share music. Share versions.</text>
       </g>
     </svg>`;
@@ -349,7 +349,7 @@ function sendSocialHtml(reply: FastifyReply, input: {
       <meta http-equiv="refresh" content="0; url=${canonicalUrl}">
       <title>${title}</title><meta name="description" content="${description}">
       <link rel="canonical" href="${canonicalUrl}">
-      <meta property="og:site_name" content="MxShare"><meta property="og:type" content="music.album">
+      <meta property="og:site_name" content="MxTrove"><meta property="og:type" content="music.album">
       <meta property="og:title" content="${title}"><meta property="og:description" content="${description}">
       <meta property="og:image" content="${imageUrl}"><meta property="og:image:secure_url" content="${imageUrl}">
       <meta property="og:image:type" content="image/png">
@@ -358,7 +358,7 @@ function sendSocialHtml(reply: FastifyReply, input: {
       <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}">
       <meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${imageUrl}">
       </head><body style="background:#090615;color:#fff;font-family:sans-serif;padding:3rem">
-      <p>Opening <a style="color:#cda7ef" href="${canonicalUrl}">${title}</a> on MxShare.</p>
+      <p>Opening <a style="color:#cda7ef" href="${canonicalUrl}">${title}</a> on MxTrove.</p>
       </body></html>`);
 }
 
@@ -373,8 +373,8 @@ export async function registerSocialPreviewRoutes(app: FastifyInstance) {
       svg: buildCardSvg({
         eyebrow: `${post.post_type} release`,
         title: post.title,
-        subtitle: post.owner?.display_name ?? post.owner?.username ?? "MxShare artist",
-        description: post.description ?? "Listen to this release and follow its versions on MxShare.",
+        subtitle: post.owner?.display_name ?? post.owner?.username ?? "MxTrove artist",
+        description: post.description ?? "Listen to this release and follow its versions on MxTrove.",
         imageDataUrl,
       }),
     });
@@ -396,7 +396,7 @@ export async function registerSocialPreviewRoutes(app: FastifyInstance) {
         eyebrow: "Creator profile",
         title: profile.display_name,
         subtitle: `@${profile.username}`,
-        description: profile.bio ?? "Discover releases, works in progress, and version history on MxShare.",
+        description: profile.bio ?? "Discover releases, works in progress, and version history on MxTrove.",
         imageDataUrl,
         roundImage: true,
       }),
@@ -418,8 +418,8 @@ export async function registerSocialPreviewRoutes(app: FastifyInstance) {
       .digest("hex")
       .slice(0, 12);
     return sendSocialHtml(reply, {
-      title: `${post.title} · ${post.owner?.display_name ?? "MxShare"}`,
-      description: post.description ?? "Listen to this public release on MxShare.",
+      title: `${post.title} · ${post.owner?.display_name ?? "MxTrove"}`,
+      description: post.description ?? "Listen to this public release on MxTrove.",
       imageUrl: `${origin}/og/post/${encodeURIComponent(post.id)}.png?v=${imageVersion}`,
       canonicalUrl: `${origin}/post/${encodeURIComponent(post.id)}`,
     });
@@ -435,8 +435,8 @@ export async function registerSocialPreviewRoutes(app: FastifyInstance) {
       .digest("hex")
       .slice(0, 12);
     return sendSocialHtml(reply, {
-      title: `${profile.display_name} (@${profile.username}) · MxShare`,
-      description: profile.bio ?? "Discover this creator on MxShare.",
+      title: `${profile.display_name} (@${profile.username}) · MxTrove`,
+      description: profile.bio ?? "Discover this creator on MxTrove.",
       imageUrl: `${origin}/og/profile/${encodeURIComponent(profile.username)}.png?v=${imageVersion}`,
       canonicalUrl: `${origin}/@${encodeURIComponent(profile.username)}`,
     });

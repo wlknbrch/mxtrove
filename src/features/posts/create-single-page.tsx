@@ -513,7 +513,7 @@ export function CreateSinglePage() {
                     <div>
                       <CardTitle>Cloud storage setup required</CardTitle>
                       <CardDescription className="mt-2 text-base leading-7">
-                        Connect the selected provider once in Settings. MxShare creates a dedicated folder structure
+                        Connect the selected provider once in Settings. MxTrove creates a dedicated folder structure
                         there and reuses it for future uploads.
                       </CardDescription>
                     </div>
@@ -582,7 +582,7 @@ export function CreateSinglePage() {
                   <div className="space-y-2">
                     <CardTitle>Generated public preview</CardTitle>
                     <CardDescription className="text-base leading-7">
-                      Manual preview uploads are disabled. MxShare always derives the public MP3 and waveform from the private original.
+                      Manual preview uploads are disabled. MxTrove always derives the public MP3 and waveform from the private original.
                     </CardDescription>
                   </div>
 
@@ -649,7 +649,7 @@ export function CreateSinglePage() {
                 job={mediaProcessingJob}
                 error={mediaProcessingError}
                 title="Generated playback preview"
-                emptyMessage="Upload or select a private original once. MxShare will create the public MP3 preview and waveform automatically."
+                emptyMessage="Upload or select a private original once. MxTrove will create the public MP3 preview and waveform automatically."
               />
 
               <Card>
@@ -759,7 +759,7 @@ export function CreateSinglePage() {
                 <div>
                   <CardTitle>Review</CardTitle>
                   <CardDescription className="mt-2 text-base leading-7">
-                    Check the release setup before MxShare writes song version data, single post data, and optional public preview metadata.
+                    Check the release setup before MxTrove writes song version data, single post data, and optional public preview metadata.
                   </CardDescription>
                 </div>
               </CardHeader>
@@ -783,7 +783,7 @@ export function CreateSinglePage() {
                         ? "A generated public preview asset is attached."
                         : "Generate the public preview from the private original before publishing."
                       : visibility === "followers" || visibility === "unlisted"
-                        ? "MxShare will create a protected MP3 after the release shell is saved."
+                        ? "MxTrove will create a protected MP3 after the release shell is saved."
                       : "Private release: the generated preview can be attached later."}
                   </p>
                 </div>

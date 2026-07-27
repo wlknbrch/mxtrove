@@ -1,4 +1,4 @@
-# MxShare Media Worker
+# MxTrove Media Worker
 
 Fastify worker for media conversion, private derivative streaming, attachments,
 data exports, web push, and dynamic social previews.

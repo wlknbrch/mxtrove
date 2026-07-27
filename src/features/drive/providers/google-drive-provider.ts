@@ -35,6 +35,8 @@ declare global {
 
 const GOOGLE_SCRIPT = "https://accounts.google.com/gsi/client";
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+const ROOT_FOLDER_NAME = "MxTrove";
+const LEGACY_ROOT_FOLDER_NAME = "MxShare";
 
 interface GoogleDriveState {
   accessToken: string | null;
@@ -58,7 +60,7 @@ function assertDriveId(value: string, label: "file" | "folder") {
   const trimmed = value.trim();
   if (!trimmed || trimmed === "." || trimmed === "null" || trimmed === "undefined") {
     throw new Error(
-      `Google Drive ${label} setup is missing or invalid. Reconnect Google Drive in Settings to rebuild the MxShare folder structure.`,
+      `Google Drive ${label} setup is missing or invalid. Reconnect Google Drive in Settings to rebuild the MxTrove folder structure.`,
     );
   }
 
@@ -72,7 +74,7 @@ function formatGoogleApiError(response: Response, rawMessage: string) {
     const message = payload.error?.message ?? rawMessage;
 
     if (response.status === 404 && reason === "notFound") {
-      return "Google Drive could not find the selected file or folder. Reconnect Google Drive in Settings to refresh the MxShare folder setup, then try again.";
+      return "Google Drive could not find the selected file or folder. Reconnect Google Drive in Settings to refresh the MxTrove folder setup, then try again.";
     }
 
     return message;
@@ -330,6 +332,51 @@ export class GoogleDriveProvider implements CloudStorageProvider {
     return payload;
   }
 
+  private async renameFolder(folderId: string, name: string) {
+    const accessToken = await this.ensureAuthenticated();
+    const response = await authorizedFetch(
+      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(folderId)}?fields=id,name`,
+      accessToken,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name }),
+      },
+    );
+
+    return response.json() as Promise<{ id: string; name: string }>;
+  }
+
+  private async getFolder(folderId: string) {
+    const accessToken = await this.ensureAuthenticated();
+    const response = await authorizedFetch(
+      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(folderId)}?fields=id,name,trashed`,
+      accessToken,
+    );
+    return response.json() as Promise<{ id: string; name: string; trashed?: boolean }>;
+  }
+
+  private async migrateLegacyRootFolder(folderId: string) {
+    const current = await this.getFolder(folderId);
+    if (current.trashed || current.name === ROOT_FOLDER_NAME) {
+      return;
+    }
+    if (current.name !== LEGACY_ROOT_FOLDER_NAME) {
+      return;
+    }
+
+    const conflictingRoot = await this.findFolderByName(ROOT_FOLDER_NAME);
+    if (conflictingRoot && conflictingRoot.id !== folderId) {
+      throw new Error(
+        `Google Drive contains both “${LEGACY_ROOT_FOLDER_NAME}” and “${ROOT_FOLDER_NAME}” folders. Move or rename the extra folder, then reconnect so MxTrove can preserve the existing folder IDs safely.`,
+      );
+    }
+
+    await this.renameFolder(folderId, ROOT_FOLDER_NAME);
+  }
+
   private async findOrCreateFolder(name: string, parentId?: string) {
     const existing = await this.findFolderByName(name, parentId);
     if (existing) {
@@ -372,11 +419,19 @@ export class GoogleDriveProvider implements CloudStorageProvider {
 
   async ensureRootStructure(): Promise<CloudFolderStructure> {
     if (this.state.folders) {
+      await this.ensureAuthenticated();
+      await this.migrateLegacyRootFolder(this.state.folders.rootFolderId);
       return this.state.folders;
     }
 
     await this.ensureAuthenticated();
-    const root = await this.findOrCreateFolder("MxShare");
+    let root = await this.findFolderByName(ROOT_FOLDER_NAME);
+    if (!root) {
+      const legacyRoot = await this.findFolderByName(LEGACY_ROOT_FOLDER_NAME);
+      root = legacyRoot
+        ? await this.renameFolder(legacyRoot.id, ROOT_FOLDER_NAME)
+        : await this.createFolder(ROOT_FOLDER_NAME);
+    }
     const audio = await this.findOrCreateFolder("Audio", root.id);
     const originals = await this.findOrCreateFolder("Originals", audio.id);
     const previews = await this.findOrCreateFolder("Previews", audio.id);

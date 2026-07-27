@@ -165,7 +165,7 @@ export class OneDriveProvider implements CloudStorageProvider {
   async ensureRootStructure() {
     if (this.folders) return this.folders;
     const driveRoot = await this.graph<DriveItem>("/me/drive/root?$select=id");
-    const root = await this.ensureFolder(driveRoot.id, "MxShare");
+    const root = await this.ensureFolder(driveRoot.id, "MxTrove");
     const audio = await this.ensureFolder(root, "Audio");
     const originals = await this.ensureFolder(audio, "Originals");
     const previews = await this.ensureFolder(audio, "Previews");

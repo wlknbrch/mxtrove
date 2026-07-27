@@ -701,7 +701,7 @@ export function SongDetailPage() {
             <div>
               <CardTitle>Asset uploads</CardTitle>
               <CardDescription className="mt-2">
-                A quick-added song becomes usable here: add the private source once and let MxShare generate the browser-safe playback file for its context.
+                A quick-added song becomes usable here: add the private source once and let MxTrove generate the browser-safe playback file for its context.
               </CardDescription>
             </div>
           </CardHeader>
@@ -728,8 +728,8 @@ export function SongDetailPage() {
               title="Private source upload"
               description={
                 isProjectVersionFlow
-                  ? "The original stays private in your provider. MxShare creates a protected project preview only after you add the version."
-                  : "The original stays private in your provider. MxShare also generates the public MP3 playback file automatically."
+                  ? "The original stays private in your provider. MxTrove creates a protected project preview only after you add the version."
+                  : "The original stays private in your provider. MxTrove also generates the public MP3 playback file automatically."
               }
               parentFolderId={storedFolders?.audioOriginalsFolderId ?? ""}
               disabled={!storedFolders}
@@ -739,7 +739,7 @@ export function SongDetailPage() {
               <div className="rounded-[22px] border border-white/[0.08] bg-white/[0.03] px-4 py-4">
                 <p className="font-medium">Generated public playback</p>
                 <p className="mt-2 text-sm leading-7 text-muted-foreground">
-                  Manual preview uploads are disabled. MxShare always generates the public MP3 preview and waveform from the selected private source.
+                  Manual preview uploads are disabled. MxTrove always generates the public MP3 preview and waveform from the selected private source.
                 </p>
                 {repairableVersions.length > 0 ? (
                   <p className="mt-2 text-sm leading-7 text-accent-secondary">

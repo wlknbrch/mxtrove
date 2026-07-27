@@ -1,14 +1,14 @@
-# MxShare V2
+# MxTrove V2
 
-MxShare is a collaborative working archive for musicians. Artists keep private
-originals in their own cloud account, while MxShare provides versioned releases,
+MxTrove is a collaborative working archive for musicians. Artists keep private
+originals in their own cloud account, while MxTrove provides versioned releases,
 collaboration rooms, protected previews, timestamped feedback, messaging, social
 discovery, and public release pages.
 
 The production site is designed for:
 
-- `https://mxshare.wlknbrch.com`
-- `https://www.mxshare.wlknbrch.com` (redirects to the apex domain)
+- `https://mxtrove.wlknbrch.com`
+- `https://www.mxtrove.wlknbrch.com` (redirects to the apex domain)
 
 ## What V2 Includes
 
@@ -71,7 +71,7 @@ Important directories:
 ## Storage And Trust Model
 
 Private WAV, FLAC, AIFF, and master files remain in the uploader's personal
-Google Drive, Dropbox, or OneDrive account. MxShare does not copy those originals
+Google Drive, Dropbox, or OneDrive account. MxTrove does not copy those originals
 to Supabase or the VPS as a permanent backup.
 
 The VPS protected-media volume may contain only derivatives:
@@ -221,11 +221,11 @@ Production Auth settings:
 
 ```text
 Site URL:
-https://mxshare.wlknbrch.com
+https://mxtrove.wlknbrch.com
 
 Allowed redirect URLs:
-https://mxshare.wlknbrch.com
-https://www.mxshare.wlknbrch.com
+https://mxtrove.wlknbrch.com
+https://www.mxtrove.wlknbrch.com
 http://localhost:5173
 ```
 
@@ -249,7 +249,7 @@ Create a scoped Dropbox app and add:
 
 ```text
 http://localhost:5173/oauth/callback/dropbox
-https://mxshare.wlknbrch.com/oauth/callback/dropbox
+https://mxtrove.wlknbrch.com/oauth/callback/dropbox
 ```
 
 Set the app key as `VITE_DROPBOX_CLIENT_ID`.
@@ -260,7 +260,7 @@ Create a Microsoft Entra SPA registration and add:
 
 ```text
 http://localhost:5173/oauth/callback/onedrive
-https://mxshare.wlknbrch.com/oauth/callback/onedrive
+https://mxtrove.wlknbrch.com/oauth/callback/onedrive
 ```
 
 Allow delegated `User.Read` and `Files.ReadWrite`, then set the application
@@ -310,11 +310,11 @@ cp deploy/mxshare.vps.env.example deploy/mxshare.vps.env
 At minimum, replace every placeholder in that file. Important production values:
 
 ```text
-VITE_APP_URL=https://mxshare.wlknbrch.com
-VITE_MEDIA_WORKER_URL=https://mxshare.wlknbrch.com/worker
-APP_ORIGIN=https://mxshare.wlknbrch.com,https://www.mxshare.wlknbrch.com
-PUBLIC_APP_URL=https://mxshare.wlknbrch.com
-WORKER_PUBLIC_URL=https://mxshare.wlknbrch.com/worker
+VITE_APP_URL=https://mxtrove.wlknbrch.com
+VITE_MEDIA_WORKER_URL=https://mxtrove.wlknbrch.com/worker
+APP_ORIGIN=https://mxtrove.wlknbrch.com,https://www.mxtrove.wlknbrch.com
+PUBLIC_APP_URL=https://mxtrove.wlknbrch.com
+WORKER_PUBLIC_URL=https://mxtrove.wlknbrch.com/worker
 PROTECTED_MEDIA_DIR=/data/mxshare-protected-media
 PROTECTED_MEDIA_MIN_FREE_BYTES=1073741824
 ```
@@ -338,23 +338,67 @@ media. Back up `mxshare-protected-media`; do not publish or bind it into Nginx.
 Traefik routing included in the compose file:
 
 ```text
-mxshare.wlknbrch.com/*          -> Nginx web app
-www.mxshare.wlknbrch.com/*      -> permanent apex redirect
-mxshare.wlknbrch.com/worker/*   -> Fastify worker, /worker stripped
-mxshare.wlknbrch.com/social/*   -> social HTML renderer
-mxshare.wlknbrch.com/og/*       -> cached OG image renderer
+mxtrove.wlknbrch.com/*          -> Nginx web app
+www.mxtrove.wlknbrch.com/*      -> permanent apex redirect
+mxtrove.wlknbrch.com/worker/*   -> Fastify worker, /worker stripped
+mxtrove.wlknbrch.com/social/*   -> social HTML renderer
+mxtrove.wlknbrch.com/og/*       -> cached OG image renderer
+mxshare.wlknbrch.com/*          -> permanent MxTrove redirect
 ```
 
 Public share buttons use `/social/post/:postId` and
 `/social/profile/:username`. Crawlers receive dynamic metadata; browsers are
 immediately redirected to the canonical app route.
 
+### MxTrove rebrand and cloud folders
+
+The public product name is MxTrove. Existing database identifiers, Docker
+volumes, local-storage keys, and compatibility headers retain their historical
+`mxshare` names intentionally; changing them would invalidate local state or
+existing deployment data without improving the public brand.
+
+After deploying the rebrand, reconnect each existing provider once from
+Settings -> Cloud storage:
+
+- Google Drive renames the saved `MxShare` root folder to `MxTrove` by its
+  existing Drive ID. Child folder IDs, file IDs, public links, and database
+  references remain unchanged.
+- Dropbox atomically moves `/MxShare` to `/MxTrove`. Dropbox file IDs and shared
+  links remain unchanged, while saved parent-folder paths and Dropbox view URLs
+  are rewritten in Supabase.
+- If both old and new root folders exist, MxTrove refuses to merge them
+  automatically. Resolve the duplicate manually and reconnect; this prevents
+  accidental overwrites.
+- Changing the Dropbox app-folder display name in the Dropbox console is
+  separate from the `/MxTrove` folder managed inside the app namespace.
+
+Do not manually copy the old folder into a new root before reconnecting. The
+built-in migration is designed to preserve object identity instead of creating
+duplicate files.
+
+### Search and share-card launch
+
+The production build ships `robots.txt`, `sitemap.xml`, JSON-LD application
+metadata, canonical OpenGraph tags, and a static 1200x630 MxTrove preview. Public
+release and profile links continue to use artwork-aware cards from the worker.
+
+After the first production deployment:
+
+1. Add `https://mxtrove.wlknbrch.com/sitemap.xml` to Google Search Console.
+2. Request indexing for the canonical home URL.
+3. Verify `/social/post/:postId` and `/social/profile/:username` with the share
+   debugger of each social platform you plan to use.
+4. Keep the old MxShare DNS records pointed at Traefik while legacy links are
+   being redirected.
+5. Re-enable web push on the new origin; browser push subscriptions do not move
+   between domains.
+
 Health checks:
 
 ```bash
-curl -I https://mxshare.wlknbrch.com
-curl https://mxshare.wlknbrch.com/worker/healthz
-curl https://mxshare.wlknbrch.com/worker/readyz
+curl -I https://mxtrove.wlknbrch.com
+curl https://mxtrove.wlknbrch.com/worker/healthz
+curl https://mxtrove.wlknbrch.com/worker/readyz
 ```
 
 Inspect containers:
@@ -440,7 +484,7 @@ The migrations:
 Before production migration:
 
 ```bash
-pg_dump --format=custom --no-owner --no-acl YOUR_DATABASE_URL > mxshare-before-v2.dump
+pg_dump --format=custom --no-owner --no-acl YOUR_DATABASE_URL > mxtrove-before-v2.dump
 ```
 
 After `supabase db push`, verify one existing account, release, avatar, artwork,

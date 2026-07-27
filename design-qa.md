@@ -30,7 +30,7 @@ comparison notes:
 - Home now reads as an editorial surface rather than a plain feed: the hero statement, metrics strip, spotlight sidebar, and more cinematic first card move it meaningfully toward the approved direction.
 - Explore now shares the same design language as Home and Settings instead of feeling like a utilitarian filter page.
 - Messages benefits from the stronger global shell and header system and now feels coherent beside the other redesigned routes.
-- The fixed player is back to a native MxShare surface and visually aligns far better with the mockups than the earlier utilitarian pass.
+- The fixed player is back to a native MxTrove surface and visually aligns far better with the mockups than the earlier utilitarian pass.
 
 functional QA performed:
 - `npm run typecheck`

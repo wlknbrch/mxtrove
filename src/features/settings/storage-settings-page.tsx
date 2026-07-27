@@ -19,6 +19,7 @@ import {
   getCloudConnections,
   getProtectedMediaQuota,
   listOwnedAssets,
+  rewriteLegacyDropboxAssetPaths,
   setDefaultCloudProvider,
   updateAssetProviderReference,
   upsertCloudConnection,
@@ -92,7 +93,7 @@ export function StorageSettingsPage() {
   const driveReady = Boolean(storedFolders);
   const folderRows = [
     {
-      label: "MxShare root",
+      label: "MxTrove root",
       helper: "Private home folder for all uploads.",
       value: storedFolders?.rootFolderId ?? "Pending",
     },
@@ -133,15 +134,20 @@ export function StorageSettingsPage() {
 
       const activeProvider = getCloudStorageProvider(providerId);
       const result = await activeProvider.connect();
-      return upsertCloudConnection({
+      const connection = await upsertCloudConnection({
         ...buildCloudConnectionUpsert(viewer.userId, result),
         is_default: (connectionsQuery.data ?? []).length === 0,
       });
+      if (providerId === "dropbox") {
+        await rewriteLegacyDropboxAssetPaths(viewer.userId);
+      }
+      return connection;
     },
     onSuccess: async (connection) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["cloud-connection", viewer.userId] }),
         queryClient.invalidateQueries({ queryKey: ["cloud-connections", viewer.userId] }),
+        queryClient.invalidateQueries({ queryKey: ["owned-assets", viewer.userId] }),
       ]);
       toast.success(`${providerOptions.find((option) => option.id === connection.provider)?.name ?? "Cloud provider"} connected.`);
     },
@@ -329,7 +335,7 @@ export function StorageSettingsPage() {
                   Protected derivative quota
                 </CardTitle>
                 <CardDescription className="mt-2">
-                  Collaboration previews and private attachments live on the MxShare VPS. Private originals never count here.
+                  Collaboration previews and private attachments live on the MxTrove VPS. Private originals never count here.
                 </CardDescription>
               </div>
             </CardHeader>
@@ -359,7 +365,7 @@ export function StorageSettingsPage() {
                   Move an existing asset
                 </CardTitle>
                 <CardDescription className="mt-2">
-                  The transfer runs in this browser. MxShare keeps the existing asset ID so songs, posts, artwork, and avatars remain linked.
+                  The transfer runs in this browser. MxTrove keeps the existing asset ID so songs, posts, artwork, and avatars remain linked.
                 </CardDescription>
               </div>
             </CardHeader>
@@ -413,7 +419,7 @@ export function StorageSettingsPage() {
                 <div>
                   <CardTitle className="text-3xl md:text-[2.2rem]">Connection status</CardTitle>
                   <CardDescription className="mt-3 max-w-3xl text-base leading-7">
-                    We request only the Google scope needed for files MxShare creates and manages in your Drive.
+                    We request only the Google scope needed for files MxTrove creates and manages in your Drive.
                     Originals stay private there, while only the previews and artwork you explicitly choose become public.
                   </CardDescription>
                 </div>
@@ -459,7 +465,7 @@ export function StorageSettingsPage() {
                   </div>
                   <div className="space-y-2 text-sm leading-7 text-muted-foreground">
                     <p>1. Connect your Google account.</p>
-                    <p>2. MxShare creates a dedicated root folder.</p>
+                    <p>2. MxTrove creates a dedicated root folder.</p>
                     <p>3. Future originals, previews, artwork, and avatars reuse that structure.</p>
                   </div>
                 </div>
@@ -481,7 +487,7 @@ export function StorageSettingsPage() {
             {needsRepair ? (
               <div className="mt-5 rounded-[18px] border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
                 The saved Drive setup looks incomplete or points to missing folders. Reconnect once to rebuild the
-                dedicated MxShare folder structure before uploading again.
+                dedicated MxTrove folder structure before uploading again.
               </div>
             ) : null}
 
@@ -536,7 +542,7 @@ export function StorageSettingsPage() {
                   ready: Boolean(connectionQuery.data?.provider_account_email),
                 },
                 {
-                  label: "MxShare folder structure complete",
+                  label: "MxTrove folder structure complete",
                   ready: driveReady,
                 },
                 {

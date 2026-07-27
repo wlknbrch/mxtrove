@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 export function MxShareMark({ className }: { className?: string }) {
   return (
     <img
-      src="/mxshare-icon-no-bg.png"
+      src="/mxtrove-icon-no-bg.png"
       alt=""
       aria-hidden="true"
       draggable="false"

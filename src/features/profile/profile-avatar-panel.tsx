@@ -144,7 +144,7 @@ export function ProfileAvatarPanel({
         <div>
           <CardTitle>Avatar</CardTitle>
           <CardDescription className="mt-2">
-            Upload a public profile image. MxShare stores it in the avatar folder of your default cloud provider so every profile surface can reuse the same source.
+            Upload a public profile image. MxTrove stores it in the avatar folder of your default cloud provider so every profile surface can reuse the same source.
           </CardDescription>
         </div>
       </CardHeader>

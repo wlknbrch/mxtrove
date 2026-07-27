@@ -1,11 +1,11 @@
-const SHELL_CACHE = "mxshare-shell-v2";
-const RUNTIME_CACHE = "mxshare-runtime-v2";
+const SHELL_CACHE = "mxtrove-shell-v1";
+const RUNTIME_CACHE = "mxtrove-runtime-v1";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/mxshare-icon-192.png",
-  "/mxshare-icon-512.png",
+  "/mxtrove-icon-192.png",
+  "/mxtrove-icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {
@@ -80,11 +80,11 @@ self.addEventListener("fetch", (event) => {
 
 self.addEventListener("push", (event) => {
   const payload = event.data ? event.data.json() : {};
-  const title = payload.title || "MxShare";
+  const title = payload.title || "MxTrove";
   const options = {
     body: payload.body || "You have a new notification.",
-    icon: "/mxshare-icon-192.png",
-    badge: "/mxshare-icon-192.png",
+    icon: "/mxtrove-icon-192.png",
+    badge: "/mxtrove-icon-192.png",
     data: {
       url: payload.url || "/notifications",
     },

@@ -951,7 +951,7 @@ export function PostDetailPage() {
               </p>
               <h2 className="mt-2 font-display text-3xl">Scan, share, or embed</h2>
               <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
-                The QR code is generated in this browser. MxShare does not send the release URL to an
+                The QR code is generated in this browser. MxTrove does not send the release URL to an
                 external QR service.
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
@@ -995,7 +995,7 @@ export function PostDetailPage() {
               <p className="text-xs uppercase tracking-[0.22em] text-accent-secondary">Sharing</p>
               <h2 className="mt-2 font-display text-3xl">Release access</h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Private tokens are hash-only. Save a newly generated URL now because MxShare cannot reveal it later.
+                Private tokens are hash-only. Save a newly generated URL now because MxTrove cannot reveal it later.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">

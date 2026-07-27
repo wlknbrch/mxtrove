@@ -10,7 +10,7 @@ export function useAppViewer() {
   return useMemo(
     () => ({
       userId: user?.id ?? (env.demoMode ? demoViewerProfile.id : null),
-      email: user?.email ?? (env.demoMode ? "demo@mxshare.app" : null),
+      email: user?.email ?? (env.demoMode ? "demo@mxtrove.app" : null),
       isDemoViewer: !user && env.demoMode,
     }),
     [user],

@@ -83,7 +83,7 @@ export function PrivacySettingsPage() {
                 }))}
                 options={[
                   ["public", "Public"],
-                  ["members_only", "MxShare members only"],
+                  ["members_only", "MxTrove members only"],
                 ]}
               />
               <PrivacySelect

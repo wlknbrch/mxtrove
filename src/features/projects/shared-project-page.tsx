@@ -308,7 +308,7 @@ function SharedProjectShell({ children }: { children: React.ReactNode }) {
         <Link to="/login" className="flex items-center gap-3">
           <MxShareMark className="size-11" />
           <div>
-            <p className="font-display text-2xl">MxShare</p>
+            <p className="font-display text-2xl">MxTrove</p>
             <p className="text-xs text-muted-foreground">Protected collaboration review</p>
           </div>
         </Link>

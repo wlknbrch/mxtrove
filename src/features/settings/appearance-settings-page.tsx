@@ -61,7 +61,7 @@ export function AppearanceSettingsPage() {
                 <div>
                   <CardTitle>Theme and accent</CardTitle>
                   <CardDescription className="mt-2">
-                    Dark remains the MxShare default. Light is a designed surface, not an inverted afterthought.
+                    Dark remains the MxTrove default. Light is a designed surface, not an inverted afterthought.
                   </CardDescription>
                 </div>
                 <Badge variant="accent">{isSyncing ? "Syncing" : "Account synced"}</Badge>

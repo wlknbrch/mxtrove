@@ -9,13 +9,13 @@ const tracks: PlaybackTrack[] = [
   {
     id: "one",
     title: "First",
-    artistName: "MxShare",
+    artistName: "MxTrove",
     src: "/first.mp3",
   },
   {
     id: "two",
     title: "Second",
-    artistName: "MxShare",
+    artistName: "MxTrove",
     src: "/second.mp3",
   },
 ];

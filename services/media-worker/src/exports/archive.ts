@@ -36,20 +36,20 @@ export function buildExportArchive(
   if (format === "json") {
     return {
       bytes: Buffer.from(json),
-      filename: "mxshare-export.json",
+      filename: "mxtrove-export.json",
       mimeType: "application/json",
     };
   }
 
   const files: Record<string, Uint8Array> = {
-    "mxshare-export.json": strToU8(json),
+    "mxtrove-export.json": strToU8(json),
   };
   for (const [table, rows] of Object.entries(payload.tables)) {
     files[`csv/${table}.csv`] = strToU8(tableToCsv(rows));
   }
   return {
     bytes: Buffer.from(zipSync(files, { level: 6 })),
-    filename: "mxshare-export.zip",
+    filename: "mxtrove-export.zip",
     mimeType: "application/zip",
   };
 }

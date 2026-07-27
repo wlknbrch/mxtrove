@@ -13,7 +13,7 @@ export function OptionalPublicShell() {
     return (
       <div className="page-shell min-h-screen p-6">
         <Card className="mx-auto max-w-lg">
-          <CardTitle>Opening MxShare…</CardTitle>
+          <CardTitle>Opening MxTrove…</CardTitle>
         </Card>
       </div>
     );
@@ -29,7 +29,7 @@ export function OptionalPublicShell() {
         <Link to="/login" className="flex min-w-0 items-center gap-3">
           <MxShareMark className="size-11 shrink-0" />
           <div className="min-w-0">
-            <p className="font-display text-2xl">MxShare</p>
+            <p className="font-display text-2xl">MxTrove</p>
             <p className="truncate text-xs text-muted-foreground">Share music. Share versions.</p>
           </div>
         </Link>

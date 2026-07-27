@@ -26,7 +26,7 @@ export function AdminReportsPage() {
       <EmptyState
         icon={ShieldAlert}
         title="Administrator access required"
-        description="MxShare checks the server-managed admin role before any report data is loaded."
+        description="MxTrove checks the server-managed admin role before any report data is loaded."
       />
     );
   }
