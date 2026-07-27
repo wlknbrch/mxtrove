@@ -53,7 +53,7 @@ export function useMediaDuration(
   }, [normalizedFallback]);
 
   useEffect(() => {
-    if (!resolvedSrc) {
+    if (!resolvedSrc || normalizedFallback !== null) {
       return;
     }
 
@@ -73,7 +73,7 @@ export function useMediaDuration(
       pendingMediaDurationCache.delete(resolvedSrc);
       mediaDurationCache.set(resolvedSrc, nextDuration);
 
-      if (!cancelled) {
+      if (!cancelled && nextDuration !== null) {
         setDurationSeconds(nextDuration);
       }
     });
@@ -81,7 +81,7 @@ export function useMediaDuration(
     return () => {
       cancelled = true;
     };
-  }, [resolvedSrc]);
+  }, [normalizedFallback, resolvedSrc]);
 
   return durationSeconds;
 }

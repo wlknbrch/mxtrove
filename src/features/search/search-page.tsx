@@ -63,7 +63,14 @@ export function SearchPage() {
             placeholder="Creator, release, song, project, feedback, or message"
           />
         </label>
-        <Tabs className="mt-5" value={category} onValueChange={(value) => setCategory(value as typeof category)} items={categories} />
+        <Tabs
+          className="mt-5"
+          value={category}
+          onValueChange={(value) => setCategory(value as typeof category)}
+          items={categories}
+          wrap
+          stretch
+        />
       </Card>
       <div className="space-y-4">
         {results.map((result) => {

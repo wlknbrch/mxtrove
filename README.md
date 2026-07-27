@@ -316,7 +316,12 @@ APP_ORIGIN=https://mxshare.wlknbrch.com,https://www.mxshare.wlknbrch.com
 PUBLIC_APP_URL=https://mxshare.wlknbrch.com
 WORKER_PUBLIC_URL=https://mxshare.wlknbrch.com/worker
 PROTECTED_MEDIA_DIR=/data/mxshare-protected-media
+PROTECTED_MEDIA_MIN_FREE_BYTES=1073741824
 ```
+
+`PROTECTED_MEDIA_MIN_FREE_BYTES` is a hard safety reserve. The worker rejects a
+new protected-media upload before it would consume the final reserved disk
+space; it never deletes an existing message attachment automatically.
 
 Build and start:
 

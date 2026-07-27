@@ -199,6 +199,10 @@ export class DropboxProvider implements CloudStorageProvider {
   }
 
   async uploadResumable(input: UploadFileInput): Promise<CloudAssetResult> {
+    if (input.file.size <= UPLOAD_CHUNK_BYTES) {
+      return this.uploadFile(input);
+    }
+
     const token = await this.getToken();
     const start = await fetch(`${DROPBOX_CONTENT}/files/upload_session/start`, {
       method: "POST",
@@ -223,11 +227,10 @@ export class DropboxProvider implements CloudStorageProvider {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/octet-stream",
-          "Dropbox-API-Arg": JSON.stringify({
-            cursor: { session_id: sessionId, offset },
-            close: false,
-            ...(isLast
+          "Dropbox-API-Arg": JSON.stringify(
+            isLast
               ? {
+                  cursor: { session_id: sessionId, offset },
                   commit: {
                     path: `${input.parentFolderId.replace(/\/$/, "")}/${filename}`,
                     mode: "add",
@@ -235,8 +238,11 @@ export class DropboxProvider implements CloudStorageProvider {
                     mute: true,
                   },
                 }
-              : {}),
-          }),
+              : {
+                  cursor: { session_id: sessionId, offset },
+                  close: false,
+                },
+          ),
         },
         body: input.file.slice(offset, end),
         signal: input.signal,

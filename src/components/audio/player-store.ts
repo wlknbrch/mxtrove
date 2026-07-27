@@ -21,6 +21,7 @@ interface PlayerState {
   isPlaying: boolean;
   repeatMode: "off" | "all" | "one";
   isQueueOpen: boolean;
+  isSurfaceHidden: boolean;
   currentTimeSeconds: number;
   requestedSeekSeconds: number | null;
   enqueue: (tracks: PlaybackTrack[], startTrackId?: string, autoPlay?: boolean) => void;
@@ -33,6 +34,7 @@ interface PlayerState {
   cycleRepeatMode: () => void;
   toggleQueue: () => void;
   closeQueue: () => void;
+  setSurfaceHidden: (hidden: boolean) => void;
   requestSeek: (seconds: number) => void;
   consumeSeekRequest: () => void;
 }
@@ -43,6 +45,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   isPlaying: false,
   repeatMode: "off",
   isQueueOpen: false,
+  isSurfaceHidden: false,
   currentTimeSeconds: 0,
   requestedSeekSeconds: null,
   enqueue: (tracks, startTrackId, autoPlay = true) =>
@@ -101,6 +104,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     })),
   toggleQueue: () => set((state) => ({ isQueueOpen: !state.isQueueOpen })),
   closeQueue: () => set({ isQueueOpen: false }),
+  setSurfaceHidden: (hidden) => set({ isSurfaceHidden: hidden }),
   requestSeek: (seconds) => set({ requestedSeekSeconds: Math.max(0, seconds) }),
   consumeSeekRequest: () => set({ requestedSeekSeconds: null }),
 }));

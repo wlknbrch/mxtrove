@@ -48,6 +48,38 @@ function getDriveMediaProxyBaseUrl() {
   return functionsBaseUrl ? `${functionsBaseUrl}/drive-media` : null;
 }
 
+function buildDropboxMediaProxyUrl(
+  sourceUrl: string | null | undefined,
+  kind: "audio" | "image",
+) {
+  if (!sourceUrl) {
+    return null;
+  }
+
+  try {
+    const source = new URL(sourceUrl);
+    if (
+      source.hostname !== "dropbox.com"
+      && !source.hostname.endsWith(".dropbox.com")
+      && !source.hostname.endsWith(".dropboxusercontent.com")
+    ) {
+      return null;
+    }
+  } catch {
+    return null;
+  }
+
+  const baseUrl = getDriveMediaProxyBaseUrl();
+  if (!baseUrl) {
+    return null;
+  }
+  const url = new URL(baseUrl);
+  url.searchParams.set("provider", "dropbox");
+  url.searchParams.set("url", sourceUrl);
+  url.searchParams.set("kind", kind);
+  return url.toString();
+}
+
 export function buildGoogleDrivePublicImageUrl(fileId: string) {
   return `${GOOGLE_DRIVE_HOST}/uc?export=view&id=${encodeFileId(fileId)}`;
 }
@@ -158,6 +190,15 @@ export function getArtworkAssetUrls(asset: Asset | null | undefined) {
     ]);
   }
 
+  if (asset.provider === "dropbox") {
+    return uniqueUrls([
+      buildDropboxMediaProxyUrl(asset.share_url, "image"),
+      asset.thumbnail_url,
+      asset.share_url,
+      asset.view_url,
+    ]);
+  }
+
   return uniqueUrls([asset.thumbnail_url, asset.share_url, asset.view_url]);
 }
 
@@ -187,6 +228,14 @@ export function getPreviewPlaybackUrls(asset: Asset | null | undefined) {
       buildDriveMediaProxyUrl(asset.remote_file_id, "audio"),
       buildGoogleDriveUserContentUrl(asset.remote_file_id, "download"),
       buildGoogleDrivePublicDownloadUrl(asset.remote_file_id),
+      asset.share_url,
+      asset.view_url,
+    ]);
+  }
+
+  if (asset.provider === "dropbox") {
+    return uniqueUrls([
+      buildDropboxMediaProxyUrl(asset.share_url, "audio"),
       asset.share_url,
       asset.view_url,
     ]);

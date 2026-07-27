@@ -51,7 +51,9 @@ export function MessageAttachmentCard({
     queryKey: ["message-attachment-url", attachment.id],
     queryFn: () => getMessageAttachmentReadUrl(attachment),
     enabled: attachment.attachment_type === "image",
-    staleTime: 4 * 60 * 1000,
+    staleTime: 60 * 1000,
+    refetchInterval: 3 * 60 * 1000,
+    refetchOnWindowFocus: "always",
   });
   const deleteMutation = useMutation({
     mutationFn: () => deleteMessageAttachment(attachment.id),
@@ -135,6 +137,9 @@ export function MessageAttachmentCard({
                 src={readUrlQuery.data}
                 alt={attachment.filename}
                 className="max-h-72 w-full object-cover"
+                onError={() => {
+                  void readUrlQuery.refetch();
+                }}
               />
             ) : (
               <span className="flex h-32 items-center justify-center text-sm text-white/65">

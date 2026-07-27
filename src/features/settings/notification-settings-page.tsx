@@ -232,7 +232,9 @@ export function NotificationSettingsPage() {
       />
 
       <div className="grid gap-6 2xl:grid-cols-[310px_minmax(0,1fr)_360px]">
-        <SettingsSidebar driveReady={driveReady} />
+        <div className="hidden min-w-0 2xl:block">
+          <SettingsSidebar driveReady={driveReady} />
+        </div>
 
         <div className="space-y-6">
           <Card>
@@ -276,8 +278,9 @@ export function NotificationSettingsPage() {
                     Turn browser push on when you want message or release activity outside the app shell. Leave it off
                     if the in-app notification center is enough.
                   </p>
-                  <div className="mt-4 flex flex-wrap gap-3">
+                  <div className="mt-4 grid min-w-0 gap-3 sm:flex sm:flex-wrap">
                     <Button
+                      className="w-full sm:w-auto"
                       onClick={() => void enablePushMutation.mutateAsync()}
                       disabled={enablePushMutation.isPending || !browserCanPush || !envState.hasWebPushKey}
                     >
@@ -286,6 +289,7 @@ export function NotificationSettingsPage() {
                     </Button>
                     <Button
                       variant="secondary"
+                      className="w-full sm:w-auto"
                       onClick={() => void disablePushMutation.mutateAsync()}
                       disabled={disablePushMutation.isPending || !browserCanPush}
                     >
@@ -294,6 +298,7 @@ export function NotificationSettingsPage() {
                     </Button>
                     <Button
                       variant="ghost"
+                      className="w-full sm:w-auto"
                       onClick={() => void testPushMutation.mutateAsync()}
                       disabled={testPushMutation.isPending || !preferences?.push_enabled}
                     >

@@ -337,18 +337,20 @@ export function ConversationPage() {
         description={description}
       />
 
-      <div className="grid gap-6 2xl:grid-cols-[360px_minmax(0,1fr)_320px]">
-        <ConversationRail
-          items={conversationRailItems}
-          search={search}
-          onSearchChange={setSearch}
-          selectedConversationId={conversationId}
-          title="Messages"
-          description="Search the inbox, jump between threads, and keep feedback close to the release context."
-        />
+      <div className="grid min-w-0 gap-6 2xl:grid-cols-[360px_minmax(0,1fr)_320px]">
+        <div className="hidden min-w-0 2xl:block">
+          <ConversationRail
+            items={conversationRailItems}
+            search={search}
+            onSearchChange={setSearch}
+            selectedConversationId={conversationId}
+            title="Messages"
+            description="Search the inbox, jump between threads, and keep feedback close to the release context."
+          />
+        </div>
 
-        <Card className="flex min-h-[68vh] flex-col overflow-hidden p-0">
-          <div className="border-b border-white/[0.06] px-6 py-5">
+        <Card className="flex min-h-[58dvh] min-w-0 flex-col overflow-hidden p-0 sm:min-h-[68vh]">
+          <div className="border-b border-white/[0.06] px-4 py-4 sm:px-6 sm:py-5">
             {counterpart || project ? (
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-4">
@@ -359,7 +361,7 @@ export function ConversationPage() {
                   />
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-3">
-                      <p className="truncate font-display text-3xl tracking-[-0.03em]">
+                      <p className="truncate font-display text-2xl tracking-[-0.03em] sm:text-3xl">
                         {project?.title ?? counterpart?.display_name}
                       </p>
                       <Badge variant="accent">{project ? "Project room" : "Direct thread"}</Badge>
@@ -381,7 +383,7 @@ export function ConversationPage() {
             )}
           </div>
 
-          <div className="flex-1 space-y-4 overflow-y-auto px-5 py-5">
+          <div className="min-w-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 sm:px-5 sm:py-5">
             {conversationQuery.isPending ? (
               <div className="rounded-[20px] border border-border bg-white/3 px-4 py-4 text-sm text-muted-foreground">
                 Loading conversation…
@@ -410,7 +412,7 @@ export function ConversationPage() {
               const attachments = data.attachments.filter((attachment) => attachment.message_id === message.id);
               return (
                 <div key={message.id} className={`flex ${isOwn ? "justify-end" : "justify-start"}`}>
-                  <div className={`flex max-w-[78%] items-end gap-3 ${isOwn ? "flex-row-reverse" : ""}`}>
+                  <div className={`flex min-w-0 max-w-[92%] items-end gap-2 sm:max-w-[78%] sm:gap-3 ${isOwn ? "flex-row-reverse" : ""}`}>
                     {!isOwn && sender ? (
                       <Avatar
                         alt={sender.display_name}
@@ -420,8 +422,8 @@ export function ConversationPage() {
                     ) : null}
                     <div
                       className={isOwn
-                        ? "rounded-[26px] rounded-br-[10px] bg-[linear-gradient(135deg,rgba(var(--accent-rgb),0.98),var(--accent-strong))] px-4 py-3 text-white shadow-[0_20px_42px_rgba(var(--accent-rgb),0.28)]"
-                        : "rounded-[26px] rounded-bl-[10px] border border-white/[0.08] bg-white/[0.04] px-4 py-3"}
+                        ? "min-w-0 max-w-full rounded-[26px] rounded-br-[10px] bg-[linear-gradient(135deg,rgba(var(--accent-rgb),0.98),var(--accent-strong))] px-4 py-3 text-white shadow-[0_20px_42px_rgba(var(--accent-rgb),0.28)]"
+                        : "min-w-0 max-w-full rounded-[26px] rounded-bl-[10px] border border-white/[0.08] bg-white/[0.04] px-4 py-3"}
                     >
                       {!isOwn && sender ? (
                         <p className="mb-2 text-xs uppercase tracking-[0.18em] text-accent-secondary/80">
@@ -433,7 +435,7 @@ export function ConversationPage() {
                           Message deleted
                         </p>
                       ) : message.body ? (
-                        <p className="whitespace-pre-wrap text-[15px] leading-7">{message.body}</p>
+                        <p className="whitespace-pre-wrap break-words text-[15px] leading-7 [overflow-wrap:anywhere]">{message.body}</p>
                       ) : null}
                       {attachments.map((attachment) => (
                         <MessageAttachmentCard
@@ -478,7 +480,7 @@ export function ConversationPage() {
           </div>
 
           <form
-            className="border-t border-white/[0.06] px-5 py-4"
+            className="min-w-0 border-t border-white/[0.06] px-3 py-4 sm:px-5"
             onSubmit={(event) => {
               event.preventDefault();
               void sendMutation.mutateAsync({
@@ -534,7 +536,7 @@ export function ConversationPage() {
                 ) : null}
                 <div className="flex flex-wrap gap-2">
                 {pendingReferences.map((reference) => (
-                  <div key={reference.key} className="min-w-44 rounded-[16px] border border-accent/18 bg-accent/8 px-3 py-2">
+                  <div key={reference.key} className="min-w-0 max-w-full flex-1 basis-44 rounded-[16px] border border-accent/18 bg-accent/8 px-3 py-2">
                     <div className="flex items-center gap-2">
                       <FolderKanban className="size-4 text-accent-secondary" />
                       <span className="min-w-0 flex-1 truncate text-xs">{reference.label}</span>
@@ -552,7 +554,7 @@ export function ConversationPage() {
                   const key = `${file.name}:${file.size}`;
                   const kind = getUploadableAttachmentKind(file);
                   return (
-                    <div key={`${key}:${index}`} className="min-w-44 rounded-[16px] border border-border bg-white/[0.035] px-3 py-2">
+                    <div key={`${key}:${index}`} className="min-w-0 max-w-full flex-1 basis-44 rounded-[16px] border border-border bg-white/[0.035] px-3 py-2">
                       <div className="flex items-center gap-2">
                         {kind === "audio" ? <FileAudio className="size-4 text-accent-secondary" /> : null}
                         {kind === "image" ? <Image className="size-4 text-accent-secondary" /> : null}
@@ -580,7 +582,7 @@ export function ConversationPage() {
                 </div>
               </div>
             ) : null}
-            <div className="flex gap-3">
+            <div className="grid min-w-0 gap-3">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -592,40 +594,47 @@ export function ConversationPage() {
                   event.currentTarget.value = "";
                 }}
               />
-              <Button
-                type="button"
-                variant="secondary"
-                className="shrink-0 px-3"
-                aria-label="Attach media"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={!isOnline || pendingFiles.length + pendingReferences.length >= 5 || sendMutation.isPending}
-              >
-                <Paperclip className="size-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                className="shrink-0 px-3"
-                aria-label="Attach MxShare reference"
-                onClick={() => setReferencePickerOpen((current) => !current)}
-                disabled={!isOnline || pendingFiles.length + pendingReferences.length >= 5 || sendMutation.isPending}
-              >
-                <Link2 className="size-4" />
-              </Button>
-              <Input
-                value={draft}
-                placeholder={isOnline ? "Write a message" : "Draft saved locally until you reconnect"}
-                onChange={(event) => setDraft(event.currentTarget.value)}
-              />
-              <Button type="submit" disabled={!canSend} className="min-w-28">
-                <SendHorizonal className="size-4" />
-                {retryMessageId ? "Retry" : "Send"}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="px-3"
+                  aria-label="Attach media"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={!isOnline || pendingFiles.length + pendingReferences.length >= 5 || sendMutation.isPending}
+                >
+                  <Paperclip className="size-4" />
+                  Media
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="px-3"
+                  aria-label="Attach MxShare reference"
+                  onClick={() => setReferencePickerOpen((current) => !current)}
+                  disabled={!isOnline || pendingFiles.length + pendingReferences.length >= 5 || sendMutation.isPending}
+                >
+                  <Link2 className="size-4" />
+                  Reference
+                </Button>
+              </div>
+              <div className="flex min-w-0 gap-2 sm:gap-3">
+                <Input
+                  className="min-w-0 flex-1"
+                  value={draft}
+                  placeholder={isOnline ? "Write a message" : "Draft saved until you reconnect"}
+                  onChange={(event) => setDraft(event.currentTarget.value)}
+                />
+                <Button type="submit" disabled={!canSend} className="shrink-0 px-4 sm:min-w-28">
+                  <SendHorizonal className="size-4" />
+                  <span className="hidden sm:inline">{retryMessageId ? "Retry" : "Send"}</span>
+                </Button>
+              </div>
             </div>
           </form>
         </Card>
 
-        <div className="space-y-6">
+        <div className="hidden space-y-6 2xl:block">
           <Card>
             <div className="rounded-[28px] border border-accent/16 bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.22),rgba(255,255,255,0.02)_58%,rgba(255,255,255,0.01))] p-5">
               <div className="flex items-center gap-4">

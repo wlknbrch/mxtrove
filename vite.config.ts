@@ -15,6 +15,21 @@ function buildDriveProxyUrl(fileId: string, kind: "audio" | "image", size: strin
   return `https://drive.google.com/uc?export=download&id=${encodedFileId}`;
 }
 
+function getDropboxProxyUrl(value: string | null) {
+  if (!value) {
+    return null;
+  }
+  const url = new URL(value);
+  if (
+    url.hostname !== "dropbox.com"
+    && !url.hostname.endsWith(".dropbox.com")
+    && !url.hostname.endsWith(".dropboxusercontent.com")
+  ) {
+    return null;
+  }
+  return url.toString();
+}
+
 function copyProxyHeaders(response: Response, target: import("node:http").ServerResponse) {
   const headerNames = [
     "accept-ranges",
@@ -49,11 +64,15 @@ function driveMediaProxyPlugin() {
           const fileId = url.searchParams.get("fileId")?.trim();
           const kind = url.searchParams.get("kind") === "audio" ? "audio" : "image";
           const size = url.searchParams.get("size");
+          const provider = url.searchParams.get("provider");
+          const dropboxUrl = provider === "dropbox"
+            ? getDropboxProxyUrl(url.searchParams.get("url"))
+            : null;
 
-          if (!fileId) {
+          if (!fileId && !dropboxUrl) {
             response.statusCode = 400;
             response.setHeader("content-type", "application/json; charset=utf-8");
-            response.end(JSON.stringify({ error: "Missing fileId query parameter." }));
+            response.end(JSON.stringify({ error: "Missing or unsupported media source." }));
             return;
           }
 
@@ -64,13 +83,22 @@ function driveMediaProxyPlugin() {
             headers.set("Range", rangeHeader);
           }
 
-          const upstreamResponse = await fetch(buildDriveProxyUrl(fileId, kind, size), {
+          const upstreamResponse = await fetch(
+            dropboxUrl ?? buildDriveProxyUrl(fileId!, kind, size),
+            {
             headers,
             redirect: "follow",
-          });
+            },
+          );
 
           response.statusCode = upstreamResponse.status;
           copyProxyHeaders(upstreamResponse, response);
+          if (dropboxUrl) {
+            response.setHeader(
+              "content-type",
+              kind === "audio" ? "audio/mpeg" : upstreamResponse.headers.get("content-type") ?? "image/jpeg",
+            );
+          }
 
           if (!upstreamResponse.body) {
             response.end(await upstreamResponse.text());

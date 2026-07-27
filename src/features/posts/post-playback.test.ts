@@ -45,6 +45,21 @@ function buildRelease(overrides: Partial<ResolvedPostCard> = {}): ResolvedPostCa
   };
 }
 
+function buildProtectedAsset() {
+  return {
+    id: "protected-asset",
+    duration_seconds: 187,
+    waveform_data: {
+      version: 1,
+      durationSeconds: 187,
+      sourceSampleRate: 44_100,
+      analysisSampleRate: 8_000,
+      bucketCount: 1,
+      peaks: [[-0.5, 0.6]],
+    },
+  } as ProtectedMediaAsset;
+}
+
 describe("post playback queues", () => {
   it("builds playable release tracks with their post association", () => {
     const tracks = buildPostPlaybackTracks(buildRelease());
@@ -59,25 +74,17 @@ describe("post playback queues", () => {
     expect(tracks[0].src).toBeTruthy();
   });
 
-  it("prefers a protected derivative over a public cloud preview", () => {
-    const protectedAsset = {
-      id: "protected-asset",
-      duration_seconds: 187,
-      waveform_data: {
-        version: 1,
-        durationSeconds: 187,
-        sourceSampleRate: 44_100,
-        analysisSampleRate: 8_000,
-        bucketCount: 1,
-        peaks: [[-0.5, 0.6]],
-      },
-    } as ProtectedMediaAsset;
+  it("uses a protected derivative for a non-public release", () => {
     const release = buildRelease({
+      post: {
+        ...demoPosts[1],
+        visibility: "private",
+      },
       releaseTracks: [
         {
           ...buildRelease().releaseTracks[0],
           protectedPreview: {
-            asset: protectedAsset,
+            asset: buildProtectedAsset(),
             readUrl: "https://worker.example/protected",
           },
         },
@@ -89,6 +96,29 @@ describe("post playback queues", () => {
       srcCandidates: ["https://worker.example/protected"],
       durationSeconds: 187,
     });
+  });
+
+  it("prefers a playable cloud preview for a public release", () => {
+    const release = buildRelease({
+      post: {
+        ...demoPosts[1],
+        visibility: "public",
+      },
+      releaseTracks: [
+        {
+          ...buildRelease().releaseTracks[0],
+          protectedPreview: {
+            asset: buildProtectedAsset(),
+            readUrl: "https://worker.example/protected",
+          },
+        },
+      ],
+    });
+
+    const track = buildPostPlaybackTracks(release)[0];
+    expect(track.src).not.toBe("https://worker.example/protected");
+    expect(track.srcCandidates).toContain("https://worker.example/protected");
+    expect(track.durationSeconds).toBe(222);
   });
 
   it("omits unavailable tracks and totals only known positive durations", () => {

@@ -102,6 +102,10 @@ export const config = {
   protectedMediaDir: path.resolve(
     process.env.PROTECTED_MEDIA_DIR || "/data/mxshare-protected-media",
   ),
+  protectedMediaMinFreeBytes: readNumber(
+    "PROTECTED_MEDIA_MIN_FREE_BYTES",
+    1073741824,
+  ),
   socialPreviewCacheDir: path.resolve(
     process.env.SOCIAL_PREVIEW_CACHE_DIR || "/data/mxshare-protected-media/social-previews",
   ),

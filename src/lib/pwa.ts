@@ -90,7 +90,11 @@ export async function getCurrentPushSubscription() {
     return null;
   }
 
-  const registration = await navigator.serviceWorker.ready;
+  const registration = await navigator.serviceWorker.getRegistration();
+  if (!registration) {
+    return null;
+  }
+
   return registration.pushManager.getSubscription();
 }
 

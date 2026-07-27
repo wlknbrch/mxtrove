@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, Link, useLocation } from "react-router-dom";
+import { NavLink, Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   ArrowRight,
   Ban,
@@ -74,11 +75,18 @@ function formatBadgeCount(value: number) {
 export function AppShell() {
   const { user, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const viewer = useAppViewer();
   const isOnline = useOnlineStatus();
   const activeTrackId = usePlayerStore((state) => state.activeTrackId);
+  const setPlayerSurfaceHidden = usePlayerStore((state) => state.setSurfaceHidden);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   useNotificationsRealtime(viewer.userId);
+
+  useEffect(() => {
+    setPlayerSurfaceHidden(isMobileMenuOpen);
+    return () => setPlayerSurfaceHidden(false);
+  }, [isMobileMenuOpen, setPlayerSurfaceHidden]);
 
   useEffect(() => {
     if (!isMobileMenuOpen) {
@@ -138,9 +146,14 @@ export function AppShell() {
     || location.pathname.startsWith("/create");
   const mobileMoreBadgeCount = unreadNotificationsQuery.data ?? 0;
 
-  async function handleMobileSignOut() {
+  async function handleSignOut() {
     setIsMobileMenuOpen(false);
-    await signOut();
+    try {
+      await signOut();
+      navigate("/login", { replace: true });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "MxShare could not log you out.");
+    }
   }
 
   return (
@@ -300,7 +313,7 @@ export function AppShell() {
                   variant="ghost"
                   size="sm"
                   className="justify-center rounded-[18px] border border-white/6"
-                  onClick={() => void signOut()}
+                  onClick={() => void handleSignOut()}
                 >
                   Logout
                 </Button>
@@ -455,7 +468,7 @@ export function AppShell() {
                 <Button
                   variant="ghost"
                   className="min-h-11 rounded-[17px] border border-danger/20 text-danger hover:bg-danger/10 hover:text-danger"
-                  onClick={() => void handleMobileSignOut()}
+                  onClick={() => void handleSignOut()}
                 >
                   <LogOut className="size-4" />
                   Log out

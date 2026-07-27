@@ -55,6 +55,13 @@ export class LocalProtectedMediaStorage implements ProtectedMediaStorage {
   async put(input: ProtectedUploadInput): Promise<ProtectedAsset> {
     const outputPath = this.resolveStoragePath(input.storageKey);
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
+    const disk = await fs.statfs(this.rootDir);
+    const availableBytes = Number(disk.bavail) * Number(disk.bsize);
+    if (availableBytes - input.bytes < config.protectedMediaMinFreeBytes) {
+      throw new Error(
+        "Protected media storage is at its safety limit. Delete older attachments or move protected media to another storage backend before uploading more.",
+      );
+    }
     await fs.copyFile(input.sourcePath, outputPath);
     await fs.chmod(outputPath, 0o600);
     return {

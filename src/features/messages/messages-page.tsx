@@ -58,7 +58,7 @@ export function MessagesPage() {
           description="Search by artist name, handle, or the last thing someone sent you."
         />
 
-        <div className="space-y-6">
+        <div className="hidden space-y-6 lg:block">
           <Card className="overflow-hidden">
             <div className="rounded-[28px] border border-accent/18 bg-[radial-gradient(circle_at_top_right,rgba(var(--accent-rgb),0.24),rgba(255,255,255,0.02)_60%,rgba(255,255,255,0.01))] p-6">
               <div className="flex flex-wrap items-center gap-3">

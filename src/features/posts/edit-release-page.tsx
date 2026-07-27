@@ -391,7 +391,7 @@ export function EditReleasePage() {
           profile_id: null,
           display_name,
           role: role || "other",
-          position,
+          position: position + 1,
         }));
       const externalLinks = externalLinksText
         .split("\n")
@@ -401,7 +401,7 @@ export function EditReleasePage() {
           label: label || "Release link",
           url,
           platform: platform || "other",
-          position,
+          position: position + 1,
         }));
       const savePresentation = () => Promise.all([
         updateReleasePresentation({

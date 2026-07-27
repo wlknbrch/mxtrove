@@ -28,6 +28,21 @@ function buildDriveProxyUrl(fileId: string, kind: "audio" | "image", size: strin
   return `https://drive.google.com/uc?export=download&id=${encodedFileId}`;
 }
 
+function getDropboxProxyUrl(value: string | null) {
+  if (!value) {
+    return null;
+  }
+  const url = new URL(value);
+  if (
+    url.hostname !== "dropbox.com"
+    && !url.hostname.endsWith(".dropbox.com")
+    && !url.hostname.endsWith(".dropboxusercontent.com")
+  ) {
+    return null;
+  }
+  return url.toString();
+}
+
 function copyProxyHeaders(source: Headers) {
   const headers = new Headers(corsHeaders);
   const headerNames = [
@@ -65,9 +80,13 @@ serve(async (request) => {
   const fileId = url.searchParams.get("fileId")?.trim();
   const kind = url.searchParams.get("kind") === "audio" ? "audio" : "image";
   const size = url.searchParams.get("size");
+  const provider = url.searchParams.get("provider");
+  const dropboxUrl = provider === "dropbox"
+    ? getDropboxProxyUrl(url.searchParams.get("url"))
+    : null;
 
-  if (!fileId) {
-    return jsonResponse(400, { error: "Missing fileId query parameter." });
+  if (!fileId && !dropboxUrl) {
+    return jsonResponse(400, { error: "Missing or unsupported media source." });
   }
 
   const upstreamHeaders = new Headers();
@@ -77,14 +96,24 @@ serve(async (request) => {
     upstreamHeaders.set("Range", rangeHeader);
   }
 
-  const upstreamResponse = await fetch(buildDriveProxyUrl(fileId, kind, size), {
+  const upstreamResponse = await fetch(
+    dropboxUrl ?? buildDriveProxyUrl(fileId!, kind, size),
+    {
     method: request.method,
     headers: upstreamHeaders,
     redirect: "follow",
-  });
+    },
+  );
+  const responseHeaders = copyProxyHeaders(upstreamResponse.headers);
+  if (dropboxUrl) {
+    responseHeaders.set(
+      "content-type",
+      kind === "audio" ? "audio/mpeg" : upstreamResponse.headers.get("content-type") ?? "image/jpeg",
+    );
+  }
 
   return new Response(request.method === "HEAD" ? null : upstreamResponse.body, {
     status: upstreamResponse.status,
-    headers: copyProxyHeaders(upstreamResponse.headers),
+    headers: responseHeaders,
   });
 });

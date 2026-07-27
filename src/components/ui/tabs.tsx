@@ -18,7 +18,7 @@ export function Tabs({
   return (
     <div
       className={cn(
-        "inline-flex rounded-[22px] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.025))] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]",
+        "inline-flex max-w-full rounded-[22px] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.025))] p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]",
         stretch && "flex w-full",
         wrap && "flex w-full flex-wrap gap-1",
         className,

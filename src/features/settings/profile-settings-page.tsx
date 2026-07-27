@@ -87,7 +87,9 @@ export function ProfileSettingsPage() {
       />
 
       <div className="grid gap-6 2xl:grid-cols-[310px_minmax(0,1fr)_360px]">
-        <SettingsSidebar driveReady={driveReady} />
+        <div className="hidden min-w-0 2xl:block">
+          <SettingsSidebar driveReady={driveReady} />
+        </div>
 
         <ProfileFormPanel
           title="Public profile"
@@ -103,7 +105,7 @@ export function ProfileSettingsPage() {
         <div className="space-y-6">
           <ProfileAvatarPanel profile={profile} />
 
-          <Card>
+          <Card className="hidden md:block">
             <CardHeader>
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-3">
@@ -147,10 +149,10 @@ export function ProfileSettingsPage() {
               <div className="rounded-[24px] border border-white/[0.06] bg-white/[0.02] p-4">
                 <p className="text-xs uppercase tracking-[0.22em] text-accent-secondary/75">Connected links</p>
                 <div className="mt-3 space-y-2 text-sm text-muted-foreground">
-                  <p>{profile?.website_url ?? "Website missing"}</p>
-                  <p>{profile?.instagram_url ?? "Instagram missing"}</p>
-                  <p>{profile?.spotify_url ?? "Spotify missing"}</p>
-                  <p>{profile?.support_url ?? "Support link missing"}</p>
+                  <p className="break-all">{profile?.website_url ?? "Website missing"}</p>
+                  <p className="break-all">{profile?.instagram_url ?? "Instagram missing"}</p>
+                  <p className="break-all">{profile?.spotify_url ?? "Spotify missing"}</p>
+                  <p className="break-all">{profile?.support_url ?? "Support link missing"}</p>
                 </div>
               </div>
 

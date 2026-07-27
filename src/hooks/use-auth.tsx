@@ -20,6 +20,13 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const PUSH_SIGN_OUT_CLEANUP_TIMEOUT_MS = 1_000;
+
+function waitForPushCleanupTimeout() {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, PUSH_SIGN_OUT_CLEANUP_TIMEOUT_MS);
+  });
+}
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [loading, setLoading] = useState(true);
@@ -62,15 +69,27 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signOut: async () => {
         const client = getSupabaseBrowserClient();
         if (client) {
-          const endpoint = await unsubscribeCurrentDeviceFromPush().catch(() => null);
-          if (endpoint && session?.user?.id) {
-            await setPushSubscriptionActive({
-              profileId: session.user.id,
-              endpoint,
-              isActive: false,
-            }).catch(() => undefined);
+          const cleanupPushSubscription = async () => {
+            const endpoint = await unsubscribeCurrentDeviceFromPush().catch(() => null);
+            if (endpoint && session?.user?.id) {
+              await setPushSubscriptionActive({
+                profileId: session.user.id,
+                endpoint,
+                isActive: false,
+              }).catch(() => undefined);
+            }
+          };
+
+          await Promise.race([
+            cleanupPushSubscription(),
+            waitForPushCleanupTimeout(),
+          ]);
+
+          const { error } = await client.auth.signOut({ scope: "local" });
+          if (error) {
+            throw error;
           }
-          await client.auth.signOut();
+          setSession(null);
         }
       },
     }),

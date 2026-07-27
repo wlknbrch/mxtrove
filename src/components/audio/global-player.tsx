@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   ChevronDown,
@@ -62,6 +63,7 @@ export function GlobalPlayer() {
     isPlaying,
     repeatMode,
     isQueueOpen,
+    isSurfaceHidden,
     playTrack,
     playNext,
     playPrevious,
@@ -87,7 +89,12 @@ export function GlobalPlayer() {
     activeTrack?.srcCandidates ?? activeTrack?.src ?? null,
     "audio",
   );
+  const resolvedArtworkUrl = useResolvedMediaUrl(activeTrack?.artworkUrl ?? null, "image");
   const activePostId = activeTrack?.postId ?? null;
+  const displayDuration =
+    loadedDuration && Number.isFinite(loadedDuration)
+      ? loadedDuration
+      : activeTrack?.durationSeconds ?? null;
   const playerPostQuery = useQuery({
     queryKey: ["player-post", activePostId],
     queryFn: () => getResolvedPostById(activePostId!, viewer.userId),
@@ -283,14 +290,127 @@ export function GlobalPlayer() {
     }
   }, [closeQueue, isCollapsed, isQueueOpen]);
 
+  useEffect(() => {
+    if (!activeTrack || !("mediaSession" in navigator)) {
+      return;
+    }
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: activeTrack.title,
+      artist: activeTrack.artistName,
+      album: activeTrack.queueGroupLabel ?? "MxShare",
+      artwork: [
+        {
+          src: resolvedArtworkUrl ?? `${window.location.origin}/mxshare-icon-512.png`,
+          sizes: "512x512",
+        },
+      ],
+    });
+
+    const setHandler = (
+      action: MediaSessionAction,
+      handler: MediaSessionActionHandler | null,
+    ) => {
+      try {
+        navigator.mediaSession.setActionHandler(action, handler);
+      } catch {
+        // Some browsers expose Media Session while omitting individual actions.
+      }
+    };
+
+    setHandler("play", () => setPlaying(true));
+    setHandler("pause", () => setPlaying(false));
+    setHandler("previoustrack", () => {
+      const audio = audioRef.current;
+      if (audio && audio.currentTime > 3) {
+        handleSeek(0);
+        return;
+      }
+      playPrevious();
+    });
+    setHandler("nexttrack", playNext);
+    setHandler("seekbackward", (details) => {
+      const audio = audioRef.current;
+      if (audio) {
+        handleSeek(Math.max(0, audio.currentTime - (details.seekOffset ?? 10)));
+      }
+    });
+    setHandler("seekforward", (details) => {
+      const audio = audioRef.current;
+      if (audio) {
+        handleSeek(
+          Math.min(
+            Number.isFinite(audio.duration) ? audio.duration : Number.MAX_SAFE_INTEGER,
+            audio.currentTime + (details.seekOffset ?? 10),
+          ),
+        );
+      }
+    });
+    setHandler("seekto", (details) => {
+      if (typeof details.seekTime === "number") {
+        handleSeek(details.seekTime);
+      }
+    });
+    setHandler("stop", () => {
+      handleSeek(0);
+      setPlaying(false);
+    });
+
+    return () => {
+      for (const action of [
+        "play",
+        "pause",
+        "previoustrack",
+        "nexttrack",
+        "seekbackward",
+        "seekforward",
+        "seekto",
+        "stop",
+      ] satisfies MediaSessionAction[]) {
+        setHandler(action, null);
+      }
+    };
+  }, [
+    activeTrack,
+    playNext,
+    playPrevious,
+    resolvedArtworkUrl,
+    setPlaying,
+  ]);
+
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) {
+      return;
+    }
+
+    navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+  }, [isPlaying]);
+
+  useEffect(() => {
+    if (
+      !("mediaSession" in navigator)
+      || !displayDuration
+      || displayDuration <= 0
+      || !Number.isFinite(currentTime)
+    ) {
+      return;
+    }
+
+    try {
+      navigator.mediaSession.setPositionState({
+        duration: displayDuration,
+        playbackRate: audioRef.current?.playbackRate ?? 1,
+        position: Math.min(Math.max(currentTime, 0), displayDuration),
+      });
+    } catch {
+      // Position state is additive and unsupported on a few mobile browsers.
+    }
+  }, [currentTime, displayDuration]);
+
   if (!activeTrack) {
     return null;
   }
 
-  const displayDuration =
-    loadedDuration && Number.isFinite(loadedDuration)
-      ? loadedDuration
-      : activeTrack.durationSeconds ?? null;
   const progressPercent =
     displayDuration && displayDuration > 0
       ? Math.min((currentTime / displayDuration) * 100, 100)
@@ -414,9 +534,14 @@ export function GlobalPlayer() {
   }
 
   return (
-    <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-40 border-t border-white/10 bg-[radial-gradient(circle_at_center_top,rgba(var(--accent-rgb),0.14),transparent_28%),linear-gradient(180deg,rgba(8,6,19,0.96),rgba(7,5,17,0.98))] shadow-[0_-24px_60px_rgba(0,0,0,0.42)] backdrop-blur-2xl xl:bottom-0">
+    <div
+      className={cn(
+        "fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-40 border-t border-white/10 bg-[radial-gradient(circle_at_center_top,rgba(var(--accent-rgb),0.14),transparent_28%),linear-gradient(180deg,rgba(8,6,19,0.96),rgba(7,5,17,0.98))] shadow-[0_-24px_60px_rgba(0,0,0,0.42)] backdrop-blur-2xl transition-opacity xl:bottom-0",
+        isSurfaceHidden && "pointer-events-none opacity-0 xl:pointer-events-auto xl:opacity-100",
+      )}
+    >
       {isQueueOpen && !isCollapsed ? (
-        <div className="mx-auto max-w-[1600px] px-4 pt-4 md:px-8">
+        <div className="mx-auto hidden max-w-[1600px] px-4 pt-4 md:px-8 xl:block">
           <div className="rounded-[28px] border border-border bg-[linear-gradient(180deg,rgba(18,14,35,0.96),rgba(11,9,24,0.95))] p-5 shadow-[0_26px_64px_rgba(3,0,14,0.42)]">
             <div className="flex items-center justify-between gap-4">
               <div>
@@ -468,6 +593,73 @@ export function GlobalPlayer() {
           </div>
         </div>
       ) : null}
+      {isQueueOpen && !isCollapsed
+        ? createPortal(
+            <div className="fixed inset-0 z-[70] xl:hidden">
+              <button
+                type="button"
+                className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                onClick={closeQueue}
+                aria-label="Close playback queue"
+              />
+              <section
+                role="dialog"
+                aria-modal="true"
+                aria-label="Playback queue"
+                className="absolute inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+1rem)] max-h-[min(72dvh,620px)] overflow-hidden rounded-[30px] border border-border bg-[linear-gradient(180deg,rgba(18,14,35,0.99),rgba(9,7,21,0.99))] shadow-[0_28px_90px_rgba(0,0,0,0.62)]"
+              >
+                <div className="flex items-center justify-between border-b border-white/8 px-5 py-4">
+                  <div>
+                    <p className="font-medium">Playback queue</p>
+                    <p className="text-sm text-muted-foreground">
+                      {queue.length} track{queue.length === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-full border border-white/8"
+                    onClick={closeQueue}
+                  >
+                    Close
+                  </Button>
+                </div>
+                <div className="max-h-[calc(min(72dvh,620px)-5.25rem)] overflow-y-auto p-3">
+                  {queue.map((track, index) => (
+                    <button
+                      key={track.id}
+                      type="button"
+                      className={cn(
+                        "mb-2 flex w-full min-w-0 items-center justify-between gap-3 rounded-[19px] border border-white/8 px-4 py-3 text-left",
+                        track.id === activeTrackId && "border-accent/30 bg-accent/12",
+                      )}
+                      onClick={() => {
+                        playTrack(track.id);
+                        closeQueue();
+                      }}
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">
+                          {index + 1}. {track.title}
+                        </p>
+                        <p className="truncate text-sm text-muted-foreground">
+                          {track.artistName}
+                        </p>
+                      </div>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        <PlaybackDuration
+                          src={track.srcCandidates ?? track.src}
+                          fallbackDurationSeconds={track.durationSeconds ?? null}
+                        />
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            </div>,
+            document.body,
+          )
+        : null}
       <audio
         ref={audioRef}
         onEnded={handleEnded}

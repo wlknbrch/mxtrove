@@ -490,35 +490,17 @@ export async function createSinglePost(input: {
   }
 
   const client = requireSupabase();
-  const now = new Date().toISOString();
-  const { data: post, error: postError } = await client
-    .from("posts")
-    .insert({
-      owner_id: input.ownerId,
-      post_type: "single",
-      title: input.values.title,
-      description: input.values.description || null,
-      visibility: input.values.visibility,
-      artwork_asset_id: input.values.artwork_asset_id || null,
-      is_published: input.values.visibility !== "private",
-      published_at: input.values.visibility !== "private" ? now : null,
-      activity_at: now,
-    })
-    .select("*")
-    .single();
-
-  if (postError) {
-    throw postError;
-  }
-
-  const { error: singleError } = await client.from("single_posts").insert({
-    post_id: post.id,
-    song_id: input.songId,
-    featured_version_id: input.featuredVersionId,
+  const { data: post, error } = await client.rpc("create_single_post", {
+    target_song_id: input.songId,
+    target_version_id: input.featuredVersionId,
+    target_title: input.values.title,
+    target_description: input.values.description || "",
+    target_artwork_asset_id: input.values.artwork_asset_id || null,
+    target_visibility: input.values.visibility,
   });
 
-  if (singleError) {
-    throw singleError;
+  if (error) {
+    throw error;
   }
 
   return post;
@@ -913,85 +895,19 @@ export async function toggleVersionHeart(input: {
   }
 
   const client = requireSupabase();
-  const { data: version, error: versionError } = await client
-    .from("song_versions")
-    .select("song_id")
-    .eq("id", input.versionId)
-    .maybeSingle();
-
-  if (versionError) {
-    throw versionError;
-  }
-
-  if (!version) {
-    throw new Error("That song version could not be found.");
-  }
-
-  const [{ data: song, error: songError }, { data: existingHeart, error: heartLookupError }] = await Promise.all([
-    client.from("songs").select("owner_id").eq("id", version.song_id).maybeSingle(),
-    client
-      .from("version_hearts")
-      .select("song_version_id")
-      .eq("song_version_id", input.versionId)
-      .eq("profile_id", input.profileId)
-      .maybeSingle(),
-  ]);
-
-  if (songError) {
-    throw songError;
-  }
-
-  if (heartLookupError) {
-    throw heartLookupError;
-  }
-
-  if (input.active && song?.owner_id === input.profileId) {
-    throw new Error("You cannot heart your own song.");
-  }
-
-  if (input.active && existingHeart) {
-    return {
-      viewerHasHearted: true,
-      changed: false,
-    };
-  }
-
-  if (!input.active && !existingHeart) {
-    return {
-      viewerHasHearted: false,
-      changed: false,
-    };
-  }
-
-  if (input.active) {
-    const { error } = await client.from("version_hearts").insert({
-      song_version_id: input.versionId,
-      profile_id: input.profileId,
-    });
-
-    if (error) {
-      throw error;
-    }
-
-    return {
-      viewerHasHearted: true,
-      changed: true,
-    };
-  }
-
-  const { error } = await client
-    .from("version_hearts")
-    .delete()
-    .eq("song_version_id", input.versionId)
-    .eq("profile_id", input.profileId);
+  const { data, error } = await client.rpc("toggle_version_heart", {
+    target_version_id: input.versionId,
+    should_be_active: input.active,
+  });
 
   if (error) {
     throw error;
   }
 
+  const result = Array.isArray(data) ? data[0] : data;
   return {
-    viewerHasHearted: false,
-    changed: true,
+    viewerHasHearted: Boolean(result?.viewer_has_hearted),
+    changed: Boolean(result?.changed),
   };
 }
 
