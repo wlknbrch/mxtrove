@@ -33,7 +33,7 @@ export function BlockedAccountsPage() {
         title="Blocked accounts"
         description="Blocked accounts cannot follow, message, invite, heart, or comment across your personal MxTrove surfaces."
       />
-      <div className="grid gap-6 2xl:grid-cols-[310px_minmax(0,1fr)]">
+      <div className="grid gap-6 xl:grid-cols-[310px_minmax(0,1fr)]">
         <SettingsSidebar driveReady />
         <Card>
           {(blockedQuery.data ?? []).length ? (

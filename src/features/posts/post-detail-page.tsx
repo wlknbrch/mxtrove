@@ -11,6 +11,7 @@ import {
   PencilLine,
   Play,
   Reply,
+  Share2,
   SkipForward,
   Trash2,
 } from "lucide-react";
@@ -28,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { useLocalDraft } from "@/hooks/use-local-draft";
 import { getArtworkAssetUrls } from "@/lib/asset-urls";
+import { shareWithSystemDialog } from "@/lib/native-share";
 import { queryClient } from "@/lib/query-client";
 import { cn, formatDuration, formatRelativeTime } from "@/lib/utils";
 
@@ -179,9 +181,19 @@ export function PostDetailPage() {
     onSuccess: async ({ share_token: token }) => {
       const url = `${window.location.origin}/share/${token}`;
       setFreshShareUrl(url);
-      await navigator.clipboard.writeText(url);
+      const shareResult = await shareWithSystemDialog({
+        title: postQuery.data?.post.title ?? "Private MxTrove release",
+        text: "Listen to this private MxTrove release.",
+        url,
+      });
       await queryClient.invalidateQueries({ queryKey: ["post-share-links", postId] });
-      toast.success("Private share link copied. This token is only shown once.");
+      if (shareResult !== "cancelled") {
+        toast.success(
+          shareResult === "shared"
+            ? "Private release shared."
+            : "Native sharing is unavailable here, so the private link was copied.",
+        );
+      }
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "Could not create a share link."),
   });
@@ -424,12 +436,18 @@ export function PostDetailPage() {
                 const shareUrl = item.post.visibility === "public"
                   ? publicReleaseShareUrl
                   : window.location.href;
-                await navigator.clipboard.writeText(shareUrl);
-                toast.success("Release link copied.");
+                const shareResult = await shareWithSystemDialog({
+                  title: item.post.title,
+                  text: item.post.description ?? `Listen to ${item.post.title} on MxTrove.`,
+                  url: shareUrl,
+                });
+                if (shareResult === "copied") {
+                  toast.success("Native sharing is unavailable here, so the release link was copied.");
+                }
               }}
             >
-              <Copy className="size-4" />
-              {item.post.visibility === "unlisted" && isOwnPost ? "Create share link" : "Copy link"}
+              <Share2 className="size-4" />
+              {item.post.visibility === "unlisted" && isOwnPost ? "Create share link" : "Share"}
             </Button>
             <Button
               variant={item.viewerHasHearted ? "primary" : "secondary"}

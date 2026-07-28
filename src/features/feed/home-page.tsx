@@ -112,7 +112,7 @@ export function HomePage() {
       <Card className="velvet-hero overflow-hidden border-accent/14 px-0 py-0">
         <div className="grid gap-0 xl:grid-cols-[minmax(0,1.2fr)_320px]">
           <div className="px-6 py-7 md:px-8 md:py-9 xl:px-10">
-            <p className="text-xs uppercase tracking-[0.28em] text-accent-secondary/82">Public Alpha / Early Access</p>
+            <p className="text-xs uppercase tracking-[0.28em] text-accent-secondary/82">Public Beta / Early Access</p>
             <p className="mt-4 max-w-3xl font-display text-4xl leading-[0.98] tracking-[-0.05em] md:text-5xl xl:text-6xl">
               A softer, deeper way to follow every version drop, release, and late-night update.
             </p>

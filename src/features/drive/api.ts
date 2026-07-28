@@ -328,6 +328,31 @@ export async function getAssetById(assetId: string) {
   return data as Asset | null;
 }
 
+export async function getAssetsByIds(assetIds: string[]) {
+  const uniqueAssetIds = [...new Set(assetIds.filter(Boolean))];
+
+  if (!uniqueAssetIds.length) {
+    return [];
+  }
+
+  if (isDemoModeEnabled()) {
+    await createDemoDelay(120);
+    return demoAssets.filter((asset) => uniqueAssetIds.includes(asset.id));
+  }
+
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from("assets")
+    .select("*")
+    .in("id", uniqueAssetIds);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as Asset[];
+}
+
 export async function updateAssetPublicLinks(input: {
   assetId: string;
   accessMode: Visibility;

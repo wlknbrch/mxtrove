@@ -92,7 +92,8 @@ export async function getProfileMetrics(profileId: string): Promise<ProfilePubli
     throw error;
   }
 
-  return (data as ProfilePublicMetrics | null) ?? buildEmptyMetrics(profileId);
+  const metrics = Array.isArray(data) ? data[0] : data;
+  return (metrics as ProfilePublicMetrics | null) ?? buildEmptyMetrics(profileId);
 }
 
 export async function getFollowState(input: {

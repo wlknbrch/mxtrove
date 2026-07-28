@@ -134,9 +134,14 @@ export function StorageSettingsPage() {
 
       const activeProvider = getCloudStorageProvider(providerId);
       const result = await activeProvider.connect();
+      const existingConnection = (connectionsQuery.data ?? []).find(
+        (entry) => entry.provider === providerId,
+      );
       const connection = await upsertCloudConnection({
         ...buildCloudConnectionUpsert(viewer.userId, result),
-        is_default: (connectionsQuery.data ?? []).length === 0,
+        is_default:
+          existingConnection?.is_default
+          ?? !(connectionsQuery.data ?? []).some((entry) => entry.connection_status === "connected"),
       });
       if (providerId === "dropbox") {
         await rewriteLegacyDropboxAssetPaths(viewer.userId);
@@ -157,7 +162,17 @@ export function StorageSettingsPage() {
   });
   const defaultMutation = useMutation({
     mutationFn: setDefaultCloudProvider,
-    onSuccess: async () => {
+    onSuccess: async (_result, providerId) => {
+      queryClient.setQueryData(
+        ["cloud-connections", viewer.userId],
+        (current: typeof connectionsQuery.data) =>
+          current?.map((connection) => ({
+            ...connection,
+            is_default:
+              connection.connection_status === "connected"
+              && connection.provider === providerId,
+          })),
+      );
       await queryClient.invalidateQueries({ queryKey: ["cloud-connections", viewer.userId] });
       toast.success("Default upload provider updated.");
     },
@@ -269,7 +284,7 @@ export function StorageSettingsPage() {
         description="Connect one or more personal providers, choose a default, and keep every private original in the account you control."
       />
 
-      <div className="grid gap-6 2xl:grid-cols-[310px_minmax(0,1fr)_340px]">
+      <div className="grid gap-6 xl:grid-cols-[310px_minmax(0,1fr)_340px]">
         <SettingsSidebar driveReady={driveReady} />
 
         <div className="space-y-6">

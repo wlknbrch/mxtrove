@@ -117,15 +117,16 @@ export function SettingsSidebar({
       <div className="space-y-2">
         {implementedSections.map((item) => {
           const Icon = item.icon;
-          const isActive =
-            item.id === "overview"
-              ? location.pathname === "/settings"
-              : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
+          const requiresExactMatch =
+            item.id === "overview" || item.id === "account" || item.id === "export";
+          const isActive = requiresExactMatch
+            ? location.pathname === item.to
+            : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
           return (
             <NavLink
               key={item.id}
               to={item.to}
-              end={item.id === "overview"}
+              end={requiresExactMatch}
               className={() =>
                 cn(
                   "flex items-start gap-3 rounded-[22px] border px-4 py-3.5 transition-[background-color,border-color,color]",

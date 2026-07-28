@@ -23,7 +23,12 @@ import {
 import { getCloudStorageProvider } from "@/features/cloud-providers/provider-registry";
 import { buildCloudConnectionUpsert, getStoredDriveFolders } from "@/features/drive/google-drive-connection";
 import type { GoogleDriveProvider } from "@/features/drive/providers/google-drive-provider";
-import { createSong, getLibraryDashboard, createSongVersion } from "@/features/library/api";
+import {
+  createSong,
+  getLibraryDashboard,
+  createSongVersion,
+  type LibraryDashboardData,
+} from "@/features/library/api";
 import { MediaProcessingStatusCard } from "@/features/media-processing/media-processing-status-card";
 import {
   generateAutomaticPreviewFromSourceAsset,
@@ -71,6 +76,7 @@ export function CreateSinglePage() {
   const [mediaProcessingError, setMediaProcessingError] = useState<string | null>(null);
   const [uploadProviderId, setUploadProviderId] = useState<CloudProvider>("google_drive");
   const initializedDefaultProvider = useRef(false);
+  const postTitleWasEdited = useRef(false);
   const provider = getCloudStorageProvider(uploadProviderId);
 
   const libraryQuery = useQuery({
@@ -105,6 +111,10 @@ export function CreateSinglePage() {
 
   const availableArtwork = useMemo(
     () => (libraryQuery.data?.assets ?? []).filter((asset) => asset.asset_type === "cover_artwork"),
+    [libraryQuery.data?.assets],
+  );
+  const availableOriginals = useMemo(
+    () => (libraryQuery.data?.assets ?? []).filter((asset) => asset.asset_type === "audio_original"),
     [libraryQuery.data?.assets],
   );
   const selectedSong = useMemo(
@@ -188,32 +198,61 @@ export function CreateSinglePage() {
     artworkInputRef.current?.click();
   }
 
-  useEffect(() => {
+  function selectExistingSong(songId: string) {
     setMediaProcessingError(null);
     setMediaProcessingJob(null);
+    setExistingSongId(songId);
 
-    if (!existingSongId) {
+    if (!songId) {
       setUploadedOriginal(null);
       setUploadedPreview(null);
       setUploadedArtwork(null);
       return;
     }
 
-    setUploadedOriginal(latestSelectedOriginalAsset);
-    setUploadedPreview(latestSelectedPreviewAsset);
-    setUploadedArtwork(selectedSongArtworkAsset);
+    const song = libraryQuery.data?.songs.find((entry) => entry.id === songId) ?? null;
+    const latestVersion = (libraryQuery.data?.versions ?? [])
+      .filter((version) => version.song_id === songId)
+      .slice()
+      .sort((left, right) => right.version_number - left.version_number)[0] ?? null;
+    const originalAsset = latestVersion?.source_asset_id
+      ? libraryQuery.data?.assets.find((asset) => asset.id === latestVersion.source_asset_id) ?? null
+      : null;
+    const previewAsset = latestVersion?.preview_asset_id
+      ? libraryQuery.data?.assets.find((asset) => asset.id === latestVersion.preview_asset_id) ?? null
+      : null;
+    const artworkAsset = song?.default_artwork_asset_id
+      ? libraryQuery.data?.assets.find((asset) => asset.id === song.default_artwork_asset_id) ?? null
+      : null;
 
-    if (!postTitle.trim() && selectedSong?.title) {
-      setPostTitle(selectedSong.title);
+    setUploadedOriginal(originalAsset);
+    setUploadedPreview(previewAsset);
+    setUploadedArtwork(artworkAsset);
+
+    if (!postTitleWasEdited.current && song?.title) {
+      setPostTitle(song.title);
     }
-  }, [
-    existingSongId,
-    latestSelectedOriginalAsset,
-    latestSelectedPreviewAsset,
-    postTitle,
-    selectedSong?.title,
-    selectedSongArtworkAsset,
-  ]);
+  }
+
+  function addAssetsToLibraryCache(...assets: Array<Asset | null | undefined>) {
+    const newAssets = assets.filter((asset): asset is Asset => Boolean(asset));
+    if (!newAssets.length || !viewer.userId) {
+      return;
+    }
+
+    queryClient.setQueryData<LibraryDashboardData>(
+      ["library", viewer.userId],
+      (current) => current
+        ? {
+            ...current,
+            assets: [
+              ...newAssets,
+              ...current.assets.filter((asset) => !newAssets.some((entry) => entry.id === asset.id)),
+            ],
+          }
+        : current,
+    );
+  }
 
   const publishMutation = useMutation({
     mutationFn: async () => {
@@ -358,6 +397,8 @@ export function CreateSinglePage() {
       viewUrl: publicPreview.viewUrl,
     });
     setUploadedArtwork(asset);
+    addAssetsToLibraryCache(asset);
+    await queryClient.invalidateQueries({ queryKey: ["library", viewer.userId] });
     toast.success("Artwork uploaded.");
   };
 
@@ -439,7 +480,7 @@ export function CreateSinglePage() {
               <div className="grid gap-5 md:grid-cols-2">
                 <label className="grid gap-2">
                   <span className="text-sm font-medium">Existing song</span>
-                  <Select value={existingSongId} onChange={(event) => setExistingSongId(event.currentTarget.value)}>
+                  <Select value={existingSongId} onChange={(event) => selectExistingSong(event.currentTarget.value)}>
                     <option value="">Create a new song</option>
                     {libraryQuery.data?.songs.map((song) => (
                       <option key={song.id} value={song.id}>{song.title}</option>
@@ -453,9 +494,10 @@ export function CreateSinglePage() {
                     placeholder="Eternal Light"
                     value={newSongTitle}
                     onChange={(event) => {
-                      setNewSongTitle(event.currentTarget.value);
-                      if (!postTitle) {
-                        setPostTitle(event.currentTarget.value);
+                      const title = event.currentTarget.value;
+                      setNewSongTitle(title);
+                      if (!postTitleWasEdited.current) {
+                        setPostTitle(title);
                       }
                     }}
                     disabled={Boolean(existingSongId)}
@@ -530,53 +572,90 @@ export function CreateSinglePage() {
               ) : null}
 
               <div className="grid gap-6 lg:grid-cols-2">
-                <UploadDropzone
-                  title="Private original upload"
-                  description="Originals stay private in Drive and are only readable by their owner."
-                  parentFolderId={storedDriveFolders?.audioOriginalsFolderId ?? ""}
-                  disabled={!storedDriveFolders}
-                  onUpload={async (input) => {
-                    if (!viewer.userId) {
-                      throw new Error("Please sign in first.");
-                    }
-                    setMediaProcessingError(null);
-                    setMediaProcessingJob(null);
-                    const originalsFolderId = await resolveDriveFolder("originals");
-                    const previewsFolderId = await resolveDriveFolder("previews");
-                    const result = await uploadOriginalWithAutomaticPreview({
-                      ownerId: viewer.userId,
-                      provider,
-                      originalFile: input.file,
-                      originalsFolderId,
-                      previewsFolderId,
-                      signal: input.signal,
-                      onProgress: input.onProgress,
-                      onJobChange: setMediaProcessingJob,
-                    });
-                    setUploadedOriginal(result.originalAsset);
-                    if (result.previewAsset) {
-                      setUploadedPreview(result.previewAsset);
-                    }
-                    if (result.automationError) {
-                      setMediaProcessingError(result.automationError);
-                      toast.warning("Original uploaded. Automatic preview generation needs attention.");
-                    } else if (result.previewAsset) {
-                      toast.success("Original uploaded and preview generated automatically.");
-                    } else {
-                      toast.success("Original uploaded.");
-                    }
-                    return {
-                      fileId: result.originalAsset.remote_file_id,
-                      filename: result.originalAsset.filename,
-                      mimeType: result.originalAsset.mime_type,
-                      bytes: result.originalAsset.bytes ?? input.file.size,
-                      parentFolderId: result.originalAsset.remote_parent_folder_id ?? originalsFolderId,
-                      shareUrl: result.originalAsset.share_url,
-                      viewUrl: result.originalAsset.view_url,
-                      thumbnailUrl: result.originalAsset.thumbnail_url,
-                    };
-                  }}
-                />
+                <div className="space-y-4">
+                  <Card className="space-y-3 p-5">
+                    <div>
+                      <CardTitle>Reuse an existing original</CardTitle>
+                      <CardDescription className="mt-2 leading-6">
+                        Select any private audio asset already stored in your Library, regardless of provider.
+                      </CardDescription>
+                    </div>
+                    <Select
+                      value={uploadedOriginal?.id ?? ""}
+                      onChange={(event) => {
+                        const assetId = event.currentTarget.value;
+                        const asset = availableOriginals.find((entry) => entry.id === assetId) ?? null;
+                        const matchingVersion = (libraryQuery.data?.versions ?? []).find(
+                          (version) => version.source_asset_id === assetId,
+                        );
+                        const matchingPreview = matchingVersion?.preview_asset_id
+                          ? libraryQuery.data?.assets.find(
+                              (entry) => entry.id === matchingVersion.preview_asset_id,
+                            ) ?? null
+                          : null;
+                        setUploadedOriginal(asset);
+                        setUploadedPreview(matchingPreview);
+                        setMediaProcessingError(null);
+                        setMediaProcessingJob(null);
+                      }}
+                    >
+                      <option value="">Choose a private audio asset</option>
+                      {availableOriginals.map((asset) => (
+                        <option key={asset.id} value={asset.id}>
+                          {asset.display_name ?? asset.filename} · {asset.provider.replace("_", " ")}
+                        </option>
+                      ))}
+                    </Select>
+                  </Card>
+
+                  <UploadDropzone
+                    title="Upload a new private original"
+                    description="Originals stay private in your selected cloud provider and remain selected while you move between steps."
+                    parentFolderId={storedDriveFolders?.audioOriginalsFolderId ?? ""}
+                    disabled={!storedDriveFolders}
+                    onUpload={async (input) => {
+                      if (!viewer.userId) {
+                        throw new Error("Please sign in first.");
+                      }
+                      setMediaProcessingError(null);
+                      setMediaProcessingJob(null);
+                      const originalsFolderId = await resolveDriveFolder("originals");
+                      const previewsFolderId = await resolveDriveFolder("previews");
+                      const result = await uploadOriginalWithAutomaticPreview({
+                        ownerId: viewer.userId,
+                        provider,
+                        originalFile: input.file,
+                        originalsFolderId,
+                        previewsFolderId,
+                        signal: input.signal,
+                        onProgress: input.onProgress,
+                        onJobChange: setMediaProcessingJob,
+                      });
+                      setUploadedOriginal(result.originalAsset);
+                      setUploadedPreview(result.previewAsset ?? null);
+                      addAssetsToLibraryCache(result.originalAsset, result.previewAsset);
+                      await queryClient.invalidateQueries({ queryKey: ["library", viewer.userId] });
+                      if (result.automationError) {
+                        setMediaProcessingError(result.automationError);
+                        toast.warning("Original uploaded. Automatic preview generation needs attention.");
+                      } else if (result.previewAsset) {
+                        toast.success("Original uploaded and preview generated automatically.");
+                      } else {
+                        toast.success("Original uploaded.");
+                      }
+                      return {
+                        fileId: result.originalAsset.remote_file_id,
+                        filename: result.originalAsset.filename,
+                        mimeType: result.originalAsset.mime_type,
+                        bytes: result.originalAsset.bytes ?? input.file.size,
+                        parentFolderId: result.originalAsset.remote_parent_folder_id ?? originalsFolderId,
+                        shareUrl: result.originalAsset.share_url,
+                        viewUrl: result.originalAsset.view_url,
+                        thumbnailUrl: result.originalAsset.thumbnail_url,
+                      };
+                    }}
+                  />
+                </div>
 
                 <Card className="space-y-4 p-5">
                   <div className="space-y-2">
@@ -734,7 +813,13 @@ export function CreateSinglePage() {
               <div className="grid gap-5">
                 <label className="grid gap-2">
                   <span className="text-sm font-medium">Post title</span>
-                  <Input value={postTitle} onChange={(event) => setPostTitle(event.currentTarget.value)} />
+                  <Input
+                    value={postTitle}
+                    onChange={(event) => {
+                      postTitleWasEdited.current = true;
+                      setPostTitle(event.currentTarget.value);
+                    }}
+                  />
                 </label>
                 <label className="grid gap-2">
                   <span className="text-sm font-medium">Description / changelog context</span>

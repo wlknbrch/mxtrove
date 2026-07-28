@@ -42,7 +42,7 @@ export function DataExportPage() {
         title="Data export"
         description="Create a portable archive of account metadata. Personal cloud binaries stay with their provider and are referenced, not copied."
       />
-      <div className="grid gap-6 2xl:grid-cols-[310px_minmax(0,1fr)]">
+      <div className="grid gap-6 xl:grid-cols-[310px_minmax(0,1fr)]">
         <SettingsSidebar driveReady />
         <div className="space-y-6">
           <Card>

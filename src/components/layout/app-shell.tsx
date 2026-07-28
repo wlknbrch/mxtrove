@@ -30,7 +30,7 @@ import { usePlayerStore } from "@/components/audio/player-store";
 import { MxShareMark } from "@/components/layout/mxshare-mark";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { getAssetById } from "@/features/drive/api";
+import { getAssetById, getCloudConnections } from "@/features/drive/api";
 import { getUnreadConversationSummary } from "@/features/messages/api";
 import { getUnreadNotificationCount } from "@/features/notifications/api";
 import { useNotificationsRealtime } from "@/features/notifications/use-notifications-realtime";
@@ -89,6 +89,10 @@ export function AppShell() {
   }, [isMobileMenuOpen, setPlayerSurfaceHidden]);
 
   useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
     if (!isMobileMenuOpen) {
       return;
     }
@@ -130,11 +134,31 @@ export function AppShell() {
     queryFn: () => getUnreadConversationSummary(viewer.userId!),
     enabled: Boolean(viewer.userId),
   });
+  const cloudConnectionsQuery = useQuery({
+    queryKey: ["cloud-connections", viewer.userId],
+    queryFn: () => getCloudConnections(viewer.userId!),
+    enabled: Boolean(viewer.userId),
+  });
 
   const currentProfile = profileQuery.data ?? null;
   const avatarUrl = getAvatarAssetUrls(avatarAssetQuery.data);
   const hasActivePlayerTrack = Boolean(activeTrackId);
   const publicProfilePath = currentProfile?.username ? `/@${currentProfile.username}` : null;
+  const connectedCloudProviders = (cloudConnectionsQuery.data ?? []).filter(
+    (connection) => connection.connection_status === "connected",
+  );
+  const defaultCloudProvider =
+    connectedCloudProviders.find((connection) => connection.is_default)
+    ?? connectedCloudProviders[0]
+    ?? null;
+  const defaultCloudProviderName =
+    defaultCloudProvider?.provider === "google_drive"
+      ? "Google Drive"
+      : defaultCloudProvider?.provider === "dropbox"
+        ? "Dropbox"
+        : defaultCloudProvider?.provider === "onedrive"
+          ? "OneDrive"
+          : null;
   const unreadNavigationCounts = new Map<string, number>([
     ["/messages", unreadMessagesQuery.data?.unreadConversations ?? 0],
     ["/notifications", unreadNotificationsQuery.data ?? 0],
@@ -232,28 +256,28 @@ export function AppShell() {
 
           <div className="mt-7 rounded-[30px] border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.015))] p-5">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-medium">Google Drive</p>
+              <p className="text-sm font-medium">Cloud storage</p>
               <span
                 className={cn(
                   "inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[0.65rem] uppercase tracking-[0.24em]",
-                  envState.hasGoogleDrive
+                  connectedCloudProviders.length > 0
                     ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-200"
                     : "border-white/10 bg-white/5 text-muted-foreground",
                 )}
               >
                 <CircleDot className="size-3 fill-current stroke-none" />
-                {envState.hasGoogleDrive ? "Connected" : "Setup"}
+                {connectedCloudProviders.length > 0 ? "Connected" : "Setup"}
               </span>
             </div>
             <p className="mt-2 text-sm leading-7 text-muted-foreground">
-              {envState.hasGoogleDrive
-                ? "Connected once, then future audio, artwork, and avatars flow into the MxTrove folder structure."
-                : "Connect your Drive once in Settings and keep every upload routed into your private MxTrove structure."}
+              {connectedCloudProviders.length > 0
+                ? `${connectedCloudProviders.length} provider${connectedCloudProviders.length === 1 ? "" : "s"} connected.${defaultCloudProviderName ? ` ${defaultCloudProviderName} is the default.` : ""}`
+                : "Connect Google Drive, Dropbox, or OneDrive once and route uploads into your private MxTrove structure."}
             </p>
             <div className="mt-5">
               <Link to="/settings/storage">
                 <Button variant="secondary" size="sm" fullWidth className="justify-between">
-                  {envState.hasGoogleDrive ? "Open Drive setup" : "Connect Google Drive"}
+                  {connectedCloudProviders.length > 0 ? "Manage cloud storage" : "Connect a provider"}
                   <ArrowRight className="size-4" />
                 </Button>
               </Link>

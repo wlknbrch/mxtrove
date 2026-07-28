@@ -69,7 +69,7 @@ export function AccountSettingsPage() {
         title="Account"
         description="Manage credentials, the current authenticated session, and the recoverable account lifecycle."
       />
-      <div className="grid gap-6 2xl:grid-cols-[310px_minmax(0,1fr)]">
+      <div className="grid gap-6 xl:grid-cols-[310px_minmax(0,1fr)]">
         <SettingsSidebar driveReady />
         <div className="space-y-6">
           <Card>

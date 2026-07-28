@@ -110,6 +110,31 @@ export async function getProfileByUsername(username: string): Promise<Profile | 
   return data as Profile | null;
 }
 
+export async function getProfilesByIds(profileIds: string[]): Promise<Profile[]> {
+  const uniqueProfileIds = [...new Set(profileIds.filter(Boolean))];
+
+  if (!uniqueProfileIds.length) {
+    return [];
+  }
+
+  if (isDemoModeEnabled()) {
+    await createDemoDelay();
+    return demoProfiles.filter((profile) => uniqueProfileIds.includes(profile.id));
+  }
+
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from("profiles")
+    .select("*")
+    .in("id", uniqueProfileIds);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as Profile[];
+}
+
 export async function saveProfile(userId: string, values: ProfileFormValues): Promise<Profile> {
   if (isDemoModeEnabled()) {
     await createDemoDelay();

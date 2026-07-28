@@ -8,10 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { getAssetsByIds } from "@/features/drive/api";
 import { FollowButton } from "@/features/follows/follow-button";
 import { listProfileConnections } from "@/features/follows/api";
 import { getProfileByUsername } from "@/features/profile/api";
 import { useAppViewer } from "@/hooks/use-app-viewer";
+import { getAvatarAssetUrls } from "@/lib/asset-urls";
 import { cn } from "@/lib/utils";
 import { Users } from "lucide-react";
 
@@ -46,6 +48,25 @@ export function ProfileConnectionsPage({
 
   const profile = profileQuery.data;
   const items = connectionsQuery.data ?? [];
+  const avatarAssetIds = [
+    ...new Set(
+      items
+        .map((item) => item.profile.avatar_asset_id)
+        .filter((assetId): assetId is string => Boolean(assetId)),
+    ),
+  ];
+  const avatarAssetsQuery = useQuery({
+    queryKey: ["profile-connection-avatars", avatarAssetIds],
+    queryFn: () => getAssetsByIds(avatarAssetIds),
+    enabled: avatarAssetIds.length > 0,
+  });
+  const avatarAssetsById = new Map(
+    (avatarAssetsQuery.data ?? []).map((asset) => [asset.id, asset]),
+  );
+  const connectionsError =
+    connectionsQuery.error instanceof Error
+      ? connectionsQuery.error.message
+      : "The social graph could not be loaded.";
 
   if (!profile) {
     return (
@@ -104,7 +125,13 @@ export function ProfileConnectionsPage({
         </div>
       </div>
 
-      {items.length ? (
+      {connectionsQuery.isError ? (
+        <EmptyState
+          icon={Users}
+          title="Could not load connections"
+          description={connectionsError}
+        />
+      ) : items.length ? (
         <div className="grid gap-4 xl:grid-cols-2">
           {items.map((item) => (
             <Card key={item.profile.id}>
@@ -113,6 +140,11 @@ export function ProfileConnectionsPage({
                   <Link to={`/@${item.profile.username}`}>
                     <Avatar
                       alt={item.profile.display_name}
+                      src={getAvatarAssetUrls(
+                        item.profile.avatar_asset_id
+                          ? avatarAssetsById.get(item.profile.avatar_asset_id)
+                          : null,
+                      )}
                       initials={item.profile.display_name.slice(0, 2).toUpperCase()}
                       className="size-14"
                     />

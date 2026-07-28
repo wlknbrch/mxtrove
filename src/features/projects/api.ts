@@ -1,4 +1,6 @@
 import { createProtectedMediaReadUrl } from "@/features/media-processing/api";
+import { getProfilesByIds } from "@/features/profile/api";
+import { searchV2 } from "@/features/search/api";
 import { createDemoDelay, isDemoModeEnabled, requireSupabase } from "@/lib/service-utils";
 import type {
   Asset,
@@ -49,6 +51,30 @@ function throwIfError(error: { message?: string } | null) {
   if (error) {
     throw new Error(error.message || "Project request failed.");
   }
+}
+
+export async function searchProjectInviteCandidates(
+  query: string,
+  excludedProfileIds: string[] = [],
+): Promise<Profile[]> {
+  const normalizedQuery = query.trim();
+  if (normalizedQuery.length < 2) {
+    return [];
+  }
+
+  const excludedIds = new Set(excludedProfileIds);
+  const results = await searchV2(normalizedQuery);
+  const profileIds = results
+    .filter((result) => result.result_kind === "creator" && !excludedIds.has(result.result_id))
+    .map((result) => result.result_id)
+    .filter((profileId, index, entries) => entries.indexOf(profileId) === index)
+    .slice(0, 8);
+  const profiles = await getProfilesByIds(profileIds);
+  const profilesById = new Map(profiles.map((profile) => [profile.id, profile]));
+
+  return profileIds
+    .map((profileId) => profilesById.get(profileId))
+    .filter((profile): profile is Profile => Boolean(profile));
 }
 
 export async function listProjects(viewerId: string): Promise<ProjectDashboardItem[]> {

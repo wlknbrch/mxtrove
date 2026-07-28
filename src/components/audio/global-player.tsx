@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/utils";
 import { usePlayerStore } from "@/components/audio/player-store";
 import { useAppearance } from "@/features/appearance/appearance-provider";
-import { getResolvedPostById, togglePostHeart } from "@/features/posts/api";
+import { getResolvedPostById, togglePostHeart, toggleVersionHeart } from "@/features/posts/api";
 
 function normalizeMediaSource(value: string | null | undefined) {
   if (!value) {
@@ -100,6 +100,19 @@ export function GlobalPlayer() {
     queryFn: () => getResolvedPostById(activePostId!, viewer.userId),
     enabled: Boolean(activePostId),
   });
+  const activeReleaseTrack = playerPostQuery.data?.releaseTracks.find(
+    (entry) =>
+      entry.track.song_version_id === activeTrack?.versionId
+      || entry.version?.id === activeTrack?.versionId,
+  ) ?? null;
+  const heartsIndividualTrack = Boolean(
+    playerPostQuery.data
+    && playerPostQuery.data.post.post_type !== "single"
+    && activeReleaseTrack?.version?.id,
+  );
+  const activeHeartState = heartsIndividualTrack
+    ? Boolean(activeReleaseTrack?.viewerHasHeartedVersion)
+    : Boolean(playerPostQuery.data?.viewerHasHearted);
   const heartMutation = useMutation({
     mutationFn: async () => {
       if (!viewer.userId) {
@@ -109,13 +122,23 @@ export function GlobalPlayer() {
         throw new Error("No playable post is attached to this track.");
       }
 
-      return togglePostHeart({
+      if (heartsIndividualTrack && activeReleaseTrack?.version?.id) {
+        const result = await toggleVersionHeart({
+          versionId: activeReleaseTrack.version.id,
+          profileId: viewer.userId,
+          active: !activeReleaseTrack.viewerHasHeartedVersion,
+        });
+        return { ...result, target: "song" as const };
+      }
+
+      const result = await togglePostHeart({
         postId: activePostId,
         profileId: viewer.userId,
         active: !playerPostQuery.data?.viewerHasHearted,
       });
+      return { ...result, target: "release" as const };
     },
-    onSuccess: async () => {
+    onSuccess: async (result) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["player-post", activePostId] }),
         queryClient.invalidateQueries({ queryKey: ["post", activePostId] }),
@@ -127,7 +150,11 @@ export function GlobalPlayer() {
             })
           : Promise.resolve(),
       ]);
-      toast.success(playerPostQuery.data?.viewerHasHearted ? "Heart removed." : "Heart sent.");
+      toast.success(
+        result.viewerHasHearted
+          ? `${result.target === "song" ? "Song" : "Release"} hearted.`
+          : "Heart removed.",
+      );
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Could not update the heart.");
@@ -420,7 +447,7 @@ export function GlobalPlayer() {
   const hasNextTrack =
     (activeTrackIndex >= 0 && activeTrackIndex < queue.length - 1) ||
     (repeatMode === "all" && queue.length > 1);
-  const isHearted = Boolean(playerPostQuery.data?.viewerHasHearted);
+  const isHearted = activeHeartState;
   const isOwnPost = Boolean(playerPostQuery.data?.owner?.id && viewer.userId === playerPostQuery.data.owner.id);
   const canOpenActivePost = Boolean(activePostId);
   const repeatLabel =
@@ -554,7 +581,7 @@ export function GlobalPlayer() {
                 Close
               </Button>
             </div>
-            <div className="mt-4 grid gap-2">
+            <div className="mt-4 grid max-h-[min(48dvh,480px)] gap-2 overflow-y-auto overscroll-contain pr-1">
               {queue.map((track, index) => {
                 const isActive = track.id === activeTrackId;
 
@@ -927,7 +954,13 @@ export function GlobalPlayer() {
                     )}
                     onClick={() => void heartMutation.mutateAsync()}
                     disabled={heartMutation.isPending || !activePostId || isOwnPost}
-                    aria-label={isOwnPost ? "You cannot heart your own post" : isHearted ? "Remove heart" : "Heart this post"}
+                    aria-label={
+                      isOwnPost
+                        ? `You cannot heart your own ${heartsIndividualTrack ? "song" : "post"}`
+                        : isHearted
+                          ? `Remove ${heartsIndividualTrack ? "song" : "release"} heart`
+                          : `Heart this ${heartsIndividualTrack ? "song" : "release"}`
+                    }
                     aria-pressed={isHearted}
                   >
                     <Heart className="size-4" />

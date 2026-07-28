@@ -5,9 +5,11 @@ import { Compass, Sparkles } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription } from "@/components/ui/card";
+import { getAssetsByIds } from "@/features/drive/api";
 import { FollowButton } from "@/features/follows/follow-button";
 import { listCreatorDiscovery } from "@/features/follows/api";
 import { useAppViewer } from "@/hooks/use-app-viewer";
+import { getAvatarAssetUrls } from "@/lib/asset-urls";
 
 export function CreatorDiscoverySection({
   title = "Suggested creators",
@@ -30,6 +32,21 @@ export function CreatorDiscoverySection({
   });
 
   const creators = discoveryQuery.data ?? [];
+  const avatarAssetIds = [
+    ...new Set(
+      creators
+        .map((item) => item.profile.avatar_asset_id)
+        .filter((assetId): assetId is string => Boolean(assetId)),
+    ),
+  ];
+  const avatarAssetsQuery = useQuery({
+    queryKey: ["creator-discovery-avatars", avatarAssetIds],
+    queryFn: () => getAssetsByIds(avatarAssetIds),
+    enabled: avatarAssetIds.length > 0,
+  });
+  const avatarAssetsById = new Map(
+    (avatarAssetsQuery.data ?? []).map((asset) => [asset.id, asset]),
+  );
 
   if (!creators.length) {
     return null;
@@ -57,6 +74,11 @@ export function CreatorDiscoverySection({
                 <Link to={`/@${item.profile.username}`}>
                   <Avatar
                     alt={item.profile.display_name}
+                    src={getAvatarAssetUrls(
+                      item.profile.avatar_asset_id
+                        ? avatarAssetsById.get(item.profile.avatar_asset_id)
+                        : null,
+                    )}
                     initials={item.profile.display_name.slice(0, 2).toUpperCase()}
                     className="size-14"
                   />

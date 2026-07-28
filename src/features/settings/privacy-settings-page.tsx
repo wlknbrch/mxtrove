@@ -61,7 +61,7 @@ export function PrivacySettingsPage() {
         title="Privacy"
         description="Choose who can find, contact, and invite you. These rules are enforced by the database, not only hidden in the interface."
       />
-      <div className="grid gap-6 2xl:grid-cols-[310px_minmax(0,1fr)]">
+      <div className="grid gap-6 xl:grid-cols-[310px_minmax(0,1fr)]">
         <SettingsSidebar driveReady />
         <div className="space-y-6">
           <Card>

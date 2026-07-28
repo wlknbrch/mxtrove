@@ -28,6 +28,7 @@ import { createDirectConversation } from "@/features/messages/api";
 import { buildPostPlaybackTracks } from "@/features/posts/post-playback";
 import { getAvatarAssetUrls, getArtworkAssetUrls } from "@/lib/asset-urls";
 import { queryClient } from "@/lib/query-client";
+import { shareWithSystemDialog } from "@/lib/native-share";
 import { cn } from "@/lib/utils";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 
@@ -193,9 +194,10 @@ export function ProfilePage() {
     enabled: Boolean(profileQuery.data?.avatar_asset_id),
   });
   const metricsQuery = useQuery({
-    queryKey: ["profile-metrics", profileQuery.data?.id],
+    queryKey: ["profile-metrics", profileQuery.data?.id, viewer.userId ?? "public"],
     queryFn: () => getProfileMetrics(profileQuery.data!.id),
     enabled: Boolean(profileQuery.data?.id),
+    refetchOnMount: "always",
   });
   const followStateQuery = useQuery({
     queryKey: ["follow-state", viewer.userId, profileQuery.data?.id],
@@ -324,10 +326,14 @@ export function ProfilePage() {
               <Button
                 variant="secondary"
                 onClick={async () => {
-                  await navigator.clipboard.writeText(
-                    `${window.location.origin}/social/profile/${encodeURIComponent(profile.username)}`,
-                  );
-                  toast.success("Profile link copied.");
+                  const result = await shareWithSystemDialog({
+                    title: `${profile.display_name} on MxTrove`,
+                    text: profile.bio ?? `Discover @${profile.username} on MxTrove.`,
+                    url: `${window.location.origin}/social/profile/${encodeURIComponent(profile.username)}`,
+                  });
+                  if (result === "copied") {
+                    toast.success("Native sharing is unavailable here, so the profile link was copied.");
+                  }
                 }}
               >
                 <Share2 className="size-4" />

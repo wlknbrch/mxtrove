@@ -84,10 +84,10 @@ export function FollowButton({
       queryClient.setQueriesData<FollowState>({ queryKey: ["follow-state", viewer.userId] }, (current) =>
         current ? { ...current, viewerFollowsProfile: nextFollowing } : current,
       );
-      queryClient.setQueryData<ProfilePublicMetrics>(["profile-metrics", profileId], (current) =>
+      queryClient.setQueriesData<ProfilePublicMetrics>({ queryKey: ["profile-metrics", profileId] }, (current) =>
         patchMetrics(current, { followers: nextFollowing ? 1 : -1 }) ?? current,
       );
-      queryClient.setQueryData<ProfilePublicMetrics>(["profile-metrics", viewer.userId], (current) =>
+      queryClient.setQueriesData<ProfilePublicMetrics>({ queryKey: ["profile-metrics", viewer.userId] }, (current) =>
         patchMetrics(current, { following: nextFollowing ? 1 : -1 }) ?? current,
       );
       queryClient.setQueriesData<SocialProfileCard[]>({ queryKey: ["profile-connections"] }, (current) =>

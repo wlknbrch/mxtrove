@@ -86,10 +86,8 @@ export function ProfileSettingsPage() {
         description="Shape the public surface fans land on first: name, username, avatar, intro, and the links that turn curiosity into support."
       />
 
-      <div className="grid gap-6 2xl:grid-cols-[310px_minmax(0,1fr)_360px]">
-        <div className="hidden min-w-0 2xl:block">
-          <SettingsSidebar driveReady={driveReady} />
-        </div>
+      <div className="grid gap-6 xl:grid-cols-[310px_minmax(0,1fr)_360px]">
+        <SettingsSidebar driveReady={driveReady} />
 
         <ProfileFormPanel
           title="Public profile"

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
@@ -19,6 +19,7 @@ import {
   MoreHorizontal,
   Play,
   Plus,
+  Search,
   Send,
   Settings2,
   Trash2,
@@ -42,8 +43,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Tabs } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { getPreviewPlaybackUrls } from "@/lib/asset-urls";
-import { getAssetWaveform, normalizeWaveformData } from "@/lib/waveform";
+import { getAssetsByIds } from "@/features/drive/api";
 import { getLibraryDashboard } from "@/features/library/api";
 import { createSong } from "@/features/library/api";
 import {
@@ -62,6 +62,7 @@ import {
   reorderProjectTracks,
   revokeProjectShareLink,
   replyToFeedback,
+  searchProjectInviteCandidates,
   selectProjectTrackVersion,
   toggleFeedbackReaction,
   transferProjectOwnership,
@@ -77,12 +78,15 @@ import { useAppViewer } from "@/hooks/use-app-viewer";
 import { useLocalDraft } from "@/hooks/use-local-draft";
 import { useOfflineSnapshot } from "@/hooks/use-offline-snapshot";
 import { useOnlineStatus } from "@/hooks/use-online-status";
+import { getAvatarAssetUrls, getPreviewPlaybackUrls } from "@/lib/asset-urls";
 import { cn, formatDuration, formatRelativeTime } from "@/lib/utils";
+import { getAssetWaveform, normalizeWaveformData } from "@/lib/waveform";
 import type {
   CollaborationProjectVisibility,
   CollaborationProjectStatus,
   CollaborationRole,
   FeedbackCategory,
+  Profile,
 } from "@/types/domain";
 
 type MobilePanel = "tracks" | "review" | "people";
@@ -143,8 +147,10 @@ export function ProjectWorkspacePage() {
   const [projectDescription, setProjectDescription] = useState("");
   const [projectVisibility, setProjectVisibility] = useState<CollaborationProjectVisibility>("private");
   const [transferOwnerId, setTransferOwnerId] = useState("");
-  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteSearch, setInviteSearch] = useState("");
+  const [selectedInviteProfile, setSelectedInviteProfile] = useState<Profile | null>(null);
   const [inviteRole, setInviteRole] = useState<Exclude<CollaborationRole, "owner">>("contributor");
+  const deferredInviteSearch = useDeferredValue(inviteSearch.trim());
   const [feedbackDraft, setFeedbackDraft, clearFeedbackDraft] = useLocalDraft(
     `mxshare:draft:feedback:${viewer.userId ?? "guest"}:${projectId ?? "project"}:${selectedVersionId ?? "version"}`,
     initialFeedbackDraft,
@@ -188,6 +194,41 @@ export function ProjectWorkspacePage() {
     ),
     enabled: Boolean(projectId && canManageMembers),
   });
+  const excludedInviteProfileIds = [
+    ...new Set([
+      ...(project?.members.map(({ member }) => member.profile_id) ?? []),
+      ...(viewer.userId ? [viewer.userId] : []),
+    ]),
+  ];
+  const inviteCandidatesQuery = useQuery({
+    queryKey: ["project-invite-candidates", projectId, deferredInviteSearch, excludedInviteProfileIds],
+    queryFn: () => searchProjectInviteCandidates(deferredInviteSearch, excludedInviteProfileIds),
+    enabled: Boolean(
+      canManageMembers
+      && deferredInviteSearch.length >= 2
+      && !selectedInviteProfile,
+    ),
+    staleTime: 30_000,
+  });
+  const inviteCandidates = inviteCandidatesQuery.data ?? [];
+  const avatarAssetIds = [
+    ...new Set([
+      ...(project?.members
+        .map(({ profile }) => profile?.avatar_asset_id)
+        .filter((assetId): assetId is string => Boolean(assetId)) ?? []),
+      ...inviteCandidates
+        .map((profile) => profile.avatar_asset_id)
+        .filter((assetId): assetId is string => Boolean(assetId)),
+    ]),
+  ];
+  const avatarAssetsQuery = useQuery({
+    queryKey: ["project-member-avatars", avatarAssetIds],
+    queryFn: () => getAssetsByIds(avatarAssetIds),
+    enabled: avatarAssetIds.length > 0,
+  });
+  const avatarAssetsById = new Map(
+    (avatarAssetsQuery.data ?? []).map((asset) => [asset.id, asset]),
+  );
 
   useProjectRealtime(projectId, queryClient);
 
@@ -402,14 +443,21 @@ export function ProjectWorkspacePage() {
     onError: (error) => toast.error(error instanceof Error ? error.message : "Could not send the reply."),
   });
   const inviteMutation = useMutation({
-    mutationFn: () => inviteProjectMember({
-      projectId: projectId!,
-      email: inviteEmail,
-      role: inviteRole,
-    }),
+    mutationFn: async () => {
+      if (!selectedInviteProfile) {
+        throw new Error("Choose a profile from the search results.");
+      }
+      return inviteProjectMember({
+        projectId: projectId!,
+        profileId: selectedInviteProfile.id,
+        role: inviteRole,
+      });
+    },
     onSuccess: async ({ invite_token: token }) => {
-      setInviteEmail("");
+      setInviteSearch("");
+      setSelectedInviteProfile(null);
       await navigator.clipboard?.writeText(`${window.location.origin}/invites/${token}`);
+      await invalidateProject();
       toast.success("Invitation created and its private link copied.");
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "Could not create the invitation."),
@@ -997,89 +1045,93 @@ export function ProjectWorkspacePage() {
         </div>
 
         {isOnline && project.viewerRole !== "viewer" ? (
-          <div className="mt-5 grid gap-3 rounded-[24px] border border-border bg-white/[0.025] p-4 xl:grid-cols-[110px_110px_150px_130px_minmax(0,1fr)_auto]">
-            <label className="grid gap-1.5">
-              <span className="text-xs text-muted-foreground">Start</span>
-              <Input
-                type="number"
-                min="0"
-                step="0.1"
-                value={feedbackDraft.time}
-                aria-label="Feedback start time in seconds"
-                onChange={(event) => {
-                  const time = event.currentTarget.value;
-                  setFeedbackDraft((current) => ({ ...current, time }));
-                }}
-              />
-            </label>
-            <label className="grid gap-1.5">
-              <span className="text-xs text-muted-foreground">End (optional)</span>
-              <Input
-                type="number"
-                min={feedbackDraft.time || "0"}
-                step="0.1"
-                value={feedbackDraft.endTime}
-                aria-label="Feedback end time in seconds"
-                onChange={(event) => {
-                  const endTime = event.currentTarget.value;
-                  setFeedbackDraft((current) => ({ ...current, endTime }));
-                }}
-              />
-            </label>
-            <label className="grid gap-1.5">
-              <span className="text-xs text-muted-foreground">Category</span>
-              <Select
-                value={feedbackDraft.category}
-                onChange={(event) => {
-                  const category = event.currentTarget.value as FeedbackCategory;
-                  setFeedbackDraft((current) => ({ ...current, category }));
-                }}
-              >
-                {feedbackCategories.map((category) => <option key={category}>{category}</option>)}
-              </Select>
-            </label>
-            <label className="grid gap-1.5">
-              <span className="text-xs text-muted-foreground">Priority</span>
-              <Select
-                value={feedbackDraft.priority}
-                onChange={(event) => {
-                  const priority = event.currentTarget.value as typeof feedbackDraft.priority;
-                  setFeedbackDraft((current) => ({ ...current, priority }));
-                }}
-              >
-                {["low", "normal", "high", "blocking"].map((priority) => (
-                  <option key={priority} value={priority}>{priority}</option>
-                ))}
-              </Select>
-            </label>
-            <div className="space-y-2">
-              <Input
-                value={feedbackDraft.title}
-                placeholder="Marker title (optional)"
-                onChange={(event) => {
-                  const title = event.currentTarget.value;
-                  setFeedbackDraft((current) => ({ ...current, title }));
-                }}
-              />
-              <Textarea
-                value={feedbackDraft.body}
-                rows={2}
-                className="min-h-20"
-                placeholder="What should change at this moment?"
-                onChange={(event) => {
-                  const body = event.currentTarget.value;
-                  setFeedbackDraft((current) => ({ ...current, body }));
-                }}
-              />
+          <div className="mt-5 space-y-4 rounded-[24px] border border-border bg-white/[0.025] p-4">
+            <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+              <label className="grid min-w-0 gap-1.5">
+                <span className="text-xs text-muted-foreground">Start</span>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={feedbackDraft.time}
+                  aria-label="Feedback start time in seconds"
+                  onChange={(event) => {
+                    const time = event.currentTarget.value;
+                    setFeedbackDraft((current) => ({ ...current, time }));
+                  }}
+                />
+              </label>
+              <label className="grid min-w-0 gap-1.5">
+                <span className="text-xs text-muted-foreground">End (optional)</span>
+                <Input
+                  type="number"
+                  min={feedbackDraft.time || "0"}
+                  step="0.1"
+                  value={feedbackDraft.endTime}
+                  aria-label="Feedback end time in seconds"
+                  onChange={(event) => {
+                    const endTime = event.currentTarget.value;
+                    setFeedbackDraft((current) => ({ ...current, endTime }));
+                  }}
+                />
+              </label>
+              <label className="grid min-w-0 gap-1.5">
+                <span className="text-xs text-muted-foreground">Category</span>
+                <Select
+                  value={feedbackDraft.category}
+                  onChange={(event) => {
+                    const category = event.currentTarget.value as FeedbackCategory;
+                    setFeedbackDraft((current) => ({ ...current, category }));
+                  }}
+                >
+                  {feedbackCategories.map((category) => <option key={category}>{category}</option>)}
+                </Select>
+              </label>
+              <label className="grid min-w-0 gap-1.5">
+                <span className="text-xs text-muted-foreground">Priority</span>
+                <Select
+                  value={feedbackDraft.priority}
+                  onChange={(event) => {
+                    const priority = event.currentTarget.value as typeof feedbackDraft.priority;
+                    setFeedbackDraft((current) => ({ ...current, priority }));
+                  }}
+                >
+                  {["low", "normal", "high", "blocking"].map((priority) => (
+                    <option key={priority} value={priority}>{priority}</option>
+                  ))}
+                </Select>
+              </label>
             </div>
-            <Button
-              className="self-end"
-              disabled={!feedbackDraft.body.trim() || feedbackMutation.isPending}
-              onClick={() => feedbackMutation.mutate()}
-            >
-              <Plus className="size-4" />
-              Add at {formatDuration(Number(feedbackDraft.time) || 0)}
-            </Button>
+            <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end">
+              <div className="min-w-0 space-y-2">
+                <Input
+                  value={feedbackDraft.title}
+                  placeholder="Marker title (optional)"
+                  onChange={(event) => {
+                    const title = event.currentTarget.value;
+                    setFeedbackDraft((current) => ({ ...current, title }));
+                  }}
+                />
+                <Textarea
+                  value={feedbackDraft.body}
+                  rows={2}
+                  className="min-h-20"
+                  placeholder="What should change at this moment?"
+                  onChange={(event) => {
+                    const body = event.currentTarget.value;
+                    setFeedbackDraft((current) => ({ ...current, body }));
+                  }}
+                />
+              </div>
+              <Button
+                className="w-full whitespace-nowrap xl:w-auto"
+                disabled={!feedbackDraft.body.trim() || feedbackMutation.isPending}
+                onClick={() => feedbackMutation.mutate()}
+              >
+                <Plus className="size-4" />
+                Add at {formatDuration(Number(feedbackDraft.time) || 0)}
+              </Button>
+            </div>
           </div>
         ) : null}
 
@@ -1270,19 +1322,101 @@ export function ProjectWorkspacePage() {
 
         {canManageMembers ? (
           <div className="mt-5 space-y-3 rounded-[22px] border border-border p-3">
-            <Input
-              type="email"
-              value={inviteEmail}
-              placeholder="Collaborator email"
-              onChange={(event) => setInviteEmail(event.currentTarget.value)}
-            />
+            <div className="space-y-2">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={inviteSearch}
+                  className="pl-10"
+                  placeholder="Search name or @username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  aria-label="Search profiles to invite"
+                  aria-expanded={Boolean(
+                    !selectedInviteProfile
+                    && deferredInviteSearch.length >= 2
+                    && (inviteCandidatesQuery.isFetching || inviteCandidates.length),
+                  )}
+                  aria-controls="project-invite-candidates"
+                  onChange={(event) => {
+                    setInviteSearch(event.currentTarget.value);
+                    setSelectedInviteProfile(null);
+                  }}
+                />
+              </div>
+
+              {selectedInviteProfile ? (
+                <div className="flex items-center gap-3 rounded-[18px] border border-accent/35 bg-accent/8 px-3 py-2.5">
+                  <Avatar
+                    alt={selectedInviteProfile.display_name}
+                    src={getAvatarAssetUrls(
+                      selectedInviteProfile.avatar_asset_id
+                        ? avatarAssetsById.get(selectedInviteProfile.avatar_asset_id)
+                        : null,
+                    )}
+                    initials={selectedInviteProfile.display_name.slice(0, 2).toUpperCase()}
+                    className="size-10"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{selectedInviteProfile.display_name}</p>
+                    <p className="truncate text-xs text-muted-foreground">@{selectedInviteProfile.username}</p>
+                  </div>
+                  <Badge variant="accent">Selected</Badge>
+                </div>
+              ) : deferredInviteSearch.length >= 2 ? (
+                <div
+                  id="project-invite-candidates"
+                  className="max-h-72 space-y-1 overflow-y-auto rounded-[18px] border border-border bg-background/75 p-1.5"
+                >
+                  {inviteCandidatesQuery.isFetching ? (
+                    <p className="px-3 py-4 text-center text-sm text-muted-foreground">Searching profiles...</p>
+                  ) : inviteCandidates.length ? (
+                    inviteCandidates.map((profile) => (
+                      <button
+                        key={profile.id}
+                        type="button"
+                        className="flex w-full items-center gap-3 rounded-[14px] px-3 py-2.5 text-left transition hover:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        onClick={() => {
+                          setSelectedInviteProfile(profile);
+                          setInviteSearch(`@${profile.username}`);
+                        }}
+                      >
+                        <Avatar
+                          alt={profile.display_name}
+                          src={getAvatarAssetUrls(
+                            profile.avatar_asset_id
+                              ? avatarAssetsById.get(profile.avatar_asset_id)
+                              : null,
+                          )}
+                          initials={profile.display_name.slice(0, 2).toUpperCase()}
+                          className="size-10"
+                        />
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium">{profile.display_name}</span>
+                          <span className="block truncate text-xs text-muted-foreground">@{profile.username}</span>
+                        </span>
+                      </button>
+                    ))
+                  ) : (
+                    <p className="px-3 py-4 text-center text-sm text-muted-foreground">
+                      No matching profiles found.
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="px-1 text-xs text-muted-foreground">
+                  Enter at least two characters. Small typos are okay.
+                </p>
+              )}
+            </div>
             <div className="flex gap-2">
               <Select value={inviteRole} onChange={(event) => setInviteRole(event.currentTarget.value as typeof inviteRole)}>
                 {assignableRoles.map((role) => <option key={role}>{role}</option>)}
               </Select>
               <Button
                 size="sm"
-                disabled={!inviteEmail.trim() || inviteMutation.isPending}
+                disabled={!selectedInviteProfile || inviteMutation.isPending}
+                aria-label="Invite selected profile"
                 onClick={() => inviteMutation.mutate()}
               >
                 <UserPlus className="size-4" />
@@ -1296,6 +1430,11 @@ export function ProjectWorkspacePage() {
             <div key={member.profile_id} className="flex items-center gap-3 rounded-[20px] border border-border px-3 py-3">
               <Avatar
                 alt={profile?.display_name ?? "Project member"}
+                src={getAvatarAssetUrls(
+                  profile?.avatar_asset_id
+                    ? avatarAssetsById.get(profile.avatar_asset_id)
+                    : null,
+                )}
                 initials={(profile?.display_name ?? "?").slice(0, 2).toUpperCase()}
                 className="size-10"
               />

@@ -231,10 +231,8 @@ export function NotificationSettingsPage() {
         description="Choose what should interrupt you, keep browser push on the devices that matter, and leave the rest on in-app unread counts."
       />
 
-      <div className="grid gap-6 2xl:grid-cols-[310px_minmax(0,1fr)_360px]">
-        <div className="hidden min-w-0 2xl:block">
-          <SettingsSidebar driveReady={driveReady} />
-        </div>
+      <div className="grid gap-6 xl:grid-cols-[310px_minmax(0,1fr)_360px]">
+        <SettingsSidebar driveReady={driveReady} />
 
         <div className="space-y-6">
           <Card>
