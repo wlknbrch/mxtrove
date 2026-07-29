@@ -1,11 +1,12 @@
 import { startTransition, useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Disc3, Radio, Sparkles } from "lucide-react";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { Disc3, LoaderCircle, Radio, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { usePlayerStore } from "@/components/audio/player-store";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { useOfflineSnapshot } from "@/hooks/use-offline-snapshot";
@@ -13,7 +14,7 @@ import { useOnlineStatus } from "@/hooks/use-online-status";
 import { getArtworkAssetUrls } from "@/lib/asset-urls";
 import { env } from "@/lib/env";
 
-import { listHomeFeed } from "@/features/feed/api";
+import { listHomeFeedPage } from "@/features/feed/api";
 import { FeedPostCard } from "@/features/feed/feed-post-card";
 import { CreatorDiscoverySection } from "@/features/follows/creator-discovery-section";
 import { buildPostPlaybackTracks } from "@/features/posts/post-playback";
@@ -21,19 +22,28 @@ import { buildPostPlaybackTracks } from "@/features/posts/post-playback";
 export function HomePage() {
   const viewer = useAppViewer();
   const isOnline = useOnlineStatus();
-  const feedQuery = useQuery({
+  const feedQuery = useInfiniteQuery({
     queryKey: ["home-feed", viewer.userId],
-    queryFn: () => listHomeFeed(viewer.userId),
+    queryFn: ({ pageParam }) => listHomeFeedPage(viewer.userId, { offset: pageParam }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
   });
+  const loadedFeedItems = useMemo(() => {
+    const uniqueItems = new Map(
+      (feedQuery.data?.pages.flatMap((page) => page.items) ?? [])
+        .map((item) => [item.post.id, item]),
+    );
+    return [...uniqueItems.values()];
+  }, [feedQuery.data]);
   const publicFeedItems = useMemo(
-    () => feedQuery.data?.filter((item) => item.post.visibility === "public").slice(0, 18),
-    [feedQuery.data],
+    () => loadedFeedItems.filter((item) => item.post.visibility === "public").slice(0, 24),
+    [loadedFeedItems],
   );
   const feedSnapshot = useOfflineSnapshot(
     `mxshare:offline:v2:public-feed:${viewer.userId ?? "guest"}`,
     publicFeedItems,
   );
-  const feedData = feedQuery.data ?? (!isOnline ? feedSnapshot : null) ?? [];
+  const feedData = loadedFeedItems.length ? loadedFeedItems : (!isOnline ? feedSnapshot : null) ?? [];
   const items = feedData.filter((item): item is NonNullable<typeof item> => Boolean(item));
   const enqueue = usePlayerStore((state) => state.enqueue);
   const activeTrackId = usePlayerStore((state) => state.activeTrackId);
@@ -108,6 +118,14 @@ export function HomePage() {
           Showing the last saved public feed. Playback and new activity need a connection.
         </div>
       ) : null}
+      {feedQuery.isError ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-danger/25 bg-danger/8 px-4 py-3 text-sm text-danger">
+          <span>The feed could not be refreshed. Existing releases remain available elsewhere.</span>
+          <Button variant="ghost" size="sm" onClick={() => void feedQuery.refetch()}>
+            Retry feed
+          </Button>
+        </div>
+      ) : null}
 
       <Card className="velvet-hero overflow-hidden border-accent/14 px-0 py-0">
         <div className="grid gap-0 xl:grid-cols-[minmax(0,1.2fr)_320px]">
@@ -171,8 +189,27 @@ export function HomePage() {
       {items.length ? (
         <div className="space-y-5">
           {orderedItems.map((item, index) => (
-            <FeedPostCard key={item.post.id} item={item} spotlight={index === 0} />
+            <div
+              key={item.post.id}
+              className="[contain-intrinsic-size:auto_560px] [content-visibility:auto]"
+            >
+              <FeedPostCard item={item} spotlight={index === 0} />
+            </div>
           ))}
+          {feedQuery.hasNextPage ? (
+            <div className="flex justify-center pt-2">
+              <Button
+                variant="secondary"
+                disabled={feedQuery.isFetchingNextPage}
+                onClick={() => void feedQuery.fetchNextPage()}
+              >
+                {feedQuery.isFetchingNextPage ? (
+                  <LoaderCircle className="size-4 animate-spin" />
+                ) : null}
+                Load more releases
+              </Button>
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className="space-y-6">

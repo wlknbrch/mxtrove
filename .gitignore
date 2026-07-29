@@ -3,6 +3,7 @@ dist/
 coverage/
 services/media-worker/node_modules/
 services/media-worker/dist/
+services/media-worker/.data/
 
 .env
 .env.local

@@ -27,6 +27,7 @@ import type {
   Visibility,
 } from "@/types/domain";
 import { createProtectedMediaReadUrl } from "@/features/media-processing/api";
+import { resolveAvailableProtectedReadUrls } from "@/features/posts/protected-preview";
 import type { ProtectedMediaAsset } from "@/types/domain";
 
 import type { ResolvedComment, ResolvedPostCard, ResolvedReleaseTrack, ResolvedSingleInfo } from "@/features/posts/types";
@@ -284,10 +285,10 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
     throw protectedAssetsResult.error;
   }
   const protectedAssets = (protectedAssetsResult.data ?? []) as ProtectedMediaAsset[];
-  const protectedReadUrls = new Map<string, string>();
-  await Promise.all(protectedAssets.map(async (asset) => {
-    protectedReadUrls.set(asset.id, await createProtectedMediaReadUrl(asset.id));
-  }));
+  const protectedReadUrls = await resolveAvailableProtectedReadUrls(
+    protectedAssets,
+    createProtectedMediaReadUrl,
+  );
   const versionHeartCounts = new Map<string, number>();
   const viewerHeartedVersionIds = new Set<string>();
 

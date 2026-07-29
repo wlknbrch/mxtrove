@@ -335,8 +335,26 @@ export async function acceptProjectInvite(token: string) {
   const { data, error } = await client.rpc("accept_project_invite", {
     invite_token: token,
   });
+  if (!error) {
+    return data as string;
+  }
+
+  // Profile-targeted invites can also be accepted from the inbox. Falling
+  // back to that path keeps old token links usable while the RPC still
+  // verifies that the invite belongs to the authenticated account.
+  const invite = await resolveProjectInvite(token);
+  if (invite?.invite_id) {
+    const { data: fallbackProjectId, error: fallbackError } = await client.rpc(
+      "accept_project_invite_by_id",
+      { target_invite_id: invite.invite_id },
+    );
+    if (!fallbackError) {
+      return fallbackProjectId as string;
+    }
+  }
+
   throwIfError(error);
-  return data as string;
+  throw new Error("This invitation could not be accepted.");
 }
 
 export async function declineProjectInvite(token: string) {
@@ -494,29 +512,15 @@ export async function deleteProject(projectId: string) {
 
 export async function toggleFeedbackReaction(input: {
   threadId: string;
-  profileId: string;
   reaction: FeedbackReaction["reaction"];
   active: boolean;
 }) {
   const client = requireSupabase();
-  const query = client
-    .from("feedback_reactions");
-
-  if (input.active) {
-    const { error } = await query.upsert({
-      thread_id: input.threadId,
-      profile_id: input.profileId,
-      reaction: input.reaction,
-    });
-    throwIfError(error);
-    return;
-  }
-
-  const { error } = await query
-    .delete()
-    .eq("thread_id", input.threadId)
-    .eq("profile_id", input.profileId)
-    .eq("reaction", input.reaction);
+  const { error } = await client.rpc("set_feedback_reaction", {
+    target_thread_id: input.threadId,
+    target_reaction: input.reaction,
+    target_active: input.active,
+  });
   throwIfError(error);
 }
 

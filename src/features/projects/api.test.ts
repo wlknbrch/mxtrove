@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getProfilesByIds } from "@/features/profile/api";
-import { searchProjectInviteCandidates } from "@/features/projects/api";
+import { searchProjectInviteCandidates, toggleFeedbackReaction } from "@/features/projects/api";
 import { searchV2 } from "@/features/search/api";
+import { requireSupabase } from "@/lib/service-utils";
 import type { Profile } from "@/types/domain";
 
 vi.mock("@/features/profile/api", () => ({
@@ -12,6 +13,14 @@ vi.mock("@/features/profile/api", () => ({
 vi.mock("@/features/search/api", () => ({
   searchV2: vi.fn(),
 }));
+
+vi.mock("@/lib/service-utils", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/service-utils")>("@/lib/service-utils");
+  return {
+    ...actual,
+    requireSupabase: vi.fn(),
+  };
+});
 
 const profiles: Profile[] = [
   {
@@ -92,5 +101,28 @@ describe("searchProjectInviteCandidates", () => {
     await expect(searchProjectInviteCandidates("l")).resolves.toEqual([]);
     expect(searchV2).not.toHaveBeenCalled();
     expect(getProfilesByIds).not.toHaveBeenCalled();
+  });
+});
+
+describe("toggleFeedbackReaction", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("uses the atomic reaction RPC instead of writing independent reaction rows", async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    vi.mocked(requireSupabase).mockReturnValue({ rpc } as never);
+
+    await toggleFeedbackReaction({
+      threadId: "thread-1",
+      reaction: "agree",
+      active: true,
+    });
+
+    expect(rpc).toHaveBeenCalledWith("set_feedback_reaction", {
+      target_thread_id: "thread-1",
+      target_reaction: "agree",
+      target_active: true,
+    });
   });
 });

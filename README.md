@@ -189,6 +189,11 @@ Web:    http://localhost:5173
 Worker: http://localhost:8080
 ```
 
+Local protected media is stored in `services/media-worker/.data/protected-media`
+by default. Keep this directory outside temporary system folders: Supabase stores
+only the protected-media metadata, so deleting the local directory also deletes
+the only local copy of message attachments and protected derivatives.
+
 Set `VITE_ENABLE_DEMO_MODE=true` only for explicit UI-only inspection. Demo mode
 does not prove RLS, OAuth, protected playback, uploads, or Realtime behavior.
 

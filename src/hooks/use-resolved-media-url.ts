@@ -63,26 +63,29 @@ export function useResolvedMediaUrl(
 ) {
   const candidates = normalizeCandidates(input);
   const cacheKey = `${mediaType}:${candidates.join("|")}`;
-  const [resolvedUrl, setResolvedUrl] = useState<string | null>(() => {
-    if (!candidates.length) {
-      return null;
-    }
-
-    return resolvedMediaUrlCache.get(cacheKey) ?? null;
-  });
+  const [resolvedMedia, setResolvedMedia] = useState<{
+    cacheKey: string;
+    url: string | null;
+  }>(() => ({
+    cacheKey,
+    url: candidates.length ? resolvedMediaUrlCache.get(cacheKey) ?? null : null,
+  }));
 
   useEffect(() => {
     if (!candidates.length) {
-      setResolvedUrl(null);
+      setResolvedMedia({ cacheKey, url: null });
       return;
     }
 
     const cached = resolvedMediaUrlCache.get(cacheKey);
     if (typeof cached !== "undefined") {
-      setResolvedUrl(cached);
+      setResolvedMedia({ cacheKey, url: cached });
       return;
     }
 
+    // Do not let a previous track's resolved URL leak into the next render
+    // while a proxied media candidate is still being fetched.
+    setResolvedMedia({ cacheKey, url: null });
     let cancelled = false;
     const pending =
       pendingMediaUrlCache.get(cacheKey) ?? resolveMediaUrl(candidates, mediaType);
@@ -94,7 +97,7 @@ export function useResolvedMediaUrl(
       resolvedMediaUrlCache.set(cacheKey, nextUrl);
 
       if (!cancelled) {
-        setResolvedUrl(nextUrl);
+        setResolvedMedia({ cacheKey, url: nextUrl });
       }
     });
 
@@ -103,5 +106,7 @@ export function useResolvedMediaUrl(
     };
   }, [cacheKey, mediaType]);
 
-  return resolvedUrl;
+  return resolvedMedia.cacheKey === cacheKey
+    ? resolvedMedia.url
+    : resolvedMediaUrlCache.get(cacheKey) ?? null;
 }

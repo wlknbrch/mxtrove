@@ -129,8 +129,14 @@ export function MessageAttachmentCard({
           <button
             type="button"
             className="block w-full"
-            onClick={() => setLightboxOpen(true)}
-            disabled={!readUrlQuery.data}
+            onClick={() => {
+              if (readUrlQuery.isError) {
+                void readUrlQuery.refetch();
+                return;
+              }
+              setLightboxOpen(true);
+            }}
+            disabled={!readUrlQuery.data && !readUrlQuery.isError}
           >
             {readUrlQuery.data ? (
               <img
@@ -141,6 +147,12 @@ export function MessageAttachmentCard({
                   void readUrlQuery.refetch();
                 }}
               />
+            ) : readUrlQuery.isError ? (
+              <span className="flex h-32 flex-col items-center justify-center gap-2 px-4 text-center text-sm text-white/65">
+                <Image className="size-5" />
+                <span>This attachment is no longer available.</span>
+                <span className="text-xs text-white/45">Select to retry.</span>
+              </span>
             ) : (
               <span className="flex h-32 items-center justify-center text-sm text-white/65">
                 <Image className="mr-2 size-4" />

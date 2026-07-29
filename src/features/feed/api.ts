@@ -3,10 +3,9 @@ import { createDemoDelay, isDemoModeEnabled, requireSupabase } from "@/lib/servi
 import type { FeedEvent } from "@/types/domain";
 
 import { getResolvedPostById, listResolvedPosts } from "@/features/posts/api";
+import type { ResolvedPostCard } from "@/features/posts/types";
 
-const HOME_PRIMARY_LIMIT = 12;
-const HOME_TRENDING_LIMIT = 12;
-const HOME_FEED_LIMIT = 18;
+export const HOME_FEED_PAGE_SIZE = 6;
 
 function mergeUniquePostIds(groups: string[][], limit: number) {
   const seen = new Set<string>();
@@ -54,9 +53,30 @@ export interface ExploreCatalogResult {
   followers_count: number | null;
 }
 
-export async function listHomeFeed(viewerId: string | null) {
+export interface HomeFeedPage {
+  items: ResolvedPostCard[];
+  nextOffset: number | null;
+}
+
+async function resolveFeedPosts(postIds: string[], viewerId?: string | null) {
+  const results = await Promise.allSettled(
+    postIds.map((postId) => getResolvedPostById(postId, viewerId)),
+  );
+
+  return results.flatMap((result) => (
+    result.status === "fulfilled" && result.value ? [result.value] : []
+  ));
+}
+
+export async function listHomeFeedPage(
+  viewerId: string | null,
+  options: { offset?: number; limit?: number } = {},
+): Promise<HomeFeedPage> {
+  const offset = Math.max(0, options.offset ?? 0);
+  const limit = Math.max(1, options.limit ?? HOME_FEED_PAGE_SIZE);
+
   if (!viewerId && !isDemoModeEnabled()) {
-    return [];
+    return { items: [], nextOffset: null };
   }
 
   if (isDemoModeEnabled()) {
@@ -72,10 +92,10 @@ export async function listHomeFeed(viewerId: string | null) {
           .map((event) => event.post_id),
         posts.map((post) => post.post.id),
       ],
-      HOME_FEED_LIMIT,
+      Number.MAX_SAFE_INTEGER,
     );
-
-    return orderedIds
+    const pageIds = orderedIds.slice(offset, offset + limit);
+    const items = pageIds
       .map((postId) => {
         const post = resolvedById.get(postId);
         if (!post) {
@@ -88,20 +108,36 @@ export async function listHomeFeed(viewerId: string | null) {
         };
       })
       .filter((post): post is NonNullable<typeof post> => Boolean(post));
+
+    return {
+      items,
+      nextOffset: offset + pageIds.length < orderedIds.length
+        ? offset + pageIds.length
+        : null,
+    };
   }
 
   const client = requireSupabase();
-  const [{ data: homeRows, error: homeError }, { data: trendingRows, error: trendingError }, resolvedPosts] =
+  const [
+    { data: homeRows, error: homeError },
+    { data: trendingRows, error: trendingError },
+    { data: latestRows, error: latestError },
+  ] =
     await Promise.all([
       client.rpc("list_home_feed_post_ids", {
-        limit_count: HOME_PRIMARY_LIMIT,
-        offset_count: 0,
+        limit_count: limit + 1,
+        offset_count: offset,
       }),
       client.rpc("list_trending_public_post_ids", {
-        limit_count: HOME_TRENDING_LIMIT,
-        offset_count: 0,
+        limit_count: limit + 1,
+        offset_count: offset,
       }),
-      listResolvedPosts({ visibility: "public", viewerId }),
+      client
+        .from("posts")
+        .select("id")
+        .eq("visibility", "public")
+        .order("activity_at", { ascending: false })
+        .range(offset, offset + limit),
     ]);
 
   if (homeError) {
@@ -111,15 +147,23 @@ export async function listHomeFeed(viewerId: string | null) {
   if (trendingError) {
     throw trendingError;
   }
+  if (latestError) {
+    throw latestError;
+  }
 
   const primaryPostIds = ((homeRows ?? []) as Array<{ post_id: string }>).map((row) => row.post_id);
   const trendingPostIds = ((trendingRows ?? []) as Array<{ post_id: string }>).map((row) => row.post_id);
-  const latestPublicPostIds = resolvedPosts.map((post) => post.post.id);
+  const latestPublicPostIds = ((latestRows ?? []) as Array<{ id: string }>).map((row) => row.id);
   const orderedPostIds = mergeUniquePostIds(
     [primaryPostIds, trendingPostIds, latestPublicPostIds],
-    HOME_FEED_LIMIT,
+    limit,
   );
-  const resolvedById = new Map(resolvedPosts.map((post) => [post.post.id, post]));
+  const resolvedPosts = await resolveFeedPosts(orderedPostIds, viewerId);
+  const resolvedById = new Map(
+    resolvedPosts
+      .filter((post): post is ResolvedPostCard => Boolean(post))
+      .map((post) => [post.post.id, post]),
+  );
   const feedEventsResult = orderedPostIds.length
     ? await client
         .from("feed_events")
@@ -134,7 +178,7 @@ export async function listHomeFeed(viewerId: string | null) {
 
   const latestFeedEventByPostId = getLatestFeedEventByPostId((feedEventsResult.data ?? []) as FeedEvent[]);
 
-  return orderedPostIds
+  const items = orderedPostIds
     .map((postId) => {
       const post = resolvedById.get(postId);
       if (!post) {
@@ -147,6 +191,15 @@ export async function listHomeFeed(viewerId: string | null) {
       };
     })
     .filter((post): post is NonNullable<typeof post> => Boolean(post));
+  const hasMore =
+    primaryPostIds.length > limit
+    || trendingPostIds.length > limit
+    || latestPublicPostIds.length > limit;
+
+  return {
+    items,
+    nextOffset: hasMore ? offset + limit : null,
+  };
 }
 
 export async function listExploreFeed(params?: {
@@ -176,9 +229,7 @@ export async function listExploreFeed(params?: {
     }
 
     const rankedPostIds = ((data ?? []) as Array<{ post_id: string }>).map((row) => row.post_id);
-    const resolvedPosts = await Promise.all(
-      rankedPostIds.map((postId) => getResolvedPostById(postId, params.viewerId)),
-    );
+    const resolvedPosts = await resolveFeedPosts(rankedPostIds, params.viewerId);
 
     return resolvedPosts
       .filter(Boolean)
@@ -227,8 +278,9 @@ export async function searchExploreCatalog(params: {
   const rows = (data ?? []) as ExploreCatalogResult[];
   const postRows = rows.filter((row) => row.result_kind === "post" && row.post_id);
   const creatorRows = rows.filter((row) => row.result_kind === "creator");
-  const resolvedPosts = await Promise.all(
-    postRows.map((row) => getResolvedPostById(row.post_id!, params.viewerId)),
+  const resolvedPosts = await resolveFeedPosts(
+    postRows.map((row) => row.post_id!),
+    params.viewerId,
   );
 
   return {

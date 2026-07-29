@@ -18,6 +18,24 @@ async function getAccessToken() {
   return accessToken;
 }
 
+async function getWorkerErrorMessage(response: Response, fallback: string) {
+  const payload = await response.text();
+  if (!payload) {
+    return fallback;
+  }
+
+  try {
+    const parsed = JSON.parse(payload) as { error?: unknown };
+    if (typeof parsed.error === "string" && parsed.error.trim()) {
+      return parsed.error;
+    }
+  } catch {
+    // Non-JSON worker responses are still useful error messages.
+  }
+
+  return payload;
+}
+
 async function workerRequest<T>(path: string, init?: RequestInit) {
   const accessToken = await getAccessToken();
   const response = await fetch(`${env.mediaWorkerUrl}${path}`, {
@@ -29,8 +47,10 @@ async function workerRequest<T>(path: string, init?: RequestInit) {
   });
 
   if (!response.ok) {
-    const payload = await response.text();
-    throw new Error(payload || `Media worker request failed with status ${response.status}.`);
+    throw new Error(await getWorkerErrorMessage(
+      response,
+      `Media worker request failed with status ${response.status}.`,
+    ));
   }
 
   if (response.status === 204) {
@@ -330,7 +350,10 @@ export async function createProtectedMediaReadUrl(
       },
     );
     if (!response.ok) {
-      throw new Error(await response.text() || "The protected shared preview is unavailable.");
+      throw new Error(await getWorkerErrorMessage(
+        response,
+        "The protected shared preview is unavailable.",
+      ));
     }
     const result = await response.json() as { url: string; expiresInSeconds: number };
     return result.url;

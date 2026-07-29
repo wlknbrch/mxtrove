@@ -209,6 +209,21 @@ export function GlobalPlayer() {
     }, 700);
   }
 
+  function playCurrentAudio(audio: HTMLAudioElement, expectedTrackId: string, message: string) {
+    const playerState = usePlayerStore.getState();
+    if (
+      loadedTrackIdRef.current !== expectedTrackId
+      || playerState.activeTrackId !== expectedTrackId
+      || !playerState.isPlaying
+    ) {
+      return;
+    }
+
+    void audio.play().catch((error) => {
+      schedulePlaybackError(message, error);
+    });
+  }
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) {
@@ -267,12 +282,12 @@ export function GlobalPlayer() {
       setLoadedDuration(null);
     }
 
-    if (isPlaying) {
-      void audio.play().catch((error) => {
-        schedulePlaybackError("This track could not be played in the browser.", error);
-      });
+    if (isPlaying && audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+      playCurrentAudio(audio, activeTrack.id, "This track could not be played in the browser.");
     } else {
-      audio.pause();
+      if (!isPlaying) {
+        audio.pause();
+      }
     }
   }, [activeTrack, isPlaying, resolvedAudioSrc, setCurrentTimeSeconds]);
 
@@ -695,6 +710,11 @@ export function GlobalPlayer() {
         }}
         onCanPlay={() => {
           clearPendingPlaybackError();
+          const audio = audioRef.current;
+          const expectedTrackId = loadedTrackIdRef.current;
+          if (audio && expectedTrackId) {
+            playCurrentAudio(audio, expectedTrackId, "This track could not be played in the browser.");
+          }
         }}
         onPlaying={() => {
           clearPendingPlaybackError();

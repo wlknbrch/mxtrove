@@ -8,30 +8,63 @@ export interface ResolvedNotification {
   actor: Profile | null;
 }
 
-export async function listNotifications(viewerId: string) {
+export const NOTIFICATIONS_PAGE_SIZE = 20;
+
+export interface NotificationsPageResult {
+  items: ResolvedNotification[];
+  total: number;
+  nextOffset: number | null;
+}
+
+export async function listNotifications(
+  viewerId: string,
+  options: { offset?: number; limit?: number } = {},
+): Promise<NotificationsPageResult> {
+  const offset = Math.max(0, options.offset ?? 0);
+  const limit = Math.max(1, options.limit ?? NOTIFICATIONS_PAGE_SIZE);
+
   if (isDemoModeEnabled()) {
     await createDemoDelay();
-    return demoNotifications.map((notification) => ({
+    const matchingNotifications = demoNotifications.filter(
+      (notification) => notification.recipient_id === viewerId,
+    );
+    const items = matchingNotifications.slice(offset, offset + limit).map((notification) => ({
       notification,
       actor: demoProfiles.find((profile) => profile.id === notification.actor_id) ?? null,
     })) satisfies ResolvedNotification[];
+
+    return {
+      items,
+      total: matchingNotifications.length,
+      nextOffset: offset + items.length < matchingNotifications.length
+        ? offset + items.length
+        : null,
+    };
   }
 
   const client = requireSupabase();
-  const { data, error } = await client
+  const { data, error, count } = await client
     .from("notifications")
-    .select("*, actor:profiles!notifications_actor_id_fkey(*)")
+    .select("*, actor:profiles!notifications_actor_id_fkey(*)", { count: "exact" })
     .eq("recipient_id", viewerId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit - 1);
 
   if (error) {
     throw error;
   }
 
-  return ((data ?? []) as Array<ResolvedNotification>).map((row) => ({
+  const items = ((data ?? []) as Array<ResolvedNotification>).map((row) => ({
     notification: row.notification ?? (row as unknown as Notification),
     actor: (row as unknown as { actor: Profile | null }).actor ?? null,
   }));
+  const total = count ?? items.length;
+
+  return {
+    items,
+    total,
+    nextOffset: offset + items.length < total ? offset + items.length : null,
+  };
 }
 
 export async function getUnreadNotificationCount(viewerId: string) {

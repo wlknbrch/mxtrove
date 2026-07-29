@@ -84,7 +84,14 @@ export async function registerProtectedMediaRoutes(app: FastifyInstance) {
         return reply.code(404).send({ error: "Protected media not found." });
       }
 
-      const readPath = await protectedMediaStorage.getReadPath(params.assetId);
+      let readPath: string;
+      try {
+        readPath = await protectedMediaStorage.getReadPath(params.assetId);
+      } catch {
+        return reply.code(410).send({
+          error: "This protected media file is no longer available. Ask the sender to upload it again.",
+        });
+      }
       const stats = await fsPromises.stat(readPath);
       const size = stats.size;
       let range = null;
@@ -140,6 +147,12 @@ export async function registerProtectedMediaRoutes(app: FastifyInstance) {
     });
     if (!canAccess) {
       return reply.code(404).send({ error: "Protected media not found." });
+    }
+
+    if (!(await protectedMediaStorage.exists(params.assetId))) {
+      return reply.code(410).send({
+        error: "This protected media file is no longer available. Ask the sender to upload it again.",
+      });
     }
 
     return reply.send({

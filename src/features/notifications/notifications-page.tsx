@@ -1,6 +1,6 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, CheckCircle2, MessageCircleMore, UserRound } from "lucide-react";
-import { useState } from "react";
+import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
+import { ArrowUpRight, CheckCircle2, LoaderCircle, MailOpen, MessageCircleMore, UserRound } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -8,11 +8,17 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  getUnreadNotificationCount,
+  listNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  type ResolvedNotification,
+} from "@/features/notifications/api";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { queryClient } from "@/lib/query-client";
 import { cn, formatRelativeTime } from "@/lib/utils";
-
-import { listNotifications, markAllNotificationsRead, markNotificationRead, type ResolvedNotification } from "@/features/notifications/api";
 
 function getNotificationHeading(entry: ResolvedNotification) {
   switch (entry.notification.type) {
@@ -103,6 +109,14 @@ function getNotificationMessage(entry: ResolvedNotification) {
 }
 
 function getPrimaryNotificationTarget(entry: ResolvedNotification) {
+  if (entry.notification.type === "project_invite") {
+    return {
+      label: "Review invitation",
+      to: "/invites",
+      icon: MailOpen,
+    };
+  }
+
   if (entry.notification.project_id) {
     return {
       label: "Open project",
@@ -141,11 +155,23 @@ export function NotificationsPage() {
   const viewer = useAppViewer();
   const navigate = useNavigate();
   const [markingNotificationId, setMarkingNotificationId] = useState<string | null>(null);
-  const notificationsQuery = useQuery({
+  const notificationsQuery = useInfiniteQuery({
     queryKey: ["notifications", viewer.userId],
-    queryFn: () => listNotifications(viewer.userId!),
+    queryFn: ({ pageParam }) => listNotifications(viewer.userId!, { offset: pageParam }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
     enabled: Boolean(viewer.userId),
   });
+  const unreadQuery = useQuery({
+    queryKey: ["notifications-unread", viewer.userId],
+    queryFn: () => getUnreadNotificationCount(viewer.userId!),
+    enabled: Boolean(viewer.userId),
+  });
+  const notifications = useMemo(
+    () => notificationsQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [notificationsQuery.data],
+  );
+  const totalCount = notificationsQuery.data?.pages[0]?.total ?? notifications.length;
 
   const markAllMutation = useMutation({
     mutationFn: () => markAllNotificationsRead(),
@@ -171,7 +197,7 @@ export function NotificationsPage() {
       setMarkingNotificationId(null);
     },
   });
-  const unreadCount = (notificationsQuery.data ?? []).filter((entry) => !entry.notification.is_read).length;
+  const unreadCount = unreadQuery.data ?? 0;
 
   async function handleOpenTarget(entry: ResolvedNotification, to: string) {
     if (!entry.notification.is_read) {
@@ -200,11 +226,12 @@ export function NotificationsPage() {
 
       <div className="flex flex-wrap gap-3">
         <Badge variant="accent">{unreadCount} unread</Badge>
-        <Badge variant="neutral">{notificationsQuery.data?.length ?? 0} total</Badge>
+        <Badge variant="neutral">{totalCount} total</Badge>
+        <Badge variant="neutral">{notifications.length} loaded</Badge>
       </div>
 
       <div className="space-y-4">
-        {notificationsQuery.data?.map((entry) => {
+        {notifications.map((entry) => {
           const actorPath = entry.actor?.username ? `/@${entry.actor.username}` : null;
           const primaryTarget = getPrimaryNotificationTarget(entry);
           const showPrimaryAction = primaryTarget && primaryTarget.to !== actorPath;
@@ -270,6 +297,27 @@ export function NotificationsPage() {
             </Card>
           );
         })}
+        {!notifications.length && !notificationsQuery.isPending ? (
+          <EmptyState
+            icon={MailOpen}
+            title="No notifications yet"
+            description="New follows, project activity, messages, and release responses will appear here."
+          />
+        ) : null}
+        {notificationsQuery.hasNextPage ? (
+          <div className="flex justify-center pt-2">
+            <Button
+              variant="secondary"
+              disabled={notificationsQuery.isFetchingNextPage}
+              onClick={() => void notificationsQuery.fetchNextPage()}
+            >
+              {notificationsQuery.isFetchingNextPage ? (
+                <LoaderCircle className="size-4 animate-spin" />
+              ) : null}
+              Load older notifications
+            </Button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

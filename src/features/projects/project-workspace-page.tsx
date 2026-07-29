@@ -413,7 +413,7 @@ export function ProjectWorkspacePage() {
       active: boolean;
     }) => {
       if (!viewer.userId) throw new Error("Please sign in first.");
-      return toggleFeedbackReaction({ threadId, reaction, active, profileId: viewer.userId });
+      return toggleFeedbackReaction({ threadId, reaction, active });
     },
     onSuccess: invalidateProject,
     onError: (error) => toast.error(error instanceof Error ? error.message : "Could not update the reaction."),
@@ -1225,9 +1225,15 @@ export function ProjectWorkspacePage() {
                       <Button
                         key={reactionOption.value}
                         size="sm"
-                        variant="ghost"
-                        className={cn("min-h-8 px-2 text-xs", active && "text-accent-secondary")}
+                        variant={active ? "secondary" : "ghost"}
+                        className={cn(
+                          "min-h-9 gap-2 rounded-full border px-3 text-xs",
+                          active
+                            ? "border-accent/45 bg-accent/14 text-accent-secondary shadow-[0_8px_22px_rgba(var(--accent-rgb),0.14)]"
+                            : "border-transparent text-muted-foreground hover:border-border hover:text-foreground",
+                        )}
                         aria-pressed={active}
+                        aria-label={`${reactionOption.label}${reactionRows.length ? `, ${reactionRows.length}` : ""}${active ? ", selected by you" : ""}`}
                         disabled={!isOnline || !viewer.userId || project.viewerRole === "viewer" || feedbackReactionMutation.isPending}
                         onClick={() => feedbackReactionMutation.mutate({
                           threadId: thread.id,
@@ -1235,9 +1241,25 @@ export function ProjectWorkspacePage() {
                           active: !active,
                         })}
                       >
-                        <ReactionIcon className={cn("size-3.5", active && "fill-current")} />
-                        {reactionOption.label}
-                        {reactionRows.length ? reactionRows.length : ""}
+                        <span
+                          className={cn(
+                            "grid size-6 place-items-center rounded-full bg-white/[0.04]",
+                            active && "bg-accent/18",
+                          )}
+                        >
+                          <ReactionIcon className={cn("size-3.5", active && "fill-current")} />
+                        </span>
+                        <span>{reactionOption.label}</span>
+                        {reactionRows.length ? (
+                          <span
+                            className={cn(
+                              "grid min-w-6 place-items-center rounded-full bg-white/[0.07] px-1.5 py-0.5 font-mono text-[10px] text-foreground",
+                              active && "bg-accent/22 text-accent-secondary",
+                            )}
+                          >
+                            {reactionRows.length}
+                          </span>
+                        ) : null}
                       </Button>
                     );
                   })}

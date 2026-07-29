@@ -62,6 +62,14 @@ export function ExplorePage() {
           </Link>
         }
       />
+      {feedQuery.isError ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-danger/25 bg-danger/8 px-4 py-3 text-sm text-danger">
+          <span>Public releases could not be loaded. Creator discovery is still available.</span>
+          <Button variant="ghost" size="sm" onClick={() => void feedQuery.refetch()}>
+            Retry releases
+          </Button>
+        </div>
+      ) : null}
 
       <Card className="velvet-hero overflow-hidden border-accent/14 px-0 py-0">
         <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_320px]">
