@@ -27,7 +27,7 @@ The production site is designed for:
 - Search across permitted creators, releases, songs, projects, feedback, and messages
 - Moderation reports, admin-only actions, recoverable account deletion, and data export
 - Realtime project, message, and notification refresh
-- PWA shell, read-only offline snapshots, and local drafts
+- PWA shell, read-only offline snapshots, and server-backed release drafts with autosave
 
 ## Architecture
 
@@ -532,6 +532,7 @@ fully accepted:
 16. Verify credits, links, QR, embed, and dynamic social cards on a public release.
 17. Request a data export and download it before expiry.
 18. Run the complete CI workflow and inspect both Docker health checks.
+19. Start a Single and an EP, leave Create after autosave, then resume both from the draft list.
 
 ## Deliberate Limits
 
@@ -540,6 +541,7 @@ editing, stem separation, AI mixing/mastering, DRM, subscriptions, payment
 processing, music distribution, iCloud Drive, anonymous comments, forums, video
 calls, or a production S3 protected-media backend.
 
-Offline mode caches only bounded metadata and drafts. It never pretends that
-uploads, cloud access, publishing, membership changes, protected playback, or
-message sending succeeded while disconnected.
+Offline mode caches only bounded read-only metadata. Release drafts are stored
+in Supabase and require a connection to save or resume; the app never pretends
+that uploads, cloud access, publishing, membership changes, protected playback,
+or message sending succeeded while disconnected.

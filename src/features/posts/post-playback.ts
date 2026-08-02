@@ -34,6 +34,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
             ...publicCandidates,
             ...(item.single.protectedPreview ? [item.single.protectedPreview.readUrl] : []),
           ],
+          protectedAssetId: item.single.protectedPreview?.asset.id ?? null,
           durationSeconds:
             item.single.previewAsset.duration_seconds
             ?? item.single.protectedPreview?.asset.duration_seconds
@@ -60,6 +61,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
         artworkUrl: getArtworkAssetUrls(item.artwork),
         src: readUrl,
         srcCandidates: [readUrl],
+        protectedAssetId: asset.id,
         durationSeconds: asset.duration_seconds,
         waveform: normalizeWaveformData(asset.waveform_data),
         versionLabel: item.single.featuredVersion?.version_label ?? null,
@@ -111,6 +113,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
             ...publicCandidates,
             ...(track.protectedPreview ? [track.protectedPreview.readUrl] : []),
           ],
+          protectedAssetId: track.protectedPreview?.asset.id ?? null,
           durationSeconds:
             track.previewAsset.duration_seconds
             ?? track.protectedPreview?.asset.duration_seconds
@@ -136,6 +139,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
         artworkUrl: getArtworkAssetUrls(item.artwork),
         src: readUrl,
         srcCandidates: [readUrl],
+        protectedAssetId: asset.id,
         durationSeconds: asset.duration_seconds,
         waveform: normalizeWaveformData(asset.waveform_data),
         versionLabel: track.versionLabel ?? track.track.production_stage,

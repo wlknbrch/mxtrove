@@ -1,9 +1,17 @@
 import { Link } from "react-router-dom";
-import { Disc3, Layers3, Radio } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Clock3, Disc3, Layers3, Radio, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { deletePostDraft, listPostDrafts } from "@/features/posts/drafts-api";
+import { getDraftFallbackTitle, getDraftRoute } from "@/features/posts/drafts";
+import { useAppViewer } from "@/hooks/use-app-viewer";
+import { queryClient } from "@/lib/query-client";
+import { formatRelativeTime } from "@/lib/utils";
 
 const createOptions = [
   {
@@ -27,6 +35,24 @@ const createOptions = [
 ];
 
 export function CreateIndexPage() {
+  const viewer = useAppViewer();
+  const draftsQuery = useQuery({
+    queryKey: ["post-drafts", viewer.userId],
+    queryFn: () => listPostDrafts(viewer.userId!),
+    enabled: Boolean(viewer.userId),
+  });
+  const deleteDraftMutation = useMutation({
+    mutationFn: deletePostDraft,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["post-drafts", viewer.userId] });
+      toast.success("Draft deleted.");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "The draft could not be deleted.");
+    },
+  });
+  const drafts = draftsQuery.data ?? [];
+
   return (
     <div className="space-y-8">
       <PageHeader
@@ -76,6 +102,66 @@ export function CreateIndexPage() {
         </div>
 
         <div className="space-y-6">
+          <Card>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.24em] text-accent-secondary/80">Your drafts</p>
+                <p className="mt-2 font-display text-3xl tracking-[-0.03em]">Continue creating</p>
+              </div>
+              <Badge variant={drafts.length ? "accent" : "neutral"}>{drafts.length}</Badge>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {draftsQuery.isLoading ? (
+                <div className="rounded-[20px] border border-white/[0.06] bg-white/[0.02] px-4 py-4 text-sm text-muted-foreground">
+                  Loading drafts…
+                </div>
+              ) : drafts.length ? (
+                drafts.map((draft) => (
+                  <div
+                    key={draft.id}
+                    className="rounded-[20px] border border-white/[0.07] bg-white/[0.025] p-4 transition-colors hover:border-accent/25"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <Link to={getDraftRoute(draft)} className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="neutral">{draft.post_type.toUpperCase()}</Badge>
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Clock3 className="size-3.5" />
+                            {formatRelativeTime(draft.updated_at)}
+                          </span>
+                        </div>
+                        <p className="mt-3 truncate font-medium">
+                          {draft.title.trim() || getDraftFallbackTitle(draft.post_type)}
+                        </p>
+                        <p className="mt-1 text-sm text-accent-secondary">Continue draft →</p>
+                      </Link>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="size-10 p-0"
+                        aria-label={`Delete ${draft.title || draft.post_type} draft`}
+                        disabled={deleteDraftMutation.isPending}
+                        onClick={() => {
+                          if (window.confirm("Delete this draft? Uploaded library assets will stay in your library.")) {
+                            deleteDraftMutation.mutate(draft.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-[20px] border border-dashed border-white/[0.09] bg-white/[0.015] px-4 py-5 text-sm leading-6 text-muted-foreground">
+                  Started releases appear here automatically. Songs and uploaded assets remain linked when you return.
+                </div>
+              )}
+            </div>
+          </Card>
+
           <Card>
             <div className="space-y-4">
               <p className="text-xs uppercase tracking-[0.24em] text-accent-secondary/80">Good to know</p>

@@ -172,6 +172,18 @@ export interface Post {
   updated_at: string;
 }
 
+export interface PostDraft {
+  id: string;
+  owner_id: string;
+  post_type: PostType;
+  title: string;
+  current_step: number;
+  schema_version: number;
+  payload: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SinglePost {
   post_id: string;
   song_id: string;

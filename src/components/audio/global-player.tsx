@@ -22,13 +22,20 @@ import { ResolvedImage } from "@/components/ui/resolved-image";
 import { shouldReportPlaybackError } from "@/components/audio/playback-error";
 import { Waveform } from "@/components/audio/waveform";
 import { useAppViewer } from "@/hooks/use-app-viewer";
-import { useResolvedMediaUrl } from "@/hooks/use-resolved-media-url";
+import {
+  useResolvedMediaSource,
+  useResolvedMediaUrl,
+} from "@/hooks/use-resolved-media-url";
 import { queryClient } from "@/lib/query-client";
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/utils";
 import { usePlayerStore } from "@/components/audio/player-store";
 import { useAppearance } from "@/features/appearance/appearance-provider";
+import { createProtectedMediaReadUrl } from "@/features/media-processing/api";
 import { getResolvedPostById, togglePostHeart, toggleVersionHeart } from "@/features/posts/api";
+
+const STALL_RECOVERY_DELAY_MS = 7_000;
+const MAX_SOURCE_RELOADS = 1;
 
 function normalizeMediaSource(value: string | null | undefined) {
   if (!value) {
@@ -42,11 +49,30 @@ function normalizeMediaSource(value: string | null | undefined) {
   }
 }
 
+function getTrackSources(track: {
+  src: string;
+  srcCandidates?: string[] | null;
+} | null) {
+  if (!track) {
+    return [];
+  }
+
+  return [...(track.srcCandidates ?? []), track.src].filter(
+    (source, index, sources): source is string =>
+      Boolean(source) && sources.indexOf(source) === index,
+  );
+}
+
 export function GlobalPlayer() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const loadedTrackIdRef = useRef<string | null>(null);
   const playbackErrorTimeoutRef = useRef<number | null>(null);
   const lastPlaybackErrorKeyRef = useRef<string | null>(null);
+  const stallRecoveryTimeoutRef = useRef<number | null>(null);
+  const pendingResumeSecondsRef = useRef(0);
+  const sourceReloadCountRef = useRef(0);
+  const protectedRefreshTrackIdRef = useRef<string | null>(null);
+  const recoveryInFlightRef = useRef(false);
   const navigate = useNavigate();
   const viewer = useAppViewer();
   const { settings: appearance, updateSettings: updateAppearance } = useAppearance();
@@ -56,6 +82,15 @@ export function GlobalPlayer() {
     appearance.remember_volume ? appearance.player_volume : 0.8,
   );
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [sourceSelection, setSourceSelection] = useState<{
+    trackId: string | null;
+    candidateIndex: number;
+    refreshedUrl: string | null;
+  }>({
+    trackId: null,
+    candidateIndex: 0,
+    refreshedUrl: null,
+  });
   const hasAdjustedVolume = useRef(false);
   const {
     queue,
@@ -85,8 +120,22 @@ export function GlobalPlayer() {
     () => queue.findIndex((track) => track.id === activeTrackId),
     [activeTrackId, queue],
   );
-  const resolvedAudioSrc = useResolvedMediaUrl(
-    activeTrack?.srcCandidates ?? activeTrack?.src ?? null,
+  const trackSources = useMemo(() => getTrackSources(activeTrack), [activeTrack]);
+  const selectedCandidateIndex =
+    sourceSelection.trackId === activeTrackId
+      ? sourceSelection.candidateIndex
+      : 0;
+  const refreshedSource =
+    sourceSelection.trackId === activeTrackId
+      ? sourceSelection.refreshedUrl
+      : null;
+  const selectedAudioSource =
+    refreshedSource ?? trackSources[selectedCandidateIndex] ?? null;
+  const {
+    url: resolvedAudioSrc,
+    isResolving: isResolvingAudioSrc,
+  } = useResolvedMediaSource(
+    selectedAudioSource,
     "audio",
   );
   const resolvedArtworkUrl = useResolvedMediaUrl(activeTrack?.artworkUrl ?? null, "image");
@@ -168,6 +217,13 @@ export function GlobalPlayer() {
     }
   }
 
+  function clearStallRecovery() {
+    if (stallRecoveryTimeoutRef.current !== null) {
+      window.clearTimeout(stallRecoveryTimeoutRef.current);
+      stallRecoveryTimeoutRef.current = null;
+    }
+  }
+
   function schedulePlaybackError(message: string, error?: unknown) {
     if (error instanceof DOMException && error.name === "AbortError") {
       return;
@@ -224,6 +280,108 @@ export function GlobalPlayer() {
     });
   }
 
+  async function recoverPlayback(reason: "error" | "stall" | "unresolved") {
+    if (recoveryInFlightRef.current || !activeTrack) {
+      return false;
+    }
+
+    const playerState = usePlayerStore.getState();
+    if (
+      playerState.activeTrackId !== activeTrack.id
+      || !playerState.isPlaying
+    ) {
+      return false;
+    }
+
+    recoveryInFlightRef.current = true;
+    clearStallRecovery();
+    const audio = audioRef.current;
+    pendingResumeSecondsRef.current = Math.max(
+      audio?.currentTime ?? 0,
+      playerState.currentTimeSeconds,
+    );
+
+    try {
+      const nextCandidateIndex = selectedCandidateIndex + 1;
+      if (!refreshedSource && nextCandidateIndex < trackSources.length) {
+        sourceReloadCountRef.current = 0;
+        setSourceSelection({
+          trackId: activeTrack.id,
+          candidateIndex: nextCandidateIndex,
+          refreshedUrl: null,
+        });
+        return true;
+      }
+
+      if (
+        activeTrack.protectedAssetId
+        && protectedRefreshTrackIdRef.current !== activeTrack.id
+      ) {
+        protectedRefreshTrackIdRef.current = activeTrack.id;
+        try {
+          const freshUrl = await createProtectedMediaReadUrl(activeTrack.protectedAssetId);
+          if (usePlayerStore.getState().activeTrackId !== activeTrack.id) {
+            return true;
+          }
+          sourceReloadCountRef.current = 0;
+          setSourceSelection({
+            trackId: activeTrack.id,
+            candidateIndex: selectedCandidateIndex,
+            refreshedUrl: freshUrl,
+          });
+          return true;
+        } catch {
+          // Fall through to one same-source reconnect before reporting failure.
+        }
+      }
+
+      if (
+        audio
+        && resolvedAudioSrc
+        && sourceReloadCountRef.current < MAX_SOURCE_RELOADS
+      ) {
+        sourceReloadCountRef.current += 1;
+        audio.pause();
+        audio.load();
+        return true;
+      }
+
+      return false;
+    } finally {
+      recoveryInFlightRef.current = false;
+      if (reason !== "error") {
+        lastPlaybackErrorKeyRef.current = null;
+      }
+    }
+  }
+
+  function scheduleStallRecovery() {
+    if (stallRecoveryTimeoutRef.current !== null) {
+      return;
+    }
+
+    stallRecoveryTimeoutRef.current = window.setTimeout(() => {
+      stallRecoveryTimeoutRef.current = null;
+      const audio = audioRef.current;
+      const playerState = usePlayerStore.getState();
+      if (
+        !audio
+        || !playerState.isPlaying
+        || audio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA
+      ) {
+        return;
+      }
+
+      void recoverPlayback("stall").then((recovered) => {
+        if (!recovered) {
+          schedulePlaybackError(
+            "Playback was interrupted. Check the connection and try again.",
+          );
+        }
+      });
+    }, STALL_RECOVERY_DELAY_MS);
+  }
+
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) {
@@ -246,6 +404,10 @@ export function GlobalPlayer() {
     }
 
     if (!resolvedAudioSrc) {
+      if (isResolvingAudioSrc) {
+        return;
+      }
+
       if (loadedTrackIdRef.current === activeTrack.id) {
         if (isPlaying) {
           void audio.play().catch((error) => {
@@ -271,14 +433,26 @@ export function GlobalPlayer() {
       || currentLoadedSrc !== nextResolvedSrc;
 
     if (shouldReloadTrack) {
+      const trackChanged = loadedTrackIdRef.current !== activeTrack.id;
+      const resumeAt = trackChanged
+        ? 0
+        : Math.max(
+            pendingResumeSecondsRef.current,
+            audio.currentTime,
+            usePlayerStore.getState().currentTimeSeconds,
+          );
       clearPendingPlaybackError();
+      clearStallRecovery();
       lastPlaybackErrorKeyRef.current = null;
       audio.pause();
       audio.src = resolvedAudioSrc;
       audio.load();
       loadedTrackIdRef.current = activeTrack.id;
-      setCurrentTime(0);
-      setCurrentTimeSeconds(0);
+      pendingResumeSecondsRef.current = resumeAt;
+      if (trackChanged) {
+        setCurrentTime(0);
+        setCurrentTimeSeconds(0);
+      }
       setLoadedDuration(null);
     }
 
@@ -289,17 +463,57 @@ export function GlobalPlayer() {
         audio.pause();
       }
     }
-  }, [activeTrack, isPlaying, resolvedAudioSrc, setCurrentTimeSeconds]);
+  }, [
+    activeTrack,
+    isPlaying,
+    isResolvingAudioSrc,
+    resolvedAudioSrc,
+    setCurrentTimeSeconds,
+  ]);
 
   useEffect(() => {
     clearPendingPlaybackError();
+    clearStallRecovery();
     lastPlaybackErrorKeyRef.current = null;
+    pendingResumeSecondsRef.current = 0;
+    sourceReloadCountRef.current = 0;
+    protectedRefreshTrackIdRef.current = null;
+    setSourceSelection({
+      trackId: activeTrackId,
+      candidateIndex: 0,
+      refreshedUrl: null,
+    });
     setCurrentTime(0);
     setCurrentTimeSeconds(0);
     setLoadedDuration(null);
   }, [activeTrackId]);
 
-  useEffect(() => () => clearPendingPlaybackError(), []);
+  useEffect(() => () => {
+    clearPendingPlaybackError();
+    clearStallRecovery();
+  }, []);
+
+  useEffect(() => {
+    if (
+      !activeTrack
+      || isResolvingAudioSrc
+      || resolvedAudioSrc
+      || !selectedAudioSource
+    ) {
+      return;
+    }
+
+    void recoverPlayback("unresolved").then((recovered) => {
+      if (!recovered) {
+        schedulePlaybackError("MxTrove could not resolve this audio source.");
+      }
+    });
+  }, [
+    activeTrack,
+    isResolvingAudioSrc,
+    resolvedAudioSrc,
+    selectedAudioSource,
+  ]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -706,10 +920,15 @@ export function GlobalPlayer() {
         ref={audioRef}
         onEnded={handleEnded}
         onError={() => {
-          schedulePlaybackError("MxTrove could not load this audio source.");
+          void recoverPlayback("error").then((recovered) => {
+            if (!recovered) {
+              schedulePlaybackError("MxTrove could not load this audio source.");
+            }
+          });
         }}
         onCanPlay={() => {
           clearPendingPlaybackError();
+          clearStallRecovery();
           const audio = audioRef.current;
           const expectedTrackId = loadedTrackIdRef.current;
           if (audio && expectedTrackId) {
@@ -718,19 +937,34 @@ export function GlobalPlayer() {
         }}
         onPlaying={() => {
           clearPendingPlaybackError();
+          clearStallRecovery();
+          sourceReloadCountRef.current = 0;
           lastPlaybackErrorKeyRef.current = null;
         }}
+        onProgress={clearStallRecovery}
+        onWaiting={scheduleStallRecovery}
+        onStalled={scheduleStallRecovery}
         onLoadedMetadata={(event) => {
           clearPendingPlaybackError();
           const duration = event.currentTarget.duration;
           setLoadedDuration(Number.isFinite(duration) ? duration : null);
+          const resumeAt = pendingResumeSecondsRef.current;
+          if (resumeAt > 0) {
+            event.currentTarget.currentTime = Number.isFinite(duration)
+              ? Math.min(resumeAt, duration)
+              : resumeAt;
+            setCurrentTime(event.currentTarget.currentTime);
+            setCurrentTimeSeconds(event.currentTarget.currentTime);
+            pendingResumeSecondsRef.current = 0;
+          }
         }}
         onDurationChange={(event) => {
           const duration = event.currentTarget.duration;
           setLoadedDuration(Number.isFinite(duration) ? duration : null);
         }}
-        preload="metadata"
+        preload="auto"
         onTimeUpdate={(event) => {
+          clearStallRecovery();
           const nextTime = event.currentTarget.currentTime;
           setCurrentTime(nextTime);
           setCurrentTimeSeconds(nextTime);

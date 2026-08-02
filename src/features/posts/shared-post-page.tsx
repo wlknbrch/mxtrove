@@ -7,7 +7,7 @@ import { MxShareMark } from "@/components/layout/mxshare-mark";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ResolvedImage } from "@/components/ui/resolved-image";
+import { FullscreenArtwork } from "@/components/ui/fullscreen-artwork";
 import { getSharedPostByToken, resolveSharedLinkTarget } from "@/features/posts/api";
 import { SharedProjectPage } from "@/features/projects/shared-project-page";
 import { buildPostPlaybackTracks, getPlaybackQueueDurationSeconds } from "@/features/posts/post-playback";
@@ -61,10 +61,11 @@ export function SharedPostPage() {
     <SharedShell>
       <div className="grid gap-7 lg:grid-cols-[minmax(280px,480px)_minmax(0,1fr)]">
         <Card className="overflow-hidden p-3">
-          <ResolvedImage
+          <FullscreenArtwork
             alt={item.post.title}
             src={getArtworkAssetUrls(item.artwork)}
-            className="aspect-square w-full rounded-[24px] object-cover"
+            className="aspect-square w-full rounded-[24px]"
+            imageClassName="size-full object-cover"
           />
         </Card>
 

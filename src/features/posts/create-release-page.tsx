@@ -9,7 +9,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Disc3, FolderOpen, GripVertical, ImagePlus, PlusCircle, ShieldCheck } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/layout/page-header";
@@ -30,6 +30,14 @@ import { useCloudUploadProvider } from "@/features/cloud-providers/use-cloud-upl
 import { createSong, getLibraryDashboard } from "@/features/library/api";
 import { generateProtectedPreviewFromSourceAsset } from "@/features/media-processing/automatic-preview";
 import { createReleasePost } from "@/features/posts/api";
+import { getPostDraft } from "@/features/posts/drafts-api";
+import {
+  hasMeaningfulReleaseDraft,
+  isReleasePostDraftPayload,
+  postDraftSchemaVersion,
+  type ReleasePostDraftPayload,
+} from "@/features/posts/drafts";
+import { usePostDraftAutosave } from "@/features/posts/use-post-draft-autosave";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { getArtworkAssetUrls } from "@/lib/asset-urls";
 import { queryClient } from "@/lib/query-client";
@@ -128,8 +136,11 @@ export function CreateReleasePage({
 }) {
   const viewer = useAppViewer();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedDraftId = searchParams.get("draft");
   const artworkInputId = useId();
   const artworkInputRef = useRef<HTMLInputElement | null>(null);
+  const restoredDraftId = useRef<string | null>(null);
   const [postType, setPostType] = useState<"ep" | "album">(kind);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -139,6 +150,7 @@ export function CreateReleasePage({
   const [quickSongTitle, setQuickSongTitle] = useState("");
   const [artworkAssetId, setArtworkAssetId] = useState<string | null>(null);
   const [uploadProviderId, setUploadProviderId] = useState<CloudProvider | null>(null);
+  const [draftHydrated, setDraftHydrated] = useState(() => !requestedDraftId);
   const {
     provider,
     providerId,
@@ -157,6 +169,42 @@ export function CreateReleasePage({
     queryFn: () => getLibraryDashboard(viewer.userId!),
     enabled: Boolean(viewer.userId),
   });
+  const draftQuery = useQuery({
+    queryKey: ["post-draft", requestedDraftId],
+    queryFn: () => getPostDraft(requestedDraftId!),
+    enabled: Boolean(requestedDraftId && viewer.userId),
+  });
+
+  useEffect(() => {
+    if (!requestedDraftId || restoredDraftId.current === requestedDraftId || !draftQuery.isFetched) return;
+
+    if (draftQuery.isError) {
+      restoredDraftId.current = requestedDraftId;
+      setDraftHydrated(true);
+      toast.error("The draft could not be loaded.");
+      return;
+    }
+
+    const draft = draftQuery.data;
+    if (!draft || !isReleasePostDraftPayload(draft.payload)) {
+      restoredDraftId.current = requestedDraftId;
+      setDraftHydrated(true);
+      toast.error("This release draft is unavailable or uses an unsupported format.");
+      return;
+    }
+
+    setPostType(draft.payload.kind);
+    setTitle(draft.payload.title);
+    setDescription(draft.payload.description);
+    setReleaseUrl(draft.payload.releaseUrl);
+    setVisibility(draft.payload.visibility);
+    setSelectedSongIds(draft.payload.selectedSongIds);
+    setQuickSongTitle(draft.payload.quickSongTitle);
+    setArtworkAssetId(draft.payload.artworkAssetId);
+    setUploadProviderId(draft.payload.uploadProviderId);
+    restoredDraftId.current = requestedDraftId;
+    setDraftHydrated(true);
+  }, [draftQuery.data, draftQuery.isError, draftQuery.isFetched, requestedDraftId]);
 
   const songs = libraryQuery.data?.songs ?? [];
   const versions = libraryQuery.data?.versions ?? [];
@@ -183,6 +231,38 @@ export function CreateReleasePage({
       ? availableArtwork.find((asset) => asset.id === firstSongArtworkId) ?? null
       : null;
   }, [artworkAssetId, availableArtwork, selectedSongs]);
+  const draftPayload = useMemo<ReleasePostDraftPayload>(() => ({
+    schemaVersion: postDraftSchemaVersion,
+    kind: postType,
+    title,
+    description,
+    releaseUrl,
+    visibility,
+    selectedSongIds,
+    quickSongTitle,
+    artworkAssetId,
+    uploadProviderId: providerId,
+  }), [
+    artworkAssetId,
+    description,
+    postType,
+    providerId,
+    quickSongTitle,
+    releaseUrl,
+    selectedSongIds,
+    title,
+    visibility,
+  ]);
+  const draftAutosave = usePostDraftAutosave({
+    ownerId: viewer.userId ?? "",
+    initialDraftId: requestedDraftId,
+    postType,
+    title: title.trim(),
+    currentStep: 1,
+    payload: draftPayload,
+    isMeaningful: hasMeaningfulReleaseDraft(draftPayload),
+    enabled: Boolean(viewer.userId && draftHydrated),
+  });
 
   async function resolveArtworkFolder() {
     return (await ensureFolders()).artworkFolderId;
@@ -333,6 +413,9 @@ export function CreateReleasePage({
       return post;
     },
     onSuccess: async (post) => {
+      await draftAutosave.completeDraft().catch(() => {
+        toast.warning("The release was published, but its saved draft could not be removed.");
+      });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["explore-feed"] }),
         queryClient.invalidateQueries({ queryKey: ["home-feed"] }),
@@ -363,6 +446,17 @@ export function CreateReleasePage({
     return Boolean(latestVersion?.preview_asset_id);
   }).length;
 
+  if (requestedDraftId && !draftHydrated) {
+    return (
+      <Card>
+        <CardTitle>Restoring your release draft…</CardTitle>
+        <CardDescription className="mt-2">
+          Track order, artwork, provider, and release metadata are being reconnected.
+        </CardDescription>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <Link
@@ -378,25 +472,36 @@ export function CreateReleasePage({
         title={`Publish an ${postType.toUpperCase()}`}
         description="Choose songs from your library, set one visible version per track, and keep later reorder changes from bumping the public feed."
         actions={
-          <Tabs
-            value={postType}
-            onValueChange={(nextValue) => {
-              if (nextValue === "single") {
-                navigate("/create/single");
-                return;
-              }
+          <div className="flex w-full flex-wrap items-center gap-3 md:w-auto">
+            <Badge variant={draftAutosave.status === "error" ? "warning" : "neutral"}>
+              {draftAutosave.status === "saving"
+                ? "Saving draft…"
+                : draftAutosave.status === "saved"
+                  ? "Draft saved"
+                  : draftAutosave.status === "error"
+                    ? "Draft save failed"
+                    : "Autosave ready"}
+            </Badge>
+            <Tabs
+              value={postType}
+              onValueChange={(nextValue) => {
+                if (nextValue === "single") {
+                  navigate("/create/single");
+                  return;
+                }
 
-              const normalized = nextValue === "album" ? "album" : "ep";
-              setPostType(normalized);
-              navigate(`/create/${normalized}`);
-            }}
-            className="w-full md:w-auto"
-            items={[
-              { value: "single", label: "Single" },
-              { value: "ep", label: "EP" },
-              { value: "album", label: "Album" },
-            ]}
-          />
+                const normalized = nextValue === "album" ? "album" : "ep";
+                setPostType(normalized);
+                navigate(`/create/${normalized}`);
+              }}
+              className="w-full md:w-auto"
+              items={[
+                { value: "single", label: "Single" },
+                { value: "ep", label: "EP" },
+                { value: "album", label: "Album" },
+              ]}
+            />
+          </div>
         }
       />
 

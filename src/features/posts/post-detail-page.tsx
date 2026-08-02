@@ -23,8 +23,8 @@ import { usePlayerStore } from "@/components/audio/player-store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FullscreenArtwork } from "@/components/ui/fullscreen-artwork";
 import { PlaybackDuration } from "@/components/ui/playback-duration";
-import { ResolvedImage } from "@/components/ui/resolved-image";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { useLocalDraft } from "@/hooks/use-local-draft";
@@ -470,17 +470,16 @@ export function PostDetailPage() {
               isMultiTrackRelease ? "lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start" : "md:grid-cols-[220px_minmax(0,1fr)]",
             )}
           >
-            <div className="relative aspect-square overflow-hidden rounded-[24px] border border-border bg-white/4">
-              {getArtworkAssetUrls(item.artwork).length > 0 ? (
-                <ResolvedImage
-                  src={getArtworkAssetUrls(item.artwork)}
-                  alt={item.post.title}
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
-              ) : (
+            <FullscreenArtwork
+              src={getArtworkAssetUrls(item.artwork)}
+              alt={item.post.title}
+              className="relative aspect-square overflow-hidden rounded-[24px] border border-border bg-white/4"
+              imageClassName="absolute inset-0 h-full w-full object-cover"
+            >
+              {getArtworkAssetUrls(item.artwork).length === 0 ? (
                 <div className="absolute inset-0 bg-gradient-to-br from-accent/40 via-accent-secondary/20 to-background" />
-              )}
-            </div>
+              ) : null}
+            </FullscreenArtwork>
             <div className="space-y-4">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="neutral">{item.post.post_type}</Badge>

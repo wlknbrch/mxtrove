@@ -284,10 +284,10 @@ export function StorageSettingsPage() {
         description="Connect one or more personal providers, choose a default, and keep every private original in the account you control."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[310px_minmax(0,1fr)_340px]">
+      <div className="grid gap-6 xl:grid-cols-[270px_minmax(320px,1.15fr)_minmax(260px,0.85fr)]">
         <SettingsSidebar driveReady={driveReady} />
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <Card>
             <CardHeader>
               <div>
@@ -297,7 +297,7 @@ export function StorageSettingsPage() {
                 </CardDescription>
               </div>
             </CardHeader>
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 min-[1800px]:grid-cols-3">
               {providerOptions.map((option) => {
                 const connection = (connectionsQuery.data ?? []).find((entry) => entry.provider === option.id);
                 return (
@@ -384,7 +384,7 @@ export function StorageSettingsPage() {
                 </CardDescription>
               </div>
             </CardHeader>
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_auto]">
+            <div className="grid gap-4 min-[1800px]:grid-cols-[minmax(0,1fr)_200px_auto]">
               <label className="grid gap-2">
                 <span className="text-sm font-medium">Asset</span>
                 <Select value={migrationAssetId} onChange={(event) => setMigrationAssetId(event.currentTarget.value)}>
@@ -539,7 +539,7 @@ export function StorageSettingsPage() {
           </Card>
         </div>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <Card>
             <CardHeader>
               <div>

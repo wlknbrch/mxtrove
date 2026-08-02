@@ -54,10 +54,10 @@ async function resolveMediaUrl(candidates: string[], mediaType: "audio" | "image
     }
   }
 
-  return candidates[0] ?? null;
+  return null;
 }
 
-export function useResolvedMediaUrl(
+export function useResolvedMediaSource(
   input: string | string[] | null | undefined,
   mediaType: "audio" | "image",
 ) {
@@ -66,26 +66,28 @@ export function useResolvedMediaUrl(
   const [resolvedMedia, setResolvedMedia] = useState<{
     cacheKey: string;
     url: string | null;
+    isResolving: boolean;
   }>(() => ({
     cacheKey,
     url: candidates.length ? resolvedMediaUrlCache.get(cacheKey) ?? null : null,
+    isResolving: candidates.length > 0 && !resolvedMediaUrlCache.has(cacheKey),
   }));
 
   useEffect(() => {
     if (!candidates.length) {
-      setResolvedMedia({ cacheKey, url: null });
+      setResolvedMedia({ cacheKey, url: null, isResolving: false });
       return;
     }
 
     const cached = resolvedMediaUrlCache.get(cacheKey);
     if (typeof cached !== "undefined") {
-      setResolvedMedia({ cacheKey, url: cached });
+      setResolvedMedia({ cacheKey, url: cached, isResolving: false });
       return;
     }
 
     // Do not let a previous track's resolved URL leak into the next render
     // while a proxied media candidate is still being fetched.
-    setResolvedMedia({ cacheKey, url: null });
+    setResolvedMedia({ cacheKey, url: null, isResolving: true });
     let cancelled = false;
     const pending =
       pendingMediaUrlCache.get(cacheKey) ?? resolveMediaUrl(candidates, mediaType);
@@ -97,7 +99,7 @@ export function useResolvedMediaUrl(
       resolvedMediaUrlCache.set(cacheKey, nextUrl);
 
       if (!cancelled) {
-        setResolvedMedia({ cacheKey, url: nextUrl });
+        setResolvedMedia({ cacheKey, url: nextUrl, isResolving: false });
       }
     });
 
@@ -106,7 +108,22 @@ export function useResolvedMediaUrl(
     };
   }, [cacheKey, mediaType]);
 
-  return resolvedMedia.cacheKey === cacheKey
-    ? resolvedMedia.url
-    : resolvedMediaUrlCache.get(cacheKey) ?? null;
+  if (resolvedMedia.cacheKey === cacheKey) {
+    return {
+      url: resolvedMedia.url,
+      isResolving: resolvedMedia.isResolving,
+    };
+  }
+
+  return {
+    url: resolvedMediaUrlCache.get(cacheKey) ?? null,
+    isResolving: candidates.length > 0 && !resolvedMediaUrlCache.has(cacheKey),
+  };
+}
+
+export function useResolvedMediaUrl(
+  input: string | string[] | null | undefined,
+  mediaType: "audio" | "image",
+) {
+  return useResolvedMediaSource(input, mediaType).url;
 }

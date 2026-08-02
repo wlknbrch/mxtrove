@@ -9,6 +9,7 @@ export interface PlaybackTrack {
   artworkUrl?: string | string[] | null;
   src: string;
   srcCandidates?: string[] | null;
+  protectedAssetId?: string | null;
   durationSeconds?: number | null;
   waveform?: import("@/types/domain").WaveformDataV1 | null;
   versionLabel?: string | null;

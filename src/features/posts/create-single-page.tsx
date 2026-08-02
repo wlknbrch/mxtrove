@@ -2,7 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle2, Disc3, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +41,14 @@ import {
   publishSingleVersion,
   updateSinglePostForPublish,
 } from "@/features/posts/api";
+import { getPostDraft } from "@/features/posts/drafts-api";
+import {
+  hasMeaningfulSingleDraft,
+  isSinglePostDraftPayload,
+  postDraftSchemaVersion,
+  type SinglePostDraftPayload,
+} from "@/features/posts/drafts";
+import { usePostDraftAutosave } from "@/features/posts/use-post-draft-autosave";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { getArtworkAssetUrls } from "@/lib/asset-urls";
 import { productionStages } from "@/lib/constants";
@@ -58,8 +66,11 @@ const steps = [
 export function CreateSinglePage() {
   const viewer = useAppViewer();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedDraftId = searchParams.get("draft");
   const artworkInputId = useId();
   const artworkInputRef = useRef<HTMLInputElement | null>(null);
+  const restoredDraftId = useRef<string | null>(null);
 
   const [step, setStep] = useState(1);
   const [existingSongId, setExistingSongId] = useState("");
@@ -75,6 +86,7 @@ export function CreateSinglePage() {
   const [mediaProcessingJob, setMediaProcessingJob] = useState<MediaProcessingJob | null>(null);
   const [mediaProcessingError, setMediaProcessingError] = useState<string | null>(null);
   const [uploadProviderId, setUploadProviderId] = useState<CloudProvider>("google_drive");
+  const [draftHydrated, setDraftHydrated] = useState(() => !requestedDraftId);
   const initializedDefaultProvider = useRef(false);
   const postTitleWasEdited = useRef(false);
   const provider = getCloudStorageProvider(uploadProviderId);
@@ -83,6 +95,11 @@ export function CreateSinglePage() {
     queryKey: ["library", viewer.userId],
     queryFn: () => getLibraryDashboard(viewer.userId!),
     enabled: Boolean(viewer.userId),
+  });
+  const draftQuery = useQuery({
+    queryKey: ["post-draft", requestedDraftId],
+    queryFn: () => getPostDraft(requestedDraftId!),
+    enabled: Boolean(requestedDraftId && viewer.userId),
   });
   const connectionsQuery = useQuery({
     queryKey: ["cloud-connections", viewer.userId],
@@ -139,6 +156,48 @@ export function CreateSinglePage() {
   const selectedSongArtworkAsset = selectedSong?.default_artwork_asset_id
     ? libraryQuery.data?.assets.find((asset) => asset.id === selectedSong.default_artwork_asset_id) ?? null
     : null;
+
+  useEffect(() => {
+    if (!requestedDraftId || restoredDraftId.current === requestedDraftId || !draftQuery.isFetched) return;
+
+    if (draftQuery.isError) {
+      restoredDraftId.current = requestedDraftId;
+      setDraftHydrated(true);
+      toast.error("The draft could not be loaded.");
+      return;
+    }
+
+    const draft = draftQuery.data;
+    if (!draft || draft.post_type !== "single" || !isSinglePostDraftPayload(draft.payload)) {
+      restoredDraftId.current = requestedDraftId;
+      setDraftHydrated(true);
+      toast.error("This single draft is unavailable or uses an unsupported format.");
+      return;
+    }
+
+    if (!libraryQuery.data) return;
+
+    const payload = draft.payload;
+    const findAsset = (assetId: string | null) =>
+      assetId ? libraryQuery.data.assets.find((asset) => asset.id === assetId) ?? null : null;
+
+    initializedDefaultProvider.current = true;
+    postTitleWasEdited.current = payload.postTitleWasEdited;
+    setStep(Math.min(4, Math.max(1, payload.step)));
+    setExistingSongId(payload.existingSongId);
+    setNewSongTitle(payload.newSongTitle);
+    setVersionLabel(payload.versionLabel);
+    setProductionStage(payload.productionStage);
+    setDescription(payload.description);
+    setPostTitle(payload.postTitle);
+    setVisibility(payload.visibility);
+    setUploadedOriginal(findAsset(payload.originalAssetId));
+    setUploadedPreview(findAsset(payload.previewAssetId));
+    setUploadedArtwork(findAsset(payload.artworkAssetId));
+    setUploadProviderId(payload.uploadProviderId);
+    restoredDraftId.current = requestedDraftId;
+    setDraftHydrated(true);
+  }, [draftQuery.data, draftQuery.isError, draftQuery.isFetched, libraryQuery.data, requestedDraftId]);
 
   async function refreshDriveSetup(providerId: CloudProvider = uploadProviderId) {
     if (!viewer.userId) {
@@ -254,6 +313,47 @@ export function CreateSinglePage() {
     );
   }
 
+  const draftPayload = useMemo<SinglePostDraftPayload>(() => ({
+    schemaVersion: postDraftSchemaVersion,
+    kind: "single",
+    step,
+    existingSongId,
+    newSongTitle,
+    versionLabel,
+    productionStage,
+    description,
+    postTitle,
+    visibility,
+    originalAssetId: uploadedOriginal?.id ?? null,
+    previewAssetId: uploadedPreview?.id ?? null,
+    artworkAssetId: uploadedArtwork?.id ?? null,
+    uploadProviderId,
+    postTitleWasEdited: postTitleWasEdited.current,
+  }), [
+    description,
+    existingSongId,
+    newSongTitle,
+    postTitle,
+    productionStage,
+    step,
+    uploadedArtwork?.id,
+    uploadedOriginal?.id,
+    uploadedPreview?.id,
+    uploadProviderId,
+    versionLabel,
+    visibility,
+  ]);
+  const draftAutosave = usePostDraftAutosave({
+    ownerId: viewer.userId ?? "",
+    initialDraftId: requestedDraftId,
+    postType: "single",
+    title: postTitle.trim() || selectedSong?.title || newSongTitle.trim(),
+    currentStep: step,
+    payload: draftPayload,
+    isMeaningful: hasMeaningfulSingleDraft(draftPayload),
+    enabled: Boolean(viewer.userId && draftHydrated),
+  });
+
   const publishMutation = useMutation({
     mutationFn: async () => {
       if (!viewer.userId) {
@@ -354,6 +454,9 @@ export function CreateSinglePage() {
       return post;
     },
     onSuccess: async (post) => {
+      await draftAutosave.completeDraft().catch(() => {
+        toast.warning("The release was published, but its saved draft could not be removed.");
+      });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["library", viewer.userId] }),
         queryClient.invalidateQueries({ queryKey: ["library-posts", viewer.userId] }),
@@ -411,6 +514,17 @@ export function CreateSinglePage() {
   const canAdvance = step < 4;
   const canGoBack = step > 1;
 
+  if (requestedDraftId && !draftHydrated) {
+    return (
+      <Card>
+        <CardTitle>Restoring your single draft…</CardTitle>
+        <CardDescription className="mt-2">
+          Song, asset, artwork, and wizard links are being reconnected.
+        </CardDescription>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <Link
@@ -426,19 +540,30 @@ export function CreateSinglePage() {
         title="Publish a single"
         description="One flow for first-time singles and version updates. Existing single posts keep their comments and post hearts."
         actions={
-          <Tabs
-            value="single"
-            onValueChange={(nextValue) => {
-              const nextRoute = nextValue === "album" ? "/create/album" : nextValue === "ep" ? "/create/ep" : "/create/single";
-              navigate(nextRoute);
-            }}
-            className="w-full md:w-auto"
-            items={[
-              { value: "single", label: "Single" },
-              { value: "ep", label: "EP" },
-              { value: "album", label: "Album" },
-            ]}
-          />
+          <div className="flex w-full flex-wrap items-center gap-3 md:w-auto">
+            <Badge variant={draftAutosave.status === "error" ? "warning" : "neutral"}>
+              {draftAutosave.status === "saving"
+                ? "Saving draft…"
+                : draftAutosave.status === "saved"
+                  ? "Draft saved"
+                  : draftAutosave.status === "error"
+                    ? "Draft save failed"
+                    : "Autosave ready"}
+            </Badge>
+            <Tabs
+              value="single"
+              onValueChange={(nextValue) => {
+                const nextRoute = nextValue === "album" ? "/create/album" : nextValue === "ep" ? "/create/ep" : "/create/single";
+                navigate(nextRoute);
+              }}
+              className="w-full md:w-auto"
+              items={[
+                { value: "single", label: "Single" },
+                { value: "ep", label: "EP" },
+                { value: "album", label: "Album" },
+              ]}
+            />
+          </div>
         }
       />
 
@@ -876,7 +1001,7 @@ export function CreateSinglePage() {
 
               <div className="mt-5 flex flex-wrap gap-3">
                 <Button onClick={() => void publishMutation.mutateAsync()} disabled={publishMutation.isPending}>
-                  {visibility === "private" ? "Save private single draft" : "Publish single"}
+                  {visibility === "private" ? "Create private single" : "Publish single"}
                 </Button>
                 <Badge
                   variant="neutral"

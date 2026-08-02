@@ -1,7 +1,14 @@
 import { renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { useResolvedMediaUrl } from "@/hooks/use-resolved-media-url";
+import {
+  useResolvedMediaSource,
+  useResolvedMediaUrl,
+} from "@/hooks/use-resolved-media-url";
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("useResolvedMediaUrl", () => {
   it("never exposes the previous track URL under a new candidate key", async () => {
@@ -19,6 +26,21 @@ describe("useResolvedMediaUrl", () => {
 
     await waitFor(() => {
       expect(result.current).toBe("https://media.example/second-track.mp3");
+    });
+  });
+
+  it("reports a failed proxied candidate instead of returning a known bad URL", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 503 })));
+    const source = "https://drive.google.com/uc?export=download&id=failed-source";
+    const { result } = renderHook(() => useResolvedMediaSource(source, "audio"));
+
+    expect(result.current.isResolving).toBe(true);
+
+    await waitFor(() => {
+      expect(result.current).toEqual({
+        url: null,
+        isResolving: false,
+      });
     });
   });
 });

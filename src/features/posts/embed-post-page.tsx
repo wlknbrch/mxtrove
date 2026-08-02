@@ -5,7 +5,7 @@ import { Link, useParams } from "react-router-dom";
 import { usePlayerStore } from "@/components/audio/player-store";
 import { MxShareMark } from "@/components/layout/mxshare-mark";
 import { Button } from "@/components/ui/button";
-import { ResolvedImage } from "@/components/ui/resolved-image";
+import { FullscreenArtwork } from "@/components/ui/fullscreen-artwork";
 import { getResolvedPostById } from "@/features/posts/api";
 import { buildPostPlaybackTracks } from "@/features/posts/post-playback";
 import { getArtworkAssetUrls } from "@/lib/asset-urls";
@@ -29,10 +29,11 @@ export function EmbedPostPage() {
   return (
     <div className="min-h-screen bg-background p-3 pb-32 text-foreground">
       <div className="glass-panel mx-auto grid max-w-3xl gap-4 rounded-[26px] border border-border p-4 sm:grid-cols-[130px_minmax(0,1fr)]">
-        <ResolvedImage
+        <FullscreenArtwork
           alt={item.post.title}
           src={getArtworkAssetUrls(item.artwork)}
-          className="aspect-square w-full rounded-[20px] object-cover"
+          className="aspect-square w-full rounded-[20px]"
+          imageClassName="size-full object-cover"
         />
         <div className="flex min-w-0 flex-col justify-center">
           <Link to={`/post/${item.post.id}`} target="_blank" className="truncate font-display text-3xl hover:text-accent-secondary">

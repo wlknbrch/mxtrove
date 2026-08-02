@@ -18,6 +18,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { FullscreenArtwork } from "@/components/ui/fullscreen-artwork";
 import { PlaybackDuration } from "@/components/ui/playback-duration";
 import { ResolvedImage } from "@/components/ui/resolved-image";
 import { Tabs } from "@/components/ui/tabs";
@@ -100,14 +101,14 @@ function ProfileReleaseCard({
 
   return (
     <Card className={cn("overflow-hidden", spotlight && "lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-6")}>
-      <div className={cn("relative overflow-hidden rounded-[24px] border border-white/[0.08] bg-background-muted", spotlight ? "min-h-[280px]" : "aspect-square")}>
-        <ResolvedImage
-          src={getArtworkAssetUrls(item.artwork)}
-          alt={item.post.title}
-          className="absolute inset-0 h-full w-full object-cover"
-        />
+      <FullscreenArtwork
+        src={getArtworkAssetUrls(item.artwork)}
+        alt={item.post.title}
+        className={cn("relative overflow-hidden rounded-[24px] border border-white/[0.08] bg-background-muted", spotlight ? "min-h-[280px]" : "aspect-square")}
+        imageClassName="absolute inset-0 h-full w-full object-cover"
+      >
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.16),transparent_42%),linear-gradient(180deg,rgba(7,5,17,0.06),rgba(7,5,17,0.6))]" />
-      </div>
+      </FullscreenArtwork>
 
       <div className={cn("space-y-4", spotlight && "py-2")}>
         <div className="flex flex-wrap items-center gap-2">
