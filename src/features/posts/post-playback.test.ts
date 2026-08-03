@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildPostPlaybackTracks,
+  getReleaseTrackVersionId,
   getPlaybackQueueDurationSeconds,
 } from "@/features/posts/post-playback";
 import type { ResolvedPostCard } from "@/features/posts/types";
@@ -69,10 +70,28 @@ describe("post playback queues", () => {
     expect(tracks[0]).toMatchObject({
       id: demoReleaseTracks[0].id,
       postId: demoPosts[1].id,
+      releaseTrackId: demoReleaseTracks[0].id,
       versionId: demoSongVersions[1].id,
       durationSeconds: 222,
+      lyrics: demoSongs[0].lyrics,
     });
     expect(tracks[0].src).toBeTruthy();
+  });
+
+  it("does not expose lyrics that were hidden for a release track", () => {
+    const release = buildRelease({
+      releaseTracks: [
+        {
+          ...buildRelease().releaseTracks[0],
+          track: {
+            ...demoReleaseTracks[0],
+            show_lyrics: false,
+          },
+        },
+      ],
+    });
+
+    expect(buildPostPlaybackTracks(release)[0]?.lyrics).toBeNull();
   });
 
   it("keeps a public release version label when the private version row is hidden", () => {
@@ -90,6 +109,9 @@ describe("post playback queues", () => {
       versionId: demoReleaseTracks[0].song_version_id,
       versionLabel: "Master candidate",
     });
+    expect(getReleaseTrackVersionId(release.releaseTracks[0])).toBe(
+      demoReleaseTracks[0].song_version_id,
+    );
   });
 
   it("uses a protected derivative for a non-public release", () => {

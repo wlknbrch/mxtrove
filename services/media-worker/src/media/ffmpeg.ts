@@ -69,6 +69,32 @@ export async function decodeToMonoPcm(
   ], onSpawn);
 }
 
+export async function decodeToAnalysisPcm(
+  inputPath: string,
+  onSpawn?: (child: ChildProcess) => void,
+) {
+  return spawnWithCapture(config.ffmpegPath, [
+    "-hide_banner",
+    "-nostdin",
+    "-i",
+    inputPath,
+    "-map",
+    "0:a:0",
+    "-vn",
+    "-sn",
+    "-dn",
+    "-ac",
+    "1",
+    "-ar",
+    "11025",
+    "-t",
+    "600",
+    "-f",
+    "f32le",
+    "pipe:1",
+  ], onSpawn);
+}
+
 export async function transcodeImagePreview(
   inputPath: string,
   outputPath: string,

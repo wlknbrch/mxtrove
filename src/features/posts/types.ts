@@ -14,6 +14,9 @@ import type {
 
 export interface ResolvedComment extends Comment {
   author: Profile | null;
+  heartCount: number;
+  replyCount: number;
+  viewerHasHearted: boolean;
 }
 
 export interface ResolvedReleaseTrack {
@@ -32,6 +35,7 @@ export interface ResolvedReleaseTrack {
 
 export interface ResolvedSingleInfo {
   song: Song | null;
+  showLyrics: boolean;
   featuredVersion: SongVersion | null;
   previewAsset: Asset | null;
   protectedPreview: {

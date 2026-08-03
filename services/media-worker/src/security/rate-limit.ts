@@ -33,6 +33,7 @@ export function selectRateLimitPolicy(method: string, pathname: string): RateLim
     pathname.includes("/attachments")
     || pathname.endsWith("/input")
     || pathname === "/v1/media/jobs"
+    || pathname === "/v1/media/analyze-song"
   ) {
     return { bucket: "upload", limit: 30, windowMs: 60_000 };
   }

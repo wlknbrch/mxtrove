@@ -71,8 +71,10 @@ POST   /v1/messages/:messageId/attachments
 DELETE /v1/message-attachments/:attachmentId
 
 GET /social/post/:postId
+GET /social/post/:postId/track/:trackId
 GET /social/profile/:username
 GET /og/post/:postId.png
+GET /og/post/:postId/track/:trackId.png
 GET /og/profile/:username.png
 ```
 

@@ -38,12 +38,14 @@ function buildPushPayload(row: ClaimedPushRow) {
         ? `${actorName} hearted “${postTitle}”.`
         : row.notification_type === "version_heart"
           ? `${actorName} hearted one of your versions.`
-          : row.notification_type === "comment"
-            ? `${actorName} commented on “${postTitle}”.`
-            : row.notification_type === "comment_reply"
-              ? `${actorName} replied in a comment thread.`
-              : row.notification_type === "single_version"
-              ? `${actorName} uploaded a new public version of “${postTitle}”.`
+          : row.notification_type === "comment_heart"
+            ? `${actorName} hearted your comment on “${postTitle}”.`
+            : row.notification_type === "comment"
+              ? `${actorName} commented on “${postTitle}”.`
+              : row.notification_type === "comment_reply"
+                ? `${actorName} replied in a comment thread.`
+                : row.notification_type === "single_version"
+                ? `${actorName} uploaded a new public version of “${postTitle}”.`
                 : row.notification_type === "project_invite"
                   ? `${actorName} invited you to a private project.`
                   : row.notification_type === "project_invite_accepted"

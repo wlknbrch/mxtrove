@@ -75,11 +75,13 @@ export function CreateSinglePage() {
   const [step, setStep] = useState(1);
   const [existingSongId, setExistingSongId] = useState("");
   const [newSongTitle, setNewSongTitle] = useState("");
+  const [newSongLyrics, setNewSongLyrics] = useState("");
   const [versionLabel, setVersionLabel] = useState("Demo");
   const [productionStage, setProductionStage] = useState("Demo");
   const [description, setDescription] = useState("");
   const [postTitle, setPostTitle] = useState("");
   const [visibility, setVisibility] = useState<Visibility>("public");
+  const [showLyrics, setShowLyrics] = useState(false);
   const [uploadedOriginal, setUploadedOriginal] = useState<Asset | null>(null);
   const [uploadedPreview, setUploadedPreview] = useState<Asset | null>(null);
   const [uploadedArtwork, setUploadedArtwork] = useState<Asset | null>(null);
@@ -156,6 +158,9 @@ export function CreateSinglePage() {
   const selectedSongArtworkAsset = selectedSong?.default_artwork_asset_id
     ? libraryQuery.data?.assets.find((asset) => asset.id === selectedSong.default_artwork_asset_id) ?? null
     : null;
+  const hasLyricsForRelease = Boolean(
+    existingSongId ? selectedSong?.lyrics?.trim() : newSongLyrics.trim(),
+  );
 
   useEffect(() => {
     if (!requestedDraftId || restoredDraftId.current === requestedDraftId || !draftQuery.isFetched) return;
@@ -186,11 +191,13 @@ export function CreateSinglePage() {
     setStep(Math.min(4, Math.max(1, payload.step)));
     setExistingSongId(payload.existingSongId);
     setNewSongTitle(payload.newSongTitle);
+    setNewSongLyrics(payload.newSongLyrics ?? "");
     setVersionLabel(payload.versionLabel);
     setProductionStage(payload.productionStage);
     setDescription(payload.description);
     setPostTitle(payload.postTitle);
     setVisibility(payload.visibility);
+    setShowLyrics(payload.showLyrics ?? false);
     setUploadedOriginal(findAsset(payload.originalAssetId));
     setUploadedPreview(findAsset(payload.previewAssetId));
     setUploadedArtwork(findAsset(payload.artworkAssetId));
@@ -319,11 +326,13 @@ export function CreateSinglePage() {
     step,
     existingSongId,
     newSongTitle,
+    newSongLyrics,
     versionLabel,
     productionStage,
     description,
     postTitle,
     visibility,
+    showLyrics,
     originalAssetId: uploadedOriginal?.id ?? null,
     previewAssetId: uploadedPreview?.id ?? null,
     artworkAssetId: uploadedArtwork?.id ?? null,
@@ -332,9 +341,11 @@ export function CreateSinglePage() {
   }), [
     description,
     existingSongId,
+    newSongLyrics,
     newSongTitle,
     postTitle,
     productionStage,
+    showLyrics,
     step,
     uploadedArtwork?.id,
     uploadedOriginal?.id,
@@ -379,6 +390,9 @@ export function CreateSinglePage() {
         song = await createSong(viewer.userId, {
           title: newSongTitle.trim(),
           notes: "",
+          lyrics: newSongLyrics.trim(),
+          musical_key: mediaProcessingJob?.detected_musical_key ?? "",
+          tempo_bpm: mediaProcessingJob?.detected_tempo_bpm ?? null,
           default_artwork_asset_id: uploadedArtwork?.id ?? null,
         });
       }
@@ -417,6 +431,7 @@ export function CreateSinglePage() {
             description: description.trim(),
             visibility,
             artwork_asset_id: uploadedArtwork?.id ?? null,
+            show_lyrics: Boolean(showLyrics && song.lyrics?.trim()),
           },
         }));
 
@@ -428,6 +443,7 @@ export function CreateSinglePage() {
           description: description.trim(),
           artworkAssetId: uploadedArtwork?.id ?? selectedSongArtworkAsset?.id ?? null,
           visibility,
+          showLyrics: Boolean(showLyrics && song.lyrics?.trim()),
         });
       } else {
         await queryClient.invalidateQueries({ queryKey: ["post", post.id] });
@@ -642,6 +658,17 @@ export function CreateSinglePage() {
                     ))}
                   </Select>
                 </label>
+                {!existingSongId ? (
+                  <label className="grid gap-2 md:col-span-2">
+                    <span className="text-sm font-medium">Lyrics (optional)</span>
+                    <Textarea
+                      className="min-h-44 whitespace-pre-wrap"
+                      placeholder="Add lyrics now, or leave this empty and add them later in the song workspace."
+                      value={newSongLyrics}
+                      onChange={(event) => setNewSongLyrics(event.currentTarget.value)}
+                    />
+                  </label>
+                ) : null}
               </div>
             </Card>
           ) : null}
@@ -750,6 +777,7 @@ export function CreateSinglePage() {
                         ownerId: viewer.userId,
                         provider,
                         originalFile: input.file,
+                        songId: existingSongId || null,
                         originalsFolderId,
                         previewsFolderId,
                         signal: input.signal,
@@ -821,6 +849,7 @@ export function CreateSinglePage() {
                               ownerId,
                               provider: sourceProvider,
                               sourceAsset,
+                              songId: existingSongId || null,
                               previewFolderId: sourcePreviewFolderId,
                               onJobChange: setMediaProcessingJob,
                             });
@@ -959,6 +988,22 @@ export function CreateSinglePage() {
                     <option value="private">Private</option>
                   </Select>
                 </label>
+                {hasLyricsForRelease ? (
+                  <label className="flex items-start gap-3 rounded-[20px] border border-white/[0.08] bg-white/[0.025] px-4 py-4">
+                    <input
+                      className="mt-1 size-4 accent-[rgb(var(--accent-rgb))]"
+                      type="checkbox"
+                      checked={showLyrics}
+                      onChange={(event) => setShowLyrics(event.currentTarget.checked)}
+                    />
+                    <span>
+                      <span className="block text-sm font-medium">Show lyrics on this release</span>
+                      <span className="mt-1 block text-sm leading-6 text-muted-foreground">
+                        Listeners can open the lyrics from the published single without leaving the post.
+                      </span>
+                    </span>
+                  </label>
+                ) : null}
               </div>
             </Card>
           ) : null}
@@ -981,6 +1026,11 @@ export function CreateSinglePage() {
                   </div>
                   <p className="text-sm text-muted-foreground">{existingSongId ? "Existing library song update" : newSongTitle || "New song pending"}</p>
                   <Badge variant="cyan">{productionStage}</Badge>
+                  {hasLyricsForRelease ? (
+                    <Badge variant={showLyrics ? "success" : "neutral"}>
+                      Lyrics {showLyrics ? "included" : "hidden"}
+                    </Badge>
+                  ) : null}
                 </div>
                 <div className="space-y-3 rounded-[22px] border border-white/[0.08] bg-white/[0.03] p-5">
                   <div className="flex items-center gap-2">

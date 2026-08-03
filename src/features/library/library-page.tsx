@@ -177,6 +177,7 @@ export function LibraryPage() {
           ownerId: viewer.userId,
           provider,
           sourceAsset: plan.sourceAsset,
+          songId: plan.songId,
           previewFolderId,
         });
 
@@ -220,6 +221,7 @@ export function LibraryPage() {
       string,
       {
         sourceAsset: Asset;
+        songId: string;
         versionIds: string[];
       }
     >();
@@ -246,6 +248,7 @@ export function LibraryPage() {
 
       plans.set(sourceAsset.id, {
         sourceAsset,
+        songId: version.song_id,
         versionIds: [version.id],
       });
     });

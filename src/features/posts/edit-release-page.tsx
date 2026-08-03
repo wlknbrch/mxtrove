@@ -42,6 +42,7 @@ type EditableTrack = {
   songId: string;
   trackTitle: string;
   songVersionId: string | null;
+  showLyrics: boolean;
 };
 
 function getSongVersions(songId: string, versions: SongVersion[]) {
@@ -139,6 +140,7 @@ export function EditReleasePage() {
     ensureFolders,
   } = useCloudUploadProvider(viewer.userId, uploadProviderId);
   const [singleSongVersionId, setSingleSongVersionId] = useState<string | null>(null);
+  const [singleShowLyrics, setSingleShowLyrics] = useState(false);
   const [tracks, setTracks] = useState<EditableTrack[]>([]);
 
   const postQuery = useQuery({
@@ -186,16 +188,19 @@ export function EditReleasePage() {
     setArtworkAssetId(item.post.artwork_asset_id ?? null);
     if (item.post.post_type === "single") {
       setSingleSongVersionId(item.single?.featuredVersion?.id ?? null);
+      setSingleShowLyrics(item.single?.showLyrics ?? false);
       setTracks([]);
       return;
     }
 
     setSingleSongVersionId(null);
+    setSingleShowLyrics(false);
     setTracks(
       item.releaseTracks.map((track) => ({
         songId: track.track.song_id,
         trackTitle: track.track.track_title,
         songVersionId: track.track.song_version_id,
+        showLyrics: track.track.show_lyrics,
       })),
     );
   }, [item]);
@@ -432,6 +437,7 @@ export function EditReleasePage() {
           releaseUrl: releaseUrl.trim() || undefined,
           artworkAssetId,
           featuredVersionId: selectedSingleVersion.id,
+          showLyrics: Boolean(singleShowLyrics && singleSong.lyrics?.trim()),
         });
         await Promise.all([
           savePresentation(),
@@ -465,6 +471,10 @@ export function EditReleasePage() {
           track_title: track.trackTitle.trim() || songs.find((song) => song.id === track.songId)?.title || "Untitled track",
           track_number: index + 1,
           production_stage: version.production_stage,
+          show_lyrics: Boolean(
+            track.showLyrics
+            && songs.find((song) => song.id === track.songId)?.lyrics?.trim(),
+          ),
         };
       });
       const resolvedVersions = resolvedTracks
@@ -829,6 +839,22 @@ export function EditReleasePage() {
                   </span>
                 )}
               </div>
+              {singleSong?.lyrics?.trim() ? (
+                <label className="mt-5 flex items-start gap-3 rounded-[20px] border border-white/[0.08] bg-white/[0.025] px-4 py-4">
+                  <input
+                    className="mt-1 size-4 accent-[rgb(var(--accent-rgb))]"
+                    type="checkbox"
+                    checked={singleShowLyrics}
+                    onChange={(event) => setSingleShowLyrics(event.currentTarget.checked)}
+                  />
+                  <span>
+                    <span className="block text-sm font-medium">Show lyrics on this release</span>
+                    <span className="mt-1 block text-sm leading-6 text-muted-foreground">
+                      Adds a lyrics button and reading dialog to the public single post.
+                    </span>
+                  </span>
+                </label>
+              ) : null}
             </Card>
           ) : (
             <Card>
@@ -861,6 +887,7 @@ export function EditReleasePage() {
                               songId: song.id,
                               trackTitle: song.title,
                               songVersionId: latestVersion?.id ?? null,
+                              showLyrics: false,
                             },
                           ];
                         });
@@ -949,6 +976,31 @@ export function EditReleasePage() {
                                 </Link>
                               </div>
                             </div>
+                            {song?.lyrics?.trim() ? (
+                              <label className="flex items-start gap-3 rounded-[18px] border border-white/[0.06] bg-white/[0.02] px-4 py-3">
+                                <input
+                                  className="mt-1 size-4 accent-[rgb(var(--accent-rgb))]"
+                                  type="checkbox"
+                                  checked={track.showLyrics}
+                                  onChange={(event) => {
+                                    const showLyrics = event.currentTarget.checked;
+                                    setTracks((current) =>
+                                      current.map((entry) =>
+                                        entry.songId === track.songId
+                                          ? { ...entry, showLyrics }
+                                          : entry,
+                                      ),
+                                    );
+                                  }}
+                                />
+                                <span>
+                                  <span className="block text-sm font-medium">Show lyrics for this track</span>
+                                  <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                                    Listeners can open the lyrics dialog directly from the release tracklist.
+                                  </span>
+                                </span>
+                              </label>
+                            ) : null}
                           </div>
                         );
                       })}

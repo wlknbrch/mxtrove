@@ -5,6 +5,7 @@ import cors from "@fastify/cors";
 import type { Readable } from "node:stream";
 
 import { registerAttachmentRoutes } from "./attachments/routes.js";
+import { analyzeSongSourceForOwner } from "./audio-analysis/analyze-song.js";
 import { verifySupabaseBearerToken } from "./auth/verify-jwt.js";
 import { runCleanupCycle } from "./cleanup/cleanup.js";
 import { config } from "./config.js";
@@ -65,6 +66,8 @@ await app.register(cors, {
     "X-MxShare-Share-Token",
     "X-MxShare-Filename",
     "X-MxShare-Attachment-Type",
+    "X-MxShare-Song-Id",
+    "X-MxShare-Source-Asset-Id",
   ],
   exposedHeaders: [
     "Accept-Ranges",
@@ -121,6 +124,7 @@ app.post("/v1/media/jobs", async (request, reply) => {
   const body = (request.body ?? {}) as {
     sourceAssetId?: string;
     songVersionId?: string | null;
+    songId?: string | null;
     outputMode?: "public_cloud" | "protected";
     protectedPurpose?: "post_preview" | "collaboration_preview" | "message_audio" | null;
     projectId?: string | null;
@@ -135,6 +139,7 @@ app.post("/v1/media/jobs", async (request, reply) => {
     ownerId: user.id,
     sourceAssetId: body.sourceAssetId,
     songVersionId: body.songVersionId ?? null,
+    songId: body.songId ?? null,
     outputMode: body.outputMode,
     protectedPurpose: body.protectedPurpose ?? null,
     projectId: body.projectId ?? null,
@@ -239,6 +244,24 @@ app.delete("/v1/media/jobs/:jobId", async (request, reply) => {
 
   await cancelMediaJob(job.id);
   return reply.code(204).send();
+});
+
+app.post("/v1/media/analyze-song", async (request, reply) => {
+  const user = await verifySupabaseBearerToken(request.headers.authorization);
+  const songId = request.headers["x-mxshare-song-id"];
+  const sourceAssetId = request.headers["x-mxshare-source-asset-id"];
+
+  if (typeof songId !== "string" || typeof sourceAssetId !== "string") {
+    return reply.code(400).send({ error: "Song and source asset headers are required." });
+  }
+
+  const analysis = await analyzeSongSourceForOwner({
+    ownerId: user.id,
+    songId,
+    sourceAssetId,
+    source: request.body as Readable,
+  });
+  return reply.send(analysis);
 });
 
 app.post("/v1/push/test", async (request, reply) => {

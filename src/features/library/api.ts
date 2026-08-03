@@ -89,6 +89,9 @@ export async function updateSong(songId: string, values: SongFormValues) {
       id: songId,
       title: values.title.trim(),
       notes: values.notes?.trim() ? values.notes.trim() : null,
+      lyrics: values.lyrics?.trim() ? values.lyrics.trim() : null,
+      musical_key: values.musical_key?.trim() ? values.musical_key.trim() : null,
+      tempo_bpm: values.tempo_bpm ?? null,
       default_artwork_asset_id: values.default_artwork_asset_id || null,
       updated_at: new Date().toISOString(),
     } satisfies Song;
@@ -100,6 +103,9 @@ export async function updateSong(songId: string, values: SongFormValues) {
     .update({
       title: values.title.trim(),
       notes: values.notes?.trim() ? values.notes.trim() : null,
+      lyrics: values.lyrics?.trim() ? values.lyrics.trim() : null,
+      musical_key: values.musical_key?.trim() ? values.musical_key.trim() : null,
+      tempo_bpm: values.tempo_bpm ?? null,
       default_artwork_asset_id: values.default_artwork_asset_id || null,
     })
     .eq("id", songId)
@@ -121,6 +127,9 @@ export async function createSong(ownerId: string, values: SongFormValues) {
       ...values,
       owner_id: ownerId,
       notes: values.notes || null,
+      lyrics: values.lyrics || null,
+      musical_key: values.musical_key || null,
+      tempo_bpm: values.tempo_bpm ?? null,
     } satisfies Song;
   }
 

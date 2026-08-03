@@ -108,6 +108,7 @@ export function FollowButton({
         queryClient.invalidateQueries({ queryKey: ["profile-metrics"] }),
         queryClient.invalidateQueries({ queryKey: ["profile-connections"] }),
         queryClient.invalidateQueries({ queryKey: ["creator-discovery"] }),
+        queryClient.invalidateQueries({ queryKey: ["profile-posts", profileId] }),
         queryClient.invalidateQueries({ queryKey: ["home-feed", viewer.userId] }),
         queryClient.invalidateQueries({ queryKey: ["notifications", viewer.userId] }),
       ]);

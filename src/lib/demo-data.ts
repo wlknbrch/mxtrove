@@ -196,6 +196,12 @@ export const demoSongs: Song[] = [
     owner_id: demoViewerProfile.id,
     title: "Eternal Light",
     notes: "Need a lighter chorus lift and tighter outro.",
+    lyrics: "Hold the light until the morning comes.",
+    musical_key: "A minor",
+    tempo_bpm: 118,
+    tempo_confidence: 0.82,
+    key_confidence: 0.76,
+    audio_analysis_updated_at: new Date().toISOString(),
     default_artwork_asset_id: demoAssets[0].id,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -311,6 +317,7 @@ export const demoSinglePosts: SinglePost[] = [
     post_id: demoPosts[0].id,
     song_id: demoSongs[0].id,
     featured_version_id: demoSongVersions[2].id,
+    show_lyrics: true,
   },
 ];
 
@@ -324,6 +331,7 @@ export const demoReleaseTracks: ReleaseTrack[] = [
     track_number: 1,
     preview_asset_id: demoAssets[1].id,
     production_stage: "Mix 1",
+    show_lyrics: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
@@ -389,6 +397,19 @@ export const demoNotifications: Notification[] = [
     project_id: null,
     is_read: true,
     created_at: new Date(Date.now() - 18_000_000).toISOString(),
+  },
+  {
+    id: "80000000-0000-0000-0000-000000000003",
+    recipient_id: demoViewerProfile.id,
+    actor_id: demoProfiles[1].id,
+    type: "comment_heart",
+    post_id: demoPosts[0].id,
+    song_version_id: null,
+    comment_id: demoComments[0].id,
+    conversation_id: null,
+    project_id: null,
+    is_read: false,
+    created_at: new Date(Date.now() - 900_000).toISOString(),
   },
 ];
 

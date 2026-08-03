@@ -36,6 +36,7 @@ import { useAppViewer } from "@/hooks/use-app-viewer";
 import { listResolvedPosts } from "@/features/posts/api";
 import type { ResolvedPostCard } from "@/features/posts/types";
 import { getProfileByUsername } from "@/features/profile/api";
+import { isListedOnProfile } from "@/features/profile/profile-post-visibility";
 
 function formatJoinDate(input: string) {
   return new Intl.DateTimeFormat("en-US", { month: "short", year: "numeric" }).format(new Date(input));
@@ -182,9 +183,7 @@ export function ProfilePage() {
         viewerId: viewer.userId,
       });
 
-      return viewer.userId === profileQuery.data!.id
-        ? resolvedPosts.filter((item) => item.post.visibility === "public")
-        : resolvedPosts;
+      return resolvedPosts.filter((item) => isListedOnProfile(item.post.visibility));
     },
     enabled: Boolean(profileQuery.data?.id),
   });

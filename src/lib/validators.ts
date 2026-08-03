@@ -23,6 +23,14 @@ export const optionalUrlSchema = z
     "Please enter a valid http or https URL.",
   );
 
+export function normalizeOptionalTempoInput(value: unknown) {
+  if (value == null || (typeof value === "string" && value.trim() === "")) {
+    return null;
+  }
+
+  return typeof value === "number" ? value : Number(value);
+}
+
 export const profileSchema = z.object({
   display_name: z.string().trim().min(2, "Display name is required.").max(60),
   username: usernameSchema,
@@ -39,6 +47,18 @@ export const profileSchema = z.object({
 export const songSchema = z.object({
   title: z.string().trim().min(1, "Song title is required.").max(120),
   notes: z.string().trim().max(4000).optional().or(z.literal("")),
+  lyrics: z.string().trim().max(50000, "Lyrics must be 50,000 characters or fewer.").optional().or(z.literal("")),
+  musical_key: z.string().trim().max(32, "Musical key must be 32 characters or fewer.").optional().or(z.literal("")),
+  tempo_bpm: z.preprocess(
+    normalizeOptionalTempoInput,
+    z
+      .number({ invalid_type_error: "Please enter a valid tempo." })
+      .finite("Please enter a valid tempo.")
+      .min(20, "Tempo must be at least 20 BPM.")
+      .max(400, "Tempo must be at most 400 BPM.")
+      .nullable()
+      .optional(),
+  ),
   default_artwork_asset_id: z.string().uuid().optional().nullable(),
 });
 
@@ -55,6 +75,7 @@ export const singlePublishSchema = z.object({
   description: z.string().trim().max(2000).optional().or(z.literal("")),
   visibility: z.enum(["private", "followers", "unlisted", "public"]),
   artwork_asset_id: z.string().uuid().optional().nullable(),
+  show_lyrics: z.boolean().optional().default(false),
 });
 
 export const commentSchema = z.object({

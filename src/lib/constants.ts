@@ -14,6 +14,33 @@ export const productionStages = [
   "Final",
 ] as const;
 
+export const musicalKeys = [
+  "C major",
+  "C# major",
+  "D major",
+  "D# major",
+  "E major",
+  "F major",
+  "F# major",
+  "G major",
+  "G# major",
+  "A major",
+  "A# major",
+  "B major",
+  "C minor",
+  "C# minor",
+  "D minor",
+  "D# minor",
+  "E minor",
+  "F minor",
+  "F# minor",
+  "G minor",
+  "G# minor",
+  "A minor",
+  "A# minor",
+  "B minor",
+] as const;
+
 export const publicPreviewPreferredExtensions = [".mp3", ".m4a", ".aac", ".ogg"] as const;
 
 export const acceptedAudioExtensions = [

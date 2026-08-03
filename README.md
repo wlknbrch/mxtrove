@@ -351,9 +351,11 @@ mxtrove.wlknbrch.com/og/*       -> cached OG image renderer
 mxshare.wlknbrch.com/*          -> permanent MxTrove redirect
 ```
 
-Public share buttons use `/social/post/:postId` and
-`/social/profile/:username`. Crawlers receive dynamic metadata; browsers are
-immediately redirected to the canonical app route.
+Public share buttons use `/social/post/:postId`,
+`/social/post/:postId/track/:trackId`, and `/social/profile/:username`.
+Crawlers receive dynamic release, song, or profile metadata; browsers are
+immediately redirected to the canonical app route. Shared album and EP songs
+retain their release context while playback is scoped to the selected track.
 
 ### MxTrove rebrand and cloud folders
 
@@ -391,8 +393,9 @@ After the first production deployment:
 
 1. Add `https://mxtrove.wlknbrch.com/sitemap.xml` to Google Search Console.
 2. Request indexing for the canonical home URL.
-3. Verify `/social/post/:postId` and `/social/profile/:username` with the share
-   debugger of each social platform you plan to use.
+3. Verify `/social/post/:postId`, `/social/post/:postId/track/:trackId`, and
+   `/social/profile/:username` with the share debugger of each social platform
+   you plan to use.
 4. Keep the old MxShare DNS records pointed at Traefik while legacy links are
    being redirected.
 5. Re-enable web push on the new origin; browser push subscriptions do not move

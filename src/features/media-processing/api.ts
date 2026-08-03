@@ -65,6 +65,71 @@ async function workerRequest<T>(path: string, init?: RequestInit) {
   return (await response.blob()) as T;
 }
 
+export interface SongAudioAnalysisResult {
+  tempoBpm: number | null;
+  tempoConfidence: number | null;
+  musicalKey: string | null;
+  keyConfidence: number | null;
+}
+
+export async function analyzeSongAudio(input: {
+  songId: string;
+  sourceAssetId: string;
+  file: File;
+  signal?: AbortSignal;
+  onProgress?: (progress: number) => void;
+}) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay(350);
+    return {
+      tempoBpm: 120,
+      tempoConfidence: 0.9,
+      musicalKey: "A minor",
+      keyConfidence: 0.82,
+    } satisfies SongAudioAnalysisResult;
+  }
+
+  const accessToken = await getAccessToken();
+  return new Promise<SongAudioAnalysisResult>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${env.mediaWorkerUrl}/v1/media/analyze-song`);
+    xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
+    xhr.setRequestHeader("Content-Type", input.file.type || "application/octet-stream");
+    xhr.setRequestHeader("X-MxShare-Song-Id", input.songId);
+    xhr.setRequestHeader("X-MxShare-Source-Asset-Id", input.sourceAssetId);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        input.onProgress?.(Math.round((event.loaded / event.total) * 100));
+      }
+    };
+    xhr.onerror = () => reject(new Error("The audio analysis could not reach the media worker."));
+    xhr.onload = () => {
+      let payload: { error?: string } | SongAudioAnalysisResult | null = null;
+      try {
+        payload = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+      } catch {
+        // The status fallback below is clearer than a JSON parsing error.
+      }
+      if (xhr.status >= 200 && xhr.status < 300 && payload) {
+        resolve(payload as SongAudioAnalysisResult);
+        return;
+      }
+      reject(new Error(
+        payload && "error" in payload && payload.error
+          ? payload.error
+          : `Audio analysis failed with status ${xhr.status}.`,
+      ));
+    };
+
+    input.signal?.addEventListener("abort", () => {
+      xhr.abort();
+      reject(new DOMException("Analysis aborted.", "AbortError"));
+    }, { once: true });
+    xhr.send(input.file);
+  });
+}
+
 export async function listMediaProcessingJobs(sourceAssetId?: string) {
   if (isDemoModeEnabled()) {
     await createDemoDelay(150);
@@ -92,6 +157,7 @@ export async function listMediaProcessingJobs(sourceAssetId?: string) {
 export async function createMediaProcessingJob(input: {
   sourceAssetId: string;
   songVersionId?: string | null;
+  songId?: string | null;
   outputMode?: "public_cloud" | "protected";
   protectedPurpose?: "post_preview" | "collaboration_preview" | "message_audio" | null;
   projectId?: string | null;
@@ -104,6 +170,7 @@ export async function createMediaProcessingJob(input: {
       owner_id: "demo",
       source_asset_id: input.sourceAssetId,
       song_version_id: input.songVersionId ?? null,
+      song_id: input.songId ?? null,
       status: "created",
       stage: "Awaiting upload",
       progress: 0,
@@ -119,6 +186,10 @@ export async function createMediaProcessingJob(input: {
       channels: null,
       bit_rate_bps: null,
       waveform_data: null,
+      detected_tempo_bpm: null,
+      detected_musical_key: null,
+      tempo_confidence: null,
+      key_confidence: null,
       error_code: null,
       error_message: null,
       attempt_count: 0,
@@ -147,6 +218,7 @@ export async function createMediaProcessingJob(input: {
       body: JSON.stringify({
         sourceAssetId: input.sourceAssetId,
         songVersionId: input.songVersionId ?? null,
+        songId: input.songId ?? null,
         outputMode: "protected",
         protectedPurpose: input.protectedPurpose ?? "collaboration_preview",
         projectId: input.projectId ?? null,
@@ -159,6 +231,7 @@ export async function createMediaProcessingJob(input: {
   const { data, error } = await client.rpc("request_media_processing_job", {
     source_asset_id: input.sourceAssetId,
     linked_song_version_id: input.songVersionId ?? null,
+    linked_song_id: input.songId ?? null,
   });
 
   if (error) {

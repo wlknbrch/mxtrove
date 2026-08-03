@@ -27,10 +27,14 @@ import type {
   Visibility,
 } from "@/types/domain";
 import { createProtectedMediaReadUrl } from "@/features/media-processing/api";
+import { getVisiblePostLyrics } from "@/features/posts/lyrics-visibility";
 import { resolveAvailableProtectedReadUrls } from "@/features/posts/protected-preview";
 import type { ProtectedMediaAsset } from "@/types/domain";
 
 import type { ResolvedComment, ResolvedPostCard, ResolvedReleaseTrack, ResolvedSingleInfo } from "@/features/posts/types";
+
+let hasWarnedAboutMissingCommentEngagement = false;
+let hasWarnedAboutMissingPostSongMetadata = false;
 
 function getApiErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) {
@@ -85,12 +89,30 @@ function resolveDemoPost(postId: string, viewerId?: string | null) {
     .map<ResolvedComment>((comment) => ({
       ...comment,
       author: getDemoProfileById(comment.author_id),
+      heartCount: comment.parent_comment_id ? 2 : 7,
+      replyCount: comment.parent_comment_id
+        ? 0
+        : demoComments.filter((reply) => reply.parent_comment_id === comment.id).length,
+      viewerHasHearted: false,
     }));
   const releaseTracks = demoReleaseTracks
     .filter((track) => track.post_id === post.id)
     .map<ResolvedReleaseTrack>((track) => ({
       track,
-      song: demoSongs.find((song) => song.id === track.song_id) ?? null,
+      song: (() => {
+        const song = demoSongs.find((entry) => entry.id === track.song_id) ?? null;
+        return song
+          ? {
+              ...song,
+              lyrics: getVisiblePostLyrics({
+                lyrics: song.lyrics,
+                showLyrics: track.show_lyrics,
+                ownerId: post.owner_id,
+                viewerId,
+              }),
+            }
+          : null;
+      })(),
       version: demoSongVersions.find((version) => version.id === track.song_version_id) ?? null,
       versionLabel:
         demoSongVersions.find((version) => version.id === track.song_version_id)?.version_label
@@ -107,7 +129,21 @@ function resolveDemoPost(postId: string, viewerId?: string | null) {
     artwork,
     single: singleLink
       ? {
-          song: demoSongs.find((song) => song.id === singleLink.song_id) ?? null,
+          song: (() => {
+            const song = demoSongs.find((entry) => entry.id === singleLink.song_id) ?? null;
+            return song
+              ? {
+                  ...song,
+                  lyrics: getVisiblePostLyrics({
+                    lyrics: song.lyrics,
+                    showLyrics: singleLink.show_lyrics,
+                    ownerId: post.owner_id,
+                    viewerId,
+                  }),
+                }
+              : null;
+          })(),
+          showLyrics: singleLink.show_lyrics,
           featuredVersion,
           previousVersion,
           previewAsset,
@@ -160,12 +196,14 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
     artworkResult,
     singleResult,
     commentsResult,
+    commentEngagementResult,
     releaseTracksResult,
     metricsResult,
     viewerHeartResult,
     creditsResult,
     externalLinksResult,
     releaseVersionLabelsResult,
+    postSongMetadataResult,
   ] = await Promise.all([
     client.from("profiles").select("*").eq("id", post.owner_id).maybeSingle(),
     post.artwork_asset_id
@@ -179,6 +217,7 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
       .select("*, author:profiles!comments_author_id_fkey(*)")
       .eq("post_id", post.id)
       .order("created_at", { ascending: true }),
+    client.rpc("get_comment_engagement", { target_post_id: post.id }),
     client
       .from("release_tracks")
       .select("*")
@@ -198,6 +237,7 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
     post.post_type === "single"
       ? Promise.resolve({ data: [], error: null })
       : client.rpc("get_release_track_version_labels", { target_post_id: post.id }),
+    client.rpc("get_post_song_metadata", { target_post_id: post.id }),
   ]);
 
   ownerResult.error && console.warn(ownerResult.error.message);
@@ -207,6 +247,10 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
   if (commentsResult.error) {
     throw commentsResult.error;
   }
+  if (commentEngagementResult.error && !hasWarnedAboutMissingCommentEngagement) {
+    hasWarnedAboutMissingCommentEngagement = true;
+    console.warn("Comment engagement is unavailable until the latest migration is applied.", commentEngagementResult.error.message);
+  }
 
   if (releaseTracksResult.error) {
     throw releaseTracksResult.error;
@@ -214,6 +258,24 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
   if (creditsResult.error) throw creditsResult.error;
   if (externalLinksResult.error) throw externalLinksResult.error;
   if (releaseVersionLabelsResult.error) throw releaseVersionLabelsResult.error;
+  if (postSongMetadataResult.error && !hasWarnedAboutMissingPostSongMetadata) {
+    hasWarnedAboutMissingPostSongMetadata = true;
+    console.warn(
+      "Shared song metadata is unavailable until the latest migration is applied.",
+      postSongMetadataResult.error.message,
+    );
+  }
+
+  const postSongMetadataRows = (postSongMetadataResult.data ?? []) as Array<{
+    release_track_id: string | null;
+    song: ResolvedSingleInfo["song"];
+  }>;
+  const singlePostSong = postSongMetadataRows.find((row) => row.release_track_id == null)?.song ?? null;
+  const releasePostSongs = new Map(
+    postSongMetadataRows
+      .filter((row): row is typeof row & { release_track_id: string } => Boolean(row.release_track_id))
+      .map((row) => [row.release_track_id, row.song]),
+  );
 
   const releaseVersionLabels = new Map(
     ((releaseVersionLabelsResult.data ?? []) as Array<{
@@ -221,8 +283,20 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
       version_label: string;
     }>).map((entry) => [entry.track_id, entry.version_label]),
   );
+  const commentEngagement = new Map(
+    ((commentEngagementResult.data ?? []) as Array<{
+      comment_id: string;
+      heart_count: number | string;
+      reply_count: number | string;
+      viewer_has_hearted: boolean;
+    }>).map((entry) => [entry.comment_id, entry]),
+  );
 
-  const singleLink = singleResult.data as { song_id: string; featured_version_id: string } | null;
+  const singleLink = singleResult.data as {
+    song_id: string;
+    featured_version_id: string;
+    show_lyrics: boolean;
+  } | null;
   const [songResult, featuredVersionResult, previousVersionResult] = singleLink
     ? await Promise.all([
         client.from("songs").select("*").eq("id", singleLink.song_id).maybeSingle(),
@@ -253,6 +327,7 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
     song_id: string;
     song_version_id: string | null;
     preview_asset_id: string | null;
+    show_lyrics: boolean;
   }>;
   const versionIds = [
     singleLink?.featured_version_id ?? null,
@@ -310,10 +385,23 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
           ? client.from("assets").select("*").eq("id", track.preview_asset_id).maybeSingle()
           : Promise.resolve({ data: null, error: null }),
       ]);
+      const resolvedSong = (song.data as ResolvedReleaseTrack["song"])
+        ?? releasePostSongs.get(track.id)
+        ?? null;
 
       return {
         track: track as ResolvedReleaseTrack["track"],
-        song: song.data as ResolvedReleaseTrack["song"],
+        song: resolvedSong
+          ? {
+              ...resolvedSong,
+              lyrics: getVisiblePostLyrics({
+                lyrics: resolvedSong.lyrics,
+                showLyrics: track.show_lyrics,
+                ownerId: post.owner_id,
+                viewerId,
+              }),
+            }
+          : null,
         version: version.data as ResolvedReleaseTrack["version"],
         versionLabel:
           (version.data as ResolvedReleaseTrack["version"])?.version_label
@@ -337,7 +425,22 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
     artwork: artworkResult.data as ResolvedPostCard["artwork"],
     single: singleLink
       ? {
-          song: songResult.data as ResolvedSingleInfo["song"],
+          song: (() => {
+            const resolvedSong = (songResult.data as ResolvedSingleInfo["song"])
+              ?? singlePostSong;
+            return resolvedSong
+              ? {
+                  ...resolvedSong,
+                  lyrics: getVisiblePostLyrics({
+                    lyrics: resolvedSong.lyrics,
+                    showLyrics: singleLink.show_lyrics,
+                    ownerId: post.owner_id,
+                    viewerId,
+                  }),
+                }
+              : null;
+          })(),
+          showLyrics: Boolean(singleLink.show_lyrics),
           featuredVersion: featuredVersionResult.data as ResolvedSingleInfo["featuredVersion"],
           previousVersion: previousVersionResult.data as ResolvedSingleInfo["previousVersion"],
           previewAsset: previewAssetResult.data as ResolvedSingleInfo["previewAsset"],
@@ -358,6 +461,9 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
     comments: ((commentsResult.data ?? []) as Array<ResolvedComment>).map((comment) => ({
       ...comment,
       author: (comment as { author: ResolvedComment["author"] }).author ?? null,
+      heartCount: Number(commentEngagement.get(comment.id)?.heart_count ?? 0),
+      replyCount: Number(commentEngagement.get(comment.id)?.reply_count ?? 0),
+      viewerHasHearted: Boolean(commentEngagement.get(comment.id)?.viewer_has_hearted),
     })),
     heartCount: Number((metricsResult.data as { heart_count?: number } | null)?.heart_count ?? 0),
     viewerHasHearted: Boolean(viewerHeartResult.data),
@@ -523,6 +629,15 @@ export async function createSinglePost(input: {
     throw error;
   }
 
+  const { error: lyricsVisibilityError } = await client
+    .from("single_posts")
+    .update({ show_lyrics: input.values.show_lyrics })
+    .eq("post_id", post.id);
+
+  if (lyricsVisibilityError) {
+    throw lyricsVisibilityError;
+  }
+
   return post;
 }
 
@@ -540,6 +655,7 @@ export async function createReleasePost(input: {
     track_title: string;
     track_number: number;
     production_stage: string | null;
+    show_lyrics: boolean;
   }>;
 }) {
   if (isDemoModeEnabled()) {
@@ -572,6 +688,7 @@ export async function updateSinglePostForPublish(input: {
   description?: string;
   artworkAssetId?: string | null;
   visibility: Visibility;
+  showLyrics: boolean;
 }) {
   if (isDemoModeEnabled()) {
     await createDemoDelay(180);
@@ -596,9 +713,37 @@ export async function updateSinglePostForPublish(input: {
 
   const { error: singleError } = await client
     .from("single_posts")
-    .update({ featured_version_id: input.featuredVersionId })
+    .update({
+      featured_version_id: input.featuredVersionId,
+      show_lyrics: input.showLyrics,
+    })
     .eq("post_id", input.postId);
   if (singleError) throw singleError;
+}
+
+export async function updateSingleLyricsVisibility(input: {
+  postId: string;
+  showLyrics: boolean;
+}) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay(120);
+    return;
+  }
+
+  const client = requireSupabase();
+  const { data, error } = await client
+    .from("single_posts")
+    .update({ show_lyrics: input.showLyrics })
+    .eq("post_id", input.postId)
+    .select("post_id")
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+  if (!data) {
+    throw new Error("Only the release owner can change lyrics visibility.");
+  }
 }
 
 export async function updateReleasePost(input: {
@@ -614,6 +759,7 @@ export async function updateReleasePost(input: {
     track_title: string;
     track_number: number;
     production_stage: string | null;
+    show_lyrics: boolean;
   }>;
 }) {
   if (isDemoModeEnabled()) {
@@ -662,6 +808,7 @@ export async function updateSinglePost(input: {
   releaseUrl?: string;
   artworkAssetId?: string | null;
   featuredVersionId: string;
+  showLyrics: boolean;
 }) {
   if (isDemoModeEnabled()) {
     await createDemoDelay(220);
@@ -714,22 +861,28 @@ export async function updateSinglePost(input: {
     throw metadataError;
   }
 
-  if (singleLink.featured_version_id === input.featuredVersionId) {
-    return;
+  if (singleLink.featured_version_id !== input.featuredVersionId) {
+    if (post.visibility === "public") {
+      await publishSingleVersion({ versionId: input.featuredVersionId });
+    } else {
+      const { error: versionUpdateError } = await client
+        .from("single_posts")
+        .update({ featured_version_id: input.featuredVersionId })
+        .eq("post_id", input.postId);
+
+      if (versionUpdateError) {
+        throw versionUpdateError;
+      }
+    }
   }
 
-  if (post.visibility === "public") {
-    await publishSingleVersion({ versionId: input.featuredVersionId });
-    return;
-  }
-
-  const { error: updateError } = await client
+  const { error: lyricsVisibilityError } = await client
     .from("single_posts")
-    .update({ featured_version_id: input.featuredVersionId })
+    .update({ show_lyrics: input.showLyrics })
     .eq("post_id", input.postId);
 
-  if (updateError) {
-    throw updateError;
+  if (lyricsVisibilityError) {
+    throw lyricsVisibilityError;
   }
 }
 
@@ -803,6 +956,38 @@ export async function deleteCommentOnPost(input: {
   if (error) {
     throw error;
   }
+}
+
+export async function toggleCommentHeart(input: {
+  commentId: string;
+  profileId: string;
+  active: boolean;
+}) {
+  if (isDemoModeEnabled()) {
+    await createDemoDelay(130);
+    const comment = demoComments.find((entry) => entry.id === input.commentId);
+    if (input.active && comment?.author_id === input.profileId) {
+      throw new Error("You cannot heart your own comment.");
+    }
+    return;
+  }
+
+  const client = requireSupabase();
+  if (input.active) {
+    const { error } = await client.from("comment_hearts").insert({
+      comment_id: input.commentId,
+      profile_id: input.profileId,
+    });
+    if (error) throw error;
+    return;
+  }
+
+  const { error } = await client
+    .from("comment_hearts")
+    .delete()
+    .eq("comment_id", input.commentId)
+    .eq("profile_id", input.profileId);
+  if (error) throw error;
 }
 
 export async function togglePostHeart(input: {
@@ -1061,6 +1246,7 @@ interface SharedPostPayload {
   artwork: ResolvedPostCard["artwork"];
   single: null | {
     song: ResolvedSingleInfo["song"];
+    showLyrics: boolean;
     featuredVersion: ResolvedSingleInfo["featuredVersion"];
     previewAsset: ResolvedSingleInfo["previewAsset"];
     protectedAsset: ProtectedMediaAsset | null;
@@ -1102,6 +1288,7 @@ export async function getSharedPostByToken(token: string): Promise<ResolvedPostC
     single: payload.single
       ? {
           song: payload.single.song,
+          showLyrics: Boolean(payload.single.showLyrics),
           featuredVersion: payload.single.featuredVersion,
           previousVersion: null,
           previewAsset: payload.single.previewAsset,

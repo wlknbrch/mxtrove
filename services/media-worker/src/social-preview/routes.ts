@@ -25,6 +25,13 @@ interface PublicPostCard {
   artwork: PublicAssetRow | null;
 }
 
+interface PublicReleaseTrackCard {
+  id: string;
+  post_id: string;
+  track_title: string;
+  updated_at: string;
+}
+
 interface PublicProfileCard {
   id: string;
   username: string;
@@ -37,7 +44,7 @@ interface PublicProfileCard {
 const GOOGLE_DRIVE_HOST = "https://drive.google.com";
 const GOOGLE_DRIVE_USERCONTENT_HOST = "https://drive.usercontent.google.com";
 const GOOGLE_DRIVE_IMAGE_HOST = "https://lh3.googleusercontent.com";
-const SOCIAL_PREVIEW_RENDER_VERSION = "mxtrove-v1";
+const SOCIAL_PREVIEW_RENDER_VERSION = "mxtrove-v2";
 
 function escapeMarkup(value: string) {
   return value
@@ -228,6 +235,17 @@ async function getPublicPost(postId: string): Promise<PublicPostCard | null> {
   return data as unknown as PublicPostCard | null;
 }
 
+async function getPublicReleaseTrack(postId: string, trackId: string): Promise<PublicReleaseTrackCard | null> {
+  const { data, error } = await supabaseAdmin
+    .from("release_tracks")
+    .select("id, post_id, track_title, updated_at")
+    .eq("id", trackId)
+    .eq("post_id", postId)
+    .maybeSingle();
+  if (error) throw error;
+  return data as PublicReleaseTrackCard | null;
+}
+
 async function getPublicProfile(username: string): Promise<PublicProfileCard | null> {
   const { data, error } = await supabaseAdmin
     .from("profiles")
@@ -329,27 +347,25 @@ async function renderCachedPng(input: {
   return png;
 }
 
-function sendSocialHtml(reply: FastifyReply, input: {
+interface SocialHtmlInput {
   title: string;
   description: string;
   imageUrl: string;
   canonicalUrl: string;
-}) {
+  ogType?: "music.album" | "music.song" | "profile";
+}
+
+export function buildSocialHtml(input: SocialHtmlInput) {
   const title = escapeMarkup(input.title);
   const description = escapeMarkup(truncate(input.description, 200));
   const canonicalUrl = escapeMarkup(input.canonicalUrl);
   const imageUrl = escapeMarkup(input.imageUrl);
-  return reply
-    .type("text/html; charset=utf-8")
-    .header("Cache-Control", "public, max-age=300, stale-while-revalidate=3600")
-    .header("X-Content-Type-Options", "nosniff")
-    .header("Content-Security-Policy", "default-src 'none'; img-src https: data:; style-src 'unsafe-inline';")
-    .send(`<!doctype html><html lang="en"><head>
+  return `<!doctype html><html lang="en"><head>
       <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
       <meta http-equiv="refresh" content="0; url=${canonicalUrl}">
       <title>${title}</title><meta name="description" content="${description}">
       <link rel="canonical" href="${canonicalUrl}">
-      <meta property="og:site_name" content="MxTrove"><meta property="og:type" content="music.album">
+      <meta property="og:site_name" content="MxTrove"><meta property="og:type" content="${input.ogType ?? "music.album"}">
       <meta property="og:title" content="${title}"><meta property="og:description" content="${description}">
       <meta property="og:image" content="${imageUrl}"><meta property="og:image:secure_url" content="${imageUrl}">
       <meta property="og:image:type" content="image/png">
@@ -359,10 +375,48 @@ function sendSocialHtml(reply: FastifyReply, input: {
       <meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${imageUrl}">
       </head><body style="background:#090615;color:#fff;font-family:sans-serif;padding:3rem">
       <p>Opening <a style="color:#cda7ef" href="${canonicalUrl}">${title}</a> on MxTrove.</p>
-      </body></html>`);
+      </body></html>`;
+}
+
+function sendSocialHtml(reply: FastifyReply, input: SocialHtmlInput) {
+  return reply
+    .type("text/html; charset=utf-8")
+    .header("Cache-Control", "public, max-age=300, stale-while-revalidate=3600")
+    .header("X-Content-Type-Options", "nosniff")
+    .header("Content-Security-Policy", "default-src 'none'; img-src https: data:; style-src 'unsafe-inline';")
+    .send(buildSocialHtml(input));
 }
 
 export async function registerSocialPreviewRoutes(app: FastifyInstance) {
+  app.get("/og/post/:postId/track/:trackId.png", async (request, reply) => {
+    const { postId, trackId } = request.params as { postId: string; trackId: string };
+    const [post, track] = await Promise.all([
+      getPublicPost(postId),
+      getPublicReleaseTrack(postId, trackId),
+    ]);
+    if (!post || !track || post.post_type === "single") {
+      return reply.code(404).send({ error: "Public release song not found." });
+    }
+
+    const imageDataUrl = await resolvePublicAssetImageDataUrl(post.artwork);
+    const artistName = post.owner?.display_name ?? post.owner?.username ?? "MxTrove artist";
+    const png = await renderCachedPng({
+      cacheKey: `${SOCIAL_PREVIEW_RENDER_VERSION}:track:${post.id}:${post.updated_at}:${track.id}:${track.updated_at}:${buildAssetCacheKey(post.artwork)}:${Boolean(imageDataUrl)}`,
+      svg: buildCardSvg({
+        eyebrow: `Track from ${post.post_type}`,
+        title: track.track_title,
+        subtitle: `${artistName} · ${post.title}`,
+        description: `Listen to this song from the ${post.post_type} “${post.title}” on MxTrove.`,
+        imageDataUrl,
+      }),
+    });
+    return reply
+      .type("image/png")
+      .header("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
+      .header("X-Content-Type-Options", "nosniff")
+      .send(png);
+  });
+
   app.get("/og/post/:postId.png", async (request, reply) => {
     const { postId } = request.params as { postId: string };
     const post = await getPublicPost(postId);
@@ -425,6 +479,31 @@ export async function registerSocialPreviewRoutes(app: FastifyInstance) {
     });
   });
 
+  app.get("/social/post/:postId/track/:trackId", async (request, reply) => {
+    const { postId, trackId } = request.params as { postId: string; trackId: string };
+    const [post, track] = await Promise.all([
+      getPublicPost(postId),
+      getPublicReleaseTrack(postId, trackId),
+    ]);
+    if (!post || !track || post.post_type === "single") {
+      return reply.code(404).send({ error: "Public release song not found." });
+    }
+
+    const origin = config.publicAppUrl;
+    const artistName = post.owner?.display_name ?? post.owner?.username ?? "MxTrove artist";
+    const imageVersion = createHash("sha256")
+      .update(`${SOCIAL_PREVIEW_RENDER_VERSION}:${post.updated_at}:${track.updated_at}:${buildAssetCacheKey(post.artwork)}`)
+      .digest("hex")
+      .slice(0, 12);
+    return sendSocialHtml(reply, {
+      title: `${track.track_title} · ${artistName}`,
+      description: `${track.track_title} by ${artistName}, from the ${post.post_type} “${post.title}” on MxTrove.`,
+      imageUrl: `${origin}/og/post/${encodeURIComponent(post.id)}/track/${encodeURIComponent(track.id)}.png?v=${imageVersion}`,
+      canonicalUrl: `${origin}/post/${encodeURIComponent(post.id)}?track=${encodeURIComponent(track.id)}`,
+      ogType: "music.song",
+    });
+  });
+
   app.get("/social/profile/:username", async (request, reply) => {
     const { username } = request.params as { username: string };
     const profile = await getPublicProfile(username);
@@ -439,6 +518,7 @@ export async function registerSocialPreviewRoutes(app: FastifyInstance) {
       description: profile.bio ?? "Discover this creator on MxTrove.",
       imageUrl: `${origin}/og/profile/${encodeURIComponent(profile.username)}.png?v=${imageVersion}`,
       canonicalUrl: `${origin}/@${encodeURIComponent(profile.username)}`,
+      ogType: "profile",
     });
   });
 }

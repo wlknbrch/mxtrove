@@ -28,6 +28,8 @@ function getNotificationHeading(entry: ResolvedNotification) {
       return "Post heart";
     case "version_heart":
       return "Song heart";
+    case "comment_heart":
+      return "Comment heart";
     case "comment":
       return "New comment";
     case "comment_reply":
@@ -73,6 +75,8 @@ function getNotificationMessage(entry: ResolvedNotification) {
       return `${actorName} hearted one of your public posts.`;
     case "version_heart":
       return `${actorName} hearted one of your shared songs.`;
+    case "comment_heart":
+      return `${actorName} hearted a comment you wrote.`;
     case "comment":
       return `${actorName} commented on one of your posts.`;
     case "comment_reply":

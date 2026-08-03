@@ -2,6 +2,7 @@ import sharp from "sharp";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 let buildCardSvg: typeof import("./routes.js").buildCardSvg;
+let buildSocialHtml: typeof import("./routes.js").buildSocialHtml;
 let getPublicAssetUrls: typeof import("./routes.js").getPublicAssetUrls;
 let resolvePublicAssetImageDataUrl: typeof import("./routes.js").resolvePublicAssetImageDataUrl;
 
@@ -11,6 +12,7 @@ beforeAll(async () => {
   process.env.PROTECTED_MEDIA_SIGNING_SECRET ||= "test-signing-secret-with-enough-entropy";
   ({
     buildCardSvg,
+    buildSocialHtml,
     getPublicAssetUrls,
     resolvePublicAssetImageDataUrl,
   } = await import("./routes.js"));
@@ -22,6 +24,22 @@ afterEach(() => {
 });
 
 describe("social preview cards", () => {
+  it("builds song-specific OpenGraph metadata with a release deep link", () => {
+    const html = buildSocialHtml({
+      title: "Night Drive · Mira",
+      description: "Night Drive by Mira, from the album Neon Maps on MxTrove.",
+      imageUrl: "https://mxtrove.wlknbrch.com/og/post/post-1/track/track-2.png",
+      canonicalUrl: "https://mxtrove.wlknbrch.com/post/post-1?track=track-2",
+      ogType: "music.song",
+    });
+
+    expect(html).toContain('property="og:type" content="music.song"');
+    expect(html).toContain('property="og:title" content="Night Drive · Mira"');
+    expect(html).toContain("from the album Neon Maps");
+    expect(html).toContain("/post/post-1?track=track-2");
+    expect(html).toContain("/og/post/post-1/track/track-2.png");
+  });
+
   it("renders a 1200x630 PNG and escapes untrusted release text", async () => {
     const svg = buildCardSvg({
       eyebrow: "single release",

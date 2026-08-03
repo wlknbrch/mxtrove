@@ -51,8 +51,8 @@ const notificationPreferenceRows: Array<{
   },
   {
     key: "comments_enabled",
-    label: "Comments",
-    description: "New comments on your public posts.",
+    label: "Comments & comment hearts",
+    description: "New comments on your posts and people hearting comments you wrote.",
   },
   {
     key: "replies_enabled",

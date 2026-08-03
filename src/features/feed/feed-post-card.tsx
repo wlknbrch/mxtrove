@@ -18,6 +18,7 @@ import { usePlayerStore } from "@/components/audio/player-store";
 import { Waveform } from "@/components/audio/waveform";
 import { buildPostPlaybackTracks, getPlaybackQueueDurationSeconds } from "@/features/posts/post-playback";
 import { togglePostHeart } from "@/features/posts/api";
+import { SongMetadataBadges } from "@/features/songs/song-metadata";
 
 import type { ResolvedPostCard } from "@/features/posts/types";
 
@@ -268,6 +269,7 @@ export function FeedPostCard({
                         {item.single.featuredVersion.version_label}
                       </span>
                     ) : null}
+                    <SongMetadataBadges song={item.single?.song} />
                   </div>
 
                   <div

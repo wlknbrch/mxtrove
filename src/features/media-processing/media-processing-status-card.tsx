@@ -75,6 +75,8 @@ export function MediaProcessingStatusCard({
             <span>{job.progress}%</span>
             {job.duration_seconds ? <span>{Math.round(job.duration_seconds)}s</span> : null}
             {job.detected_codec ? <span>{job.detected_codec}</span> : null}
+            {job.detected_tempo_bpm ? <span>{job.detected_tempo_bpm} BPM</span> : null}
+            {job.detected_musical_key ? <span>{job.detected_musical_key}</span> : null}
           </div>
         </div>
       ) : (

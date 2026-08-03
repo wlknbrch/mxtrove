@@ -11,6 +11,7 @@ export type NotificationType =
   | "follow"
   | "post_heart"
   | "version_heart"
+  | "comment_heart"
   | "comment"
   | "comment_reply"
   | "single_version"
@@ -126,6 +127,12 @@ export interface Song {
   owner_id: string;
   title: string;
   notes: string | null;
+  lyrics: string | null;
+  musical_key: string | null;
+  tempo_bpm: number | null;
+  tempo_confidence: number | null;
+  key_confidence: number | null;
+  audio_analysis_updated_at: string | null;
   default_artwork_asset_id: string | null;
   created_at: string;
   updated_at: string;
@@ -188,6 +195,7 @@ export interface SinglePost {
   post_id: string;
   song_id: string;
   featured_version_id: string;
+  show_lyrics: boolean;
 }
 
 export interface ReleaseTrack {
@@ -199,6 +207,7 @@ export interface ReleaseTrack {
   track_number: number;
   preview_asset_id: string | null;
   production_stage: string | null;
+  show_lyrics: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -302,6 +311,11 @@ export interface MediaProcessingJob {
   channels: number | null;
   bit_rate_bps: number | null;
   waveform_data: WaveformDataV1 | null;
+  song_id: string | null;
+  detected_tempo_bpm: number | null;
+  detected_musical_key: string | null;
+  tempo_confidence: number | null;
+  key_confidence: number | null;
   error_code: string | null;
   error_message: string | null;
   attempt_count: number;

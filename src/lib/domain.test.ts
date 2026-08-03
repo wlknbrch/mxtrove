@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { buildSongInsertPayload } from "@/features/library/library-domain";
 import { getNextVersionNumber, shouldBumpPostActivityForRelease, canUseAssetForPublicPlayback } from "@/lib/song-utils";
-import { usernameSchema } from "@/lib/validators";
+import { normalizeOptionalTempoInput, songSchema, usernameSchema } from "@/lib/validators";
 
 describe("username validation", () => {
   it("accepts lowercase usernames with underscores", () => {
@@ -26,8 +26,35 @@ describe("song creation payload", () => {
       owner_id: "user-1",
       title: "Eternal Light",
       notes: null,
+      lyrics: null,
+      musical_key: null,
+      tempo_bpm: null,
       default_artwork_asset_id: null,
     });
+  });
+});
+
+describe("optional song tempo validation", () => {
+  const baseSong = {
+    title: "Eternal Light",
+    notes: "",
+    lyrics: "New lyrics",
+    musical_key: "",
+    default_artwork_asset_id: null,
+  };
+
+  it.each([null, undefined, "", "   "])("accepts an empty tempo value: %j", (tempo) => {
+    expect(songSchema.parse({ ...baseSong, tempo_bpm: tempo }).tempo_bpm).toBeNull();
+  });
+
+  it("normalizes a valid decimal tempo", () => {
+    expect(normalizeOptionalTempoInput("124.5")).toBe(124.5);
+    expect(songSchema.parse({ ...baseSong, tempo_bpm: "124.5" }).tempo_bpm).toBe(124.5);
+  });
+
+  it("rejects only non-empty invalid tempo values", () => {
+    expect(() => songSchema.parse({ ...baseSong, tempo_bpm: "fast" })).toThrow("Please enter a valid tempo.");
+    expect(() => songSchema.parse({ ...baseSong, tempo_bpm: "12" })).toThrow("Tempo must be at least 20 BPM.");
   });
 });
 

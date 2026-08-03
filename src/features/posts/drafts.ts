@@ -11,11 +11,13 @@ export interface SinglePostDraftPayload extends PostDraftPayloadBase {
   step: number;
   existingSongId: string;
   newSongTitle: string;
+  newSongLyrics?: string;
   versionLabel: string;
   productionStage: string;
   description: string;
   postTitle: string;
   visibility: Visibility;
+  showLyrics?: boolean;
   originalAssetId: string | null;
   previewAssetId: string | null;
   artworkAssetId: string | null;
@@ -30,6 +32,7 @@ export interface ReleasePostDraftPayload extends PostDraftPayloadBase {
   releaseUrl: string;
   visibility: Visibility;
   selectedSongIds: string[];
+  lyricsVisibleSongIds?: string[];
   quickSongTitle: string;
   artworkAssetId: string | null;
   uploadProviderId: CloudProvider;
@@ -67,6 +70,7 @@ export function hasMeaningfulSingleDraft(payload: SinglePostDraftPayload) {
   return Boolean(
     payload.existingSongId
     || payload.newSongTitle.trim()
+    || payload.newSongLyrics?.trim()
     || payload.description.trim()
     || payload.postTitle.trim()
     || payload.originalAssetId

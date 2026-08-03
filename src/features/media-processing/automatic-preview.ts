@@ -1,4 +1,4 @@
-import { acknowledgeMediaProcessingJob, createMediaProcessingJob, downloadMediaProcessingPreview, finalizeMediaProcessingJob, getMediaProcessingJob, uploadMediaProcessingInput } from "@/features/media-processing/api";
+import { acknowledgeMediaProcessingJob, analyzeSongAudio, createMediaProcessingJob, downloadMediaProcessingPreview, finalizeMediaProcessingJob, getMediaProcessingJob, uploadMediaProcessingInput } from "@/features/media-processing/api";
 import { createAssetRecord, updateAssetPublicLinks } from "@/features/drive/api";
 
 import type { CloudStorageProvider } from "@/features/drive/providers/cloud-storage";
@@ -70,6 +70,7 @@ export async function generateAutomaticPreview(params: {
   provider: CloudStorageProvider;
   sourceAsset: Asset;
   sourceFile: File;
+  songId?: string | null;
   previewFolderId: string;
   signal?: AbortSignal;
   onJobChange?: (job: MediaProcessingJob | null) => void;
@@ -77,6 +78,7 @@ export async function generateAutomaticPreview(params: {
 }) {
   const job = await createMediaProcessingJob({
     sourceAssetId: params.sourceAsset.id,
+    songId: params.songId ?? null,
   });
   params.onJobChange?.(job);
   params.onProgress?.(42);
@@ -174,6 +176,7 @@ export async function generateAutomaticPreviewFromSourceAsset(params: {
   ownerId: string;
   provider: CloudStorageProvider;
   sourceAsset: Asset;
+  songId?: string | null;
   previewFolderId: string;
   signal?: AbortSignal;
   onJobChange?: (job: MediaProcessingJob | null) => void;
@@ -192,10 +195,34 @@ export async function generateAutomaticPreviewFromSourceAsset(params: {
     provider: params.provider,
     sourceAsset: params.sourceAsset,
     sourceFile,
+    songId: params.songId ?? null,
     previewFolderId: params.previewFolderId,
     signal: params.signal,
     onJobChange: params.onJobChange,
     onProgress: params.onProgress,
+  });
+}
+
+export async function analyzeSongMetadataFromSourceAsset(params: {
+  provider: CloudStorageProvider;
+  sourceAsset: Asset;
+  songId: string;
+  signal?: AbortSignal;
+  onProgress?: (progress: number) => void;
+}) {
+  params.onProgress?.(2);
+  const sourceBlob = await params.provider.getPrivateFileBlob(params.sourceAsset.remote_file_id);
+  const sourceFile = new File([sourceBlob], params.sourceAsset.filename, {
+    type: params.sourceAsset.mime_type || sourceBlob.type || "application/octet-stream",
+    lastModified: Date.now(),
+  });
+  params.onProgress?.(8);
+  return analyzeSongAudio({
+    songId: params.songId,
+    sourceAssetId: params.sourceAsset.id,
+    file: sourceFile,
+    signal: params.signal,
+    onProgress: (progress) => params.onProgress?.(8 + Math.round(progress * 0.92)),
   });
 }
 
@@ -257,6 +284,7 @@ export async function uploadOriginalWithAutomaticPreview(params: {
   ownerId: string;
   provider: CloudStorageProvider;
   originalFile: File;
+  songId?: string | null;
   originalsFolderId: string;
   previewsFolderId: string;
   signal?: AbortSignal;
@@ -286,6 +314,7 @@ export async function uploadOriginalWithAutomaticPreview(params: {
       provider: params.provider,
       sourceAsset: originalAsset,
       sourceFile: params.originalFile,
+      songId: params.songId ?? null,
       previewFolderId: params.previewsFolderId,
       signal: params.signal,
       onProgress: params.onProgress,

@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { FolderOpen, ImagePlus, Play, Trash2 } from "lucide-react";
+import { FolderOpen, ImagePlus, LoaderCircle, Play, Sparkles, Trash2 } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -34,18 +34,25 @@ import {
 } from "@/features/library/api";
 import { MediaProcessingStatusCard } from "@/features/media-processing/media-processing-status-card";
 import {
+  analyzeSongMetadataFromSourceAsset,
   generateAutomaticPreviewFromSourceAsset,
   generateProtectedPreviewFromSourceAsset,
   uploadOriginalWithAutomaticPreview,
 } from "@/features/media-processing/automatic-preview";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { getArtworkAssetUrls, getPreviewPlaybackUrl, getPreviewPlaybackUrls } from "@/lib/asset-urls";
-import { productionStages } from "@/lib/constants";
+import { musicalKeys, productionStages } from "@/lib/constants";
 import { hasUsablePreviewAsset, needsVersionPlaybackRepair } from "@/lib/playback-health";
 import { queryClient } from "@/lib/query-client";
 import { isDemoModeEnabled } from "@/lib/service-utils";
 import { getAssetWaveform } from "@/lib/waveform";
-import { songSchema, type SongFormValues, versionSchema, type VersionFormValues } from "@/lib/validators";
+import {
+  normalizeOptionalTempoInput,
+  songSchema,
+  type SongFormValues,
+  versionSchema,
+  type VersionFormValues,
+} from "@/lib/validators";
 import { cn } from "@/lib/utils";
 import type { Asset, CloudProvider, MediaProcessingJob } from "@/types/domain";
 
@@ -61,9 +68,11 @@ export function SongDetailPage() {
   const isProjectVersionFlow = Boolean(projectId && projectTrackId);
   const enqueue = usePlayerStore((state) => state.enqueue);
   const artworkInputId = useId();
+  const musicalKeyListId = useId();
   const artworkInputRef = useRef<HTMLInputElement | null>(null);
   const [mediaProcessingJob, setMediaProcessingJob] = useState<MediaProcessingJob | null>(null);
   const [mediaProcessingError, setMediaProcessingError] = useState<string | null>(null);
+  const [analysisProgress, setAnalysisProgress] = useState<number | null>(null);
 
   const songQuery = useQuery({
     queryKey: ["song-detail", songId],
@@ -82,6 +91,9 @@ export function SongDetailPage() {
     defaultValues: {
       title: "",
       notes: "",
+      lyrics: "",
+      musical_key: "",
+      tempo_bpm: null,
       default_artwork_asset_id: null,
     },
   });
@@ -133,6 +145,10 @@ export function SongDetailPage() {
   const selectedSourceAsset = selectedSourceAssetId
     ? assetsById.get(selectedSourceAssetId) ?? null
     : null;
+  const analysisSourceAssetId = versionForm.watch("source_asset_id") || versions[0]?.source_asset_id || "";
+  const analysisSourceAsset = analysisSourceAssetId
+    ? assetsById.get(analysisSourceAssetId) ?? null
+    : null;
   const repairableVersions = useMemo(
     () =>
       versions.filter(
@@ -151,6 +167,9 @@ export function SongDetailPage() {
     songForm.reset({
       title: song.title,
       notes: song.notes ?? "",
+      lyrics: song.lyrics ?? "",
+      musical_key: song.musical_key ?? "",
+      tempo_bpm: song.tempo_bpm,
       default_artwork_asset_id: song.default_artwork_asset_id,
     });
   }, [song, songForm]);
@@ -298,6 +317,45 @@ export function SongDetailPage() {
     },
   });
 
+  const analyzeMetadataMutation = useMutation({
+    mutationFn: async (sourceAsset: Asset) => {
+      const sourceProvider = getCloudStorageProvider(sourceAsset.provider);
+      if (!(await sourceProvider.restoreSession())) {
+        throw new Error(`Reconnect ${sourceAsset.provider.replace("_", " ")} in Storage settings first.`);
+      }
+      setAnalysisProgress(0);
+      return analyzeSongMetadataFromSourceAsset({
+        provider: sourceProvider,
+        sourceAsset,
+        songId,
+        onProgress: setAnalysisProgress,
+      });
+    },
+    onSuccess: async (analysis) => {
+      if (analysis.musicalKey) {
+        songForm.setValue("musical_key", analysis.musicalKey, { shouldDirty: false });
+      }
+      if (analysis.tempoBpm != null) {
+        songForm.setValue("tempo_bpm", analysis.tempoBpm, { shouldDirty: false });
+      }
+      await Promise.all([
+        refreshSongQueries(),
+        queryClient.invalidateQueries({ queryKey: ["post"] }),
+        queryClient.invalidateQueries({ queryKey: ["home-feed"] }),
+        queryClient.invalidateQueries({ queryKey: ["explore-feed"] }),
+        queryClient.invalidateQueries({ queryKey: ["profile-posts"] }),
+      ]);
+      setAnalysisProgress(null);
+      toast.success(
+        `Analysis complete${analysis.tempoBpm != null ? ` · ${analysis.tempoBpm} BPM` : ""}${analysis.musicalKey ? ` · ${analysis.musicalKey}` : ""}.`,
+      );
+    },
+    onError: (error) => {
+      setAnalysisProgress(null);
+      toast.error(error instanceof Error ? error.message : "Could not analyze this song.");
+    },
+  });
+
   async function uploadOriginalWithAutomation(file: File, signal?: AbortSignal, onProgress?: (progress: number) => void) {
     if (!viewer.userId) {
       throw new Error("Please sign in first.");
@@ -329,6 +387,7 @@ export function SongDetailPage() {
       ownerId: viewer.userId,
       provider,
       originalFile: file,
+      songId,
       originalsFolderId,
       previewsFolderId,
       signal,
@@ -383,6 +442,7 @@ export function SongDetailPage() {
       ownerId: viewer.userId,
       provider: assetProvider,
       sourceAsset,
+      songId,
       previewFolderId,
       onJobChange: setMediaProcessingJob,
     });
@@ -661,6 +721,103 @@ export function SongDetailPage() {
                   />
                   {songForm.formState.errors.notes ? (
                     <p className="text-sm text-danger">{songForm.formState.errors.notes.message}</p>
+                  ) : null}
+                </label>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium">Musical key</span>
+                    <Input
+                      list={musicalKeyListId}
+                      placeholder="e.g. A minor"
+                      {...songForm.register("musical_key")}
+                    />
+                    <datalist id={musicalKeyListId}>
+                      {musicalKeys.map((key) => <option key={key} value={key} />)}
+                    </datalist>
+                    {songForm.formState.errors.musical_key ? (
+                      <p className="text-sm text-danger">{songForm.formState.errors.musical_key.message}</p>
+                    ) : null}
+                  </label>
+
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium">Tempo (BPM)</span>
+                    <Input
+                      type="number"
+                      min="20"
+                      max="400"
+                      step="0.1"
+                      placeholder="e.g. 120"
+                      {...songForm.register("tempo_bpm", {
+                        setValueAs: normalizeOptionalTempoInput,
+                      })}
+                    />
+                    {songForm.formState.errors.tempo_bpm ? (
+                      <p className="text-sm text-danger">{songForm.formState.errors.tempo_bpm.message}</p>
+                    ) : null}
+                  </label>
+                </div>
+
+                <div className="grid gap-4 rounded-[22px] border border-accent/20 bg-accent/8 p-4">
+                  <div className="min-w-0">
+                    <p className="font-medium">Automatic audio analysis</p>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                      Detect tempo and musical key from the selected private original. Re-running replaces the previous detected values.
+                    </p>
+                  </div>
+                  <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                    <Select
+                      aria-label="Private source to analyze"
+                      className="min-w-0 w-full"
+                      value={analysisSourceAssetId}
+                      onChange={(event) => versionForm.setValue("source_asset_id", event.currentTarget.value, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })}
+                    >
+                      <option value="">Choose an original</option>
+                      {originalAssets.map((asset) => (
+                        <option key={asset.id} value={asset.id}>
+                          {asset.display_name ?? asset.filename}
+                        </option>
+                      ))}
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="w-full shrink-0 whitespace-nowrap sm:w-auto"
+                      disabled={!analysisSourceAsset || analyzeMetadataMutation.isPending}
+                      onClick={() => {
+                        if (analysisSourceAsset) {
+                          analyzeMetadataMutation.mutate(analysisSourceAsset);
+                        }
+                      }}
+                    >
+                      {analyzeMetadataMutation.isPending ? (
+                        <LoaderCircle className="size-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="size-4" />
+                      )}
+                      {analyzeMetadataMutation.isPending
+                        ? analysisProgress != null && analysisProgress < 100
+                          ? `Uploading ${analysisProgress}%`
+                          : "Analyzing..."
+                        : song?.tempo_bpm != null || song?.musical_key
+                          ? "Re-analyze"
+                          : "Analyze tempo & key"}
+                    </Button>
+                  </div>
+                </div>
+
+                <label className="grid gap-2">
+                  <span className="text-sm font-medium">Lyrics</span>
+                  <Textarea
+                    className="min-h-64 whitespace-pre-wrap"
+                    placeholder="Add lyrics, fragments, or topline notes. This field is optional."
+                    {...songForm.register("lyrics")}
+                  />
+                  {songForm.formState.errors.lyrics ? (
+                    <p className="text-sm text-danger">{songForm.formState.errors.lyrics.message}</p>
                   ) : null}
                 </label>
 

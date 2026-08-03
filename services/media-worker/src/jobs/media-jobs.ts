@@ -3,7 +3,8 @@ import { createHash } from "node:crypto";
 import type { ChildProcess } from "node:child_process";
 
 import { config } from "../config.js";
-import { transcodeToMp3, decodeToMonoPcm } from "../media/ffmpeg.js";
+import { analyzeAudioPcm, type AudioAnalysisResult } from "../audio-analysis/analyze-audio.js";
+import { transcodeToMp3, decodeToAnalysisPcm, decodeToMonoPcm } from "../media/ffmpeg.js";
 import { probeAudioFile } from "../media/ffprobe.js";
 import { ensureJobDir, getJobPaths, removeJobDir } from "../media/paths.js";
 import { protectedMediaStorage } from "../protected-media/index.js";
@@ -15,6 +16,7 @@ export interface MediaJobRecord {
   owner_id: string;
   source_asset_id: string;
   song_version_id: string | null;
+  song_id: string | null;
   status: string;
   stage: string;
   progress: number;
@@ -30,6 +32,10 @@ export interface MediaJobRecord {
   channels: number | null;
   bit_rate_bps: number | null;
   waveform_data: unknown;
+  detected_tempo_bpm: number | null;
+  detected_musical_key: string | null;
+  tempo_confidence: number | null;
+  key_confidence: number | null;
   error_code: string | null;
   error_message: string | null;
   attempt_count: number;
@@ -89,6 +95,7 @@ export async function createMediaProcessingJobForOwner(input: {
   ownerId: string;
   sourceAssetId: string;
   songVersionId?: string | null;
+  songId?: string | null;
   outputMode?: "public_cloud" | "protected";
   protectedPurpose?: "post_preview" | "collaboration_preview" | "message_audio" | null;
   projectId?: string | null;
@@ -108,10 +115,11 @@ export async function createMediaProcessingJobForOwner(input: {
     throw new Error("Only private original audio can be processed.");
   }
 
+  let resolvedSongId = input.songId ?? null;
   if (input.songVersionId) {
     const { data: version, error: versionError } = await supabaseAdmin
       .from("song_versions")
-      .select("id, song:songs!song_versions_song_id_fkey(owner_id)")
+      .select("id, song_id, song:songs!song_versions_song_id_fkey(owner_id)")
       .eq("id", input.songVersionId)
       .maybeSingle();
 
@@ -123,6 +131,16 @@ export async function createMediaProcessingJobForOwner(input: {
     if (!version || versionOwnerId !== input.ownerId) {
       throw new Error("Linked song version not found.");
     }
+    resolvedSongId = (version as { song_id: string }).song_id;
+  } else if (resolvedSongId) {
+    const { data: song, error: songError } = await supabaseAdmin
+      .from("songs")
+      .select("id")
+      .eq("id", resolvedSongId)
+      .eq("owner_id", input.ownerId)
+      .maybeSingle();
+    if (songError) throw songError;
+    if (!song) throw new Error("Linked song not found.");
   }
 
   const outputMode = input.outputMode ?? "public_cloud";
@@ -193,6 +211,21 @@ export async function createMediaProcessingJobForOwner(input: {
   }
 
   if (existing) {
+    if (!existing.song_id && resolvedSongId) {
+      const { data: linkedJob, error: linkError } = await supabaseAdmin
+        .from("media_processing_jobs")
+        .update({
+          song_id: resolvedSongId,
+          song_version_id: existing.song_version_id ?? input.songVersionId ?? null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id)
+        .select("*")
+        .single();
+      if (linkError) throw linkError;
+      return linkedJob as MediaJobRecord;
+    }
+
     return existing as MediaJobRecord;
   }
 
@@ -202,6 +235,7 @@ export async function createMediaProcessingJobForOwner(input: {
       owner_id: input.ownerId,
       source_asset_id: input.sourceAssetId,
       song_version_id: input.songVersionId ?? null,
+      song_id: resolvedSongId,
       status: "created",
       stage: "Awaiting upload",
       progress: 0,
@@ -287,6 +321,44 @@ async function ensureNotCancelled(jobId: string) {
   }
 }
 
+async function persistDetectedSongMetadata(job: MediaJobRecord, analysis: AudioAnalysisResult) {
+  let songId = job.song_id;
+  if (!songId && job.song_version_id) {
+    const { data: version, error } = await supabaseAdmin
+      .from("song_versions")
+      .select("song_id")
+      .eq("id", job.song_version_id)
+      .maybeSingle();
+    if (error) throw error;
+    songId = version?.song_id ?? null;
+  }
+  if (!songId || (!analysis.tempoBpm && !analysis.musicalKey)) return;
+
+  const { data: song, error: songError } = await supabaseAdmin
+    .from("songs")
+    .select("id, tempo_bpm, musical_key")
+    .eq("id", songId)
+    .eq("owner_id", job.owner_id)
+    .maybeSingle();
+  if (songError) throw songError;
+  if (!song) return;
+
+  const updates: Record<string, unknown> = {
+    audio_analysis_updated_at: new Date().toISOString(),
+  };
+  if (song.tempo_bpm == null && analysis.tempoBpm != null) {
+    updates.tempo_bpm = analysis.tempoBpm;
+    updates.tempo_confidence = analysis.tempoConfidence;
+  }
+  if (!song.musical_key && analysis.musicalKey) {
+    updates.musical_key = analysis.musicalKey;
+    updates.key_confidence = analysis.keyConfidence;
+  }
+
+  const { error: updateError } = await supabaseAdmin.from("songs").update(updates).eq("id", songId);
+  if (updateError) throw updateError;
+}
+
 export async function processMediaJob(jobId: string) {
   const job = await getJobForOwner(jobId, (await getJobOwnerId(jobId)) ?? "");
   if (!job) {
@@ -343,8 +415,35 @@ export async function processMediaJob(jobId: string) {
 
     await updateJob(jobId, {
       status: "generating_waveform",
+      stage: "Detecting tempo and musical key",
+      progress: 68,
+      updated_at: new Date().toISOString(),
+    });
+    let analysis: AudioAnalysisResult = {
+      tempoBpm: null,
+      tempoConfidence: null,
+      musicalKey: null,
+      keyConfidence: null,
+    };
+    try {
+      const analysisPcm = await decodeToAnalysisPcm(paths.previewPath, (child) => {
+        activeProcesses.set(jobId, child);
+      });
+      activeProcesses.delete(jobId);
+      analysis = analyzeAudioPcm(analysisPcm.stdout);
+      await persistDetectedSongMetadata(job, analysis);
+    } catch (analysisError) {
+      activeProcesses.delete(jobId);
+      console.warn(`Audio metadata analysis failed for job ${jobId}; preview generation will continue.`, analysisError);
+    }
+
+    await updateJob(jobId, {
       stage: "Generating waveform",
-      progress: 72,
+      progress: 78,
+      detected_tempo_bpm: analysis.tempoBpm,
+      detected_musical_key: analysis.musicalKey,
+      tempo_confidence: analysis.tempoConfidence,
+      key_confidence: analysis.keyConfidence,
       updated_at: new Date().toISOString(),
     });
     const pcm = await decodeToMonoPcm(paths.previewPath, (child) => {

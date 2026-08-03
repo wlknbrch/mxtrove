@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+  BookOpenText,
   Code2,
   Copy,
   ExternalLink,
@@ -15,7 +16,7 @@ import {
   SkipForward,
   Trash2,
 } from "lucide-react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/layout/page-header";
@@ -25,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FullscreenArtwork } from "@/components/ui/fullscreen-artwork";
 import { PlaybackDuration } from "@/components/ui/playback-duration";
+import { Tabs } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { useLocalDraft } from "@/hooks/use-local-draft";
@@ -42,12 +44,18 @@ import {
   listPostShareLinks,
   revokePostShareLink,
   toggleVersionHeart,
+  toggleCommentHeart,
   togglePostHeart,
   updateCommentOnPost,
+  updateSingleLyricsVisibility,
 } from "@/features/posts/api";
-import { buildPostPlaybackTracks, getPlaybackQueueDurationSeconds } from "@/features/posts/post-playback";
+import { buildPostPlaybackTracks, getPlaybackQueueDurationSeconds, getReleaseTrackVersionId } from "@/features/posts/post-playback";
+import { sortCommentThreads, type CommentSortMode } from "@/features/posts/comment-sorting";
 import { ReleaseQrCode } from "@/features/posts/release-qr-code";
-import type { ResolvedComment } from "@/features/posts/types";
+import { buildPublicReleaseShareUrl, buildPublicTrackShareUrl } from "@/features/posts/share-urls";
+import { LyricsDialogTrigger } from "@/features/songs/lyrics-dialog";
+import { SongMetadataBadges } from "@/features/songs/song-metadata";
+import type { ResolvedComment, ResolvedReleaseTrack } from "@/features/posts/types";
 
 function buildCommentThreads(comments: ResolvedComment[]) {
   const repliesByParent = new Map<string, ResolvedComment[]>();
@@ -69,12 +77,6 @@ function buildCommentThreads(comments: ResolvedComment[]) {
       replies: repliesByParent.get(comment.id) ?? [],
     }))
     .filter((entry) => !entry.comment.deleted_at || entry.replies.some((reply) => !reply.deleted_at));
-}
-
-function buildPublicReleaseShareUrl(origin: string, postId: string, updatedAt: string) {
-  const shareUrl = new URL(`/social/post/${encodeURIComponent(postId)}`, origin);
-  shareUrl.searchParams.set("v", updatedAt);
-  return shareUrl.toString();
 }
 
 function VersionHeartButton({
@@ -149,6 +151,7 @@ function VersionHeartButton({
 
 export function PostDetailPage() {
   const { postId = "" } = useParams();
+  const [searchParams] = useSearchParams();
   const viewer = useAppViewer();
   const navigate = useNavigate();
   const enqueue = usePlayerStore((state) => state.enqueue);
@@ -164,6 +167,7 @@ export function PostDetailPage() {
   const [replyTargetId, setReplyTargetId] = useState<string | null>(null);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingBody, setEditingBody] = useState("");
+  const [commentSort, setCommentSort] = useState<CommentSortMode>("relevant");
   const [freshShareUrl, setFreshShareUrl] = useState<string | null>(null);
 
   const postQuery = useQuery({
@@ -292,6 +296,30 @@ export function PostDetailPage() {
     },
   });
 
+  const commentHeartMutation = useMutation({
+    mutationFn: async (comment: ResolvedComment) => {
+      if (!viewer.userId) {
+        throw new Error("Please sign in first.");
+      }
+      if (comment.author_id === viewer.userId) {
+        throw new Error("You cannot heart your own comment.");
+      }
+
+      return toggleCommentHeart({
+        commentId: comment.id,
+        profileId: viewer.userId,
+        active: !comment.viewerHasHearted,
+      });
+    },
+    onSuccess: async (_result, comment) => {
+      await queryClient.invalidateQueries({ queryKey: ["post", postId] });
+      toast.success(comment.viewerHasHearted ? "Comment heart removed." : "Comment hearted.");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Could not update this comment heart.");
+    },
+  });
+
   const heartMutation = useMutation({
     mutationFn: async () => {
       if (!viewer.userId) {
@@ -346,21 +374,73 @@ export function PostDetailPage() {
       toast.error(error instanceof Error ? error.message : "Could not delete this post.");
     },
   });
+  const singleLyricsVisibilityMutation = useMutation({
+    mutationFn: async () => {
+      if (!postQuery.data?.owner?.id || postQuery.data.owner.id !== viewer.userId) {
+        throw new Error("Only the release owner can change lyrics visibility.");
+      }
+      await updateSingleLyricsVisibility({ postId, showLyrics: true });
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["post", postId] }),
+        queryClient.invalidateQueries({ queryKey: ["player-post", postId] }),
+        queryClient.invalidateQueries({ queryKey: ["home-feed"] }),
+        queryClient.invalidateQueries({ queryKey: ["explore-feed"] }),
+      ]);
+      toast.success("Lyrics are now visible on this release.");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Could not enable lyrics.");
+    },
+  });
 
   const item = postQuery.data;
-  const playbackTracks = item ? buildPostPlaybackTracks(item) : [];
-  const commentThreads = useMemo(() => (item ? buildCommentThreads(item.comments) : []), [item]);
+  const requestedTrackId = searchParams.get("track");
+  const allPlaybackTracks = item ? buildPostPlaybackTracks(item) : [];
+  const sharedReleaseTrack = item && !item.single && requestedTrackId
+    ? item.releaseTracks.find((entry) => entry.track.id === requestedTrackId) ?? null
+    : null;
+  const isTrackShareView = Boolean(sharedReleaseTrack);
+  const playbackTracks = isTrackShareView
+    ? allPlaybackTracks.filter((track) => track.releaseTrackId === sharedReleaseTrack?.track.id)
+    : allPlaybackTracks;
+  const commentThreads = useMemo(
+    () => sortCommentThreads(item ? buildCommentThreads(item.comments) : [], commentSort),
+    [commentSort, item],
+  );
   const canOpenSongWorkspace =
     Boolean(item?.single?.song?.id) && item?.owner?.id === viewer.userId;
   const isOwnPost = Boolean(item?.owner?.id && viewer.userId === item.owner.id);
   const isMultiTrackRelease = Boolean(item && !item.single);
   const releaseTrackCount = item?.releaseTracks.length ?? 0;
-  const playableTrackCount = playbackTracks.length;
-  const releaseDurationSeconds = getPlaybackQueueDurationSeconds(playbackTracks);
+  const playableTrackCount = allPlaybackTracks.length;
+  const releaseDurationSeconds = getPlaybackQueueDurationSeconds(allPlaybackTracks);
   const editPath = item ? `/post/${item.post.id}/edit` : null;
   const publicReleaseShareUrl = item
     ? buildPublicReleaseShareUrl(window.location.origin, item.post.id, item.post.updated_at)
     : "";
+
+  async function shareReleaseTrack(track: ResolvedReleaseTrack) {
+    if (!item || item.post.visibility !== "public") {
+      toast.error("Individual song links are available for public releases.");
+      return;
+    }
+
+    const shareResult = await shareWithSystemDialog({
+      title: `${track.track.track_title} · ${item.owner?.display_name ?? "MxTrove"}`,
+      text: `${track.track.track_title} by ${item.owner?.display_name ?? "this artist"}, from ${item.post.title} on MxTrove.`,
+      url: buildPublicTrackShareUrl(
+        window.location.origin,
+        item.post.id,
+        track.track.id,
+        item.post.updated_at,
+      ),
+    });
+    if (shareResult === "copied") {
+      toast.success("Native sharing is unavailable here, so the song link was copied.");
+    }
+  }
 
   if (postQuery.isPending) {
     return (
@@ -508,9 +588,13 @@ export function PostDetailPage() {
                   disabled={playbackTracks.length === 0}
                 >
                   <Play className="size-4" />
-                  {item.post.post_type === "single" ? "Play" : "Play release"}
+                  {item.post.post_type === "single"
+                    ? "Play"
+                    : isTrackShareView
+                      ? "Play shared song"
+                      : "Play release"}
                 </Button>
-                {playbackTracks.length > 1 ? (
+                {!isTrackShareView && playbackTracks.length > 1 ? (
                   <Button
                     variant="ghost"
                     onClick={() => enqueue(playbackTracks, playbackTracks[0].id)}
@@ -537,6 +621,43 @@ export function PostDetailPage() {
                 <div className="rounded-[22px] border border-border bg-white/3 p-4">
                   <p className="font-medium">Single timeline</p>
                   <div className="mt-3 space-y-3">
+                    <SongMetadataBadges song={item.single.song} />
+                    {item.single.showLyrics && item.single.song?.lyrics ? (
+                      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-accent/14 bg-accent/[0.06] px-4 py-3">
+                        <div>
+                          <p className="text-sm font-medium">Lyrics</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Read the complete lyrics while the song keeps playing.
+                          </p>
+                        </div>
+                        <LyricsDialogTrigger
+                          lyrics={item.single.song.lyrics}
+                          title={item.single.song.title || item.post.title}
+                          artistName={item.owner?.display_name}
+                          variant="secondary"
+                          label="Open lyrics"
+                        />
+                      </div>
+                    ) : isOwnPost && item.single.song?.lyrics ? (
+                      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-warning/20 bg-warning/[0.06] px-4 py-3">
+                        <div>
+                          <p className="text-sm font-medium">Lyrics are hidden</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            This older release has lyrics, but listeners cannot see them yet.
+                          </p>
+                        </div>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="rounded-full"
+                          onClick={() => void singleLyricsVisibilityMutation.mutateAsync()}
+                          disabled={singleLyricsVisibilityMutation.isPending}
+                        >
+                          <BookOpenText className="size-4" aria-hidden="true" />
+                          Enable lyrics
+                        </Button>
+                      </div>
+                    ) : null}
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Song hearts</span>
                       <VersionHeartButton
@@ -575,7 +696,9 @@ export function PostDetailPage() {
                 <div>
                   <p className="font-medium">Tracklist</p>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Ordered front to back with direct per-track playback.
+                    {isTrackShareView
+                      ? `Shared song: ${sharedReleaseTrack?.track.track_title}. The full release remains visible for context.`
+                      : "Ordered front to back with direct per-track playback and sharing."}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -590,11 +713,18 @@ export function PostDetailPage() {
               </div>
               <div className="mt-5 space-y-3">
                 {item.releaseTracks.map((track) => {
-                  const playbackTrack = playbackTracks.find((entry) => entry.id === track.track.id) ?? null;
+                  const playbackTrack = allPlaybackTracks.find((entry) => entry.id === track.track.id) ?? null;
+                  const isSharedTrack = sharedReleaseTrack?.track.id === track.track.id;
+                  const canPlayFromThisView = Boolean(playbackTrack && (!isTrackShareView || isSharedTrack));
                   return (
                     <div
                       key={track.track.id}
-                      className="grid gap-4 rounded-[24px] border border-white/[0.08] bg-white/[0.035] px-4 py-4 transition-colors hover:border-accent/22 hover:bg-white/[0.05] md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:px-5"
+                      aria-current={isSharedTrack ? "true" : undefined}
+                      className={cn(
+                        "grid gap-4 rounded-[24px] border border-white/[0.08] bg-white/[0.035] px-4 py-4 transition-colors hover:border-accent/22 hover:bg-white/[0.05] md:px-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center",
+                        isSharedTrack && "border-accent/40 bg-accent/10 shadow-[0_18px_54px_rgba(var(--accent-rgb),0.14)]",
+                        isTrackShareView && !isSharedTrack && "opacity-65",
+                      )}
                     >
                       <div className="flex min-w-0 items-start gap-4">
                         <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-accent/22 bg-accent/12 font-display text-lg tracking-[-0.04em] text-accent-secondary">
@@ -604,6 +734,10 @@ export function PostDetailPage() {
                           <div className="flex min-w-0 flex-wrap items-center gap-2">
                             <p className="break-words font-medium">{track.track.track_title}</p>
                             <Badge variant="neutral">{track.versionLabel ?? "Unmapped"}</Badge>
+                            <Badge variant={playbackTrack ? "success" : "warning"}>
+                              {playbackTrack ? "Ready" : "Pending"}
+                            </Badge>
+                            {isSharedTrack ? <Badge variant="accent">Shared song</Badge> : null}
                           </div>
                           <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                             <span>{track.version?.production_stage ?? track.track.production_stage ?? "Playback"}</span>
@@ -622,25 +756,43 @@ export function PostDetailPage() {
                               </span>
                             )}
                           </div>
+                          <SongMetadataBadges song={track.song} className="mt-3" />
+                          {track.track.show_lyrics && track.song?.lyrics ? (
+                            <div className="mt-3">
+                              <LyricsDialogTrigger
+                                lyrics={track.song.lyrics}
+                                title={track.track.track_title}
+                                artistName={item.owner?.display_name}
+                              />
+                            </div>
+                          ) : null}
                         </div>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 md:justify-end">
-                        <Badge variant={playbackTrack ? "success" : "warning"}>
-                          {playbackTrack ? "Ready" : "Pending"}
-                        </Badge>
+                      <div className="flex flex-wrap items-center gap-2 lg:justify-end">
                         <VersionHeartButton
                           postId={item.post.id}
                           ownerId={item.owner?.id}
-                          versionId={track.version?.id ?? track.track.song_version_id}
+                          versionId={getReleaseTrackVersionId(track)}
                           count={track.versionHeartCount}
                           active={track.viewerHasHeartedVersion}
                         />
+                        {item.post.visibility === "public" ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => void shareReleaseTrack(track)}
+                            aria-label={`Share ${track.track.track_title}`}
+                          >
+                            <Share2 className="size-4" />
+                            Share
+                          </Button>
+                        ) : null}
                         <Button
                           variant="ghost"
                           size="sm"
-                          disabled={!playbackTrack}
+                          disabled={!canPlayFromThisView}
                           onClick={() => {
-                            if (playbackTrack) {
+                            if (canPlayFromThisView && playbackTrack) {
                               enqueue([playbackTrack], playbackTrack.id);
                             }
                           }}
@@ -659,11 +811,22 @@ export function PostDetailPage() {
 
         <Card>
           <CardHeader>
-            <div>
+            <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
               <CardTitle>Comments</CardTitle>
               <CardDescription className="mt-2">
                 Comments belong to the post, not to each individual single version. Replies stay one level deep.
               </CardDescription>
+              </div>
+              <Tabs
+                value={commentSort}
+                onValueChange={(value) => setCommentSort(value as CommentSortMode)}
+                items={[
+                  { value: "relevant", label: "Relevant" },
+                  { value: "chronological", label: "Chronological" },
+                ]}
+                className="shrink-0"
+              />
             </div>
           </CardHeader>
           <div className="space-y-4">
@@ -689,6 +852,16 @@ export function PostDetailPage() {
                     </div>
                     {!isDeleted ? (
                       <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant={comment.viewerHasHearted ? "secondary" : "ghost"}
+                          size="sm"
+                          onClick={() => void commentHeartMutation.mutateAsync(comment)}
+                          disabled={commentHeartMutation.isPending || isOwnComment}
+                          aria-label={isOwnComment ? "You cannot heart your own comment" : comment.viewerHasHearted ? "Remove comment heart" : "Heart comment"}
+                        >
+                          <Heart className={cn("size-4", comment.viewerHasHearted && "fill-current text-accent-secondary")} />
+                          {comment.heartCount}
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -826,30 +999,42 @@ export function PostDetailPage() {
                                     {formatRelativeTime(reply.created_at)}
                                   </p>
                                 </div>
-                                {ownReply ? (
-                                  <div className="flex gap-2">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => {
-                                        setEditingCommentId(editingCommentId === reply.id ? null : reply.id);
-                                        setEditingBody(reply.body);
-                                      }}
-                                    >
-                                      <PencilLine className="size-4" />
-                                      Edit
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => void deleteCommentMutation.mutateAsync(reply.id)}
-                                      disabled={deleteCommentMutation.isPending}
-                                    >
-                                      <Trash2 className="size-4" />
-                                      Delete
-                                    </Button>
-                                  </div>
-                                ) : null}
+                                <div className="flex flex-wrap gap-2">
+                                  <Button
+                                    variant={reply.viewerHasHearted ? "secondary" : "ghost"}
+                                    size="sm"
+                                    onClick={() => void commentHeartMutation.mutateAsync(reply)}
+                                    disabled={commentHeartMutation.isPending || ownReply}
+                                    aria-label={ownReply ? "You cannot heart your own reply" : reply.viewerHasHearted ? "Remove reply heart" : "Heart reply"}
+                                  >
+                                    <Heart className={cn("size-4", reply.viewerHasHearted && "fill-current text-accent-secondary")} />
+                                    {reply.heartCount}
+                                  </Button>
+                                  {ownReply ? (
+                                    <>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                          setEditingCommentId(editingCommentId === reply.id ? null : reply.id);
+                                          setEditingBody(reply.body);
+                                        }}
+                                      >
+                                        <PencilLine className="size-4" />
+                                        Edit
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => void deleteCommentMutation.mutateAsync(reply.id)}
+                                        disabled={deleteCommentMutation.isPending}
+                                      >
+                                        <Trash2 className="size-4" />
+                                        Delete
+                                      </Button>
+                                    </>
+                                  ) : null}
+                                </div>
                               </div>
 
                               {editingCommentId === reply.id ? (

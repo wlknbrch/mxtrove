@@ -8,10 +8,17 @@ import { getAssetWaveform } from "@/lib/waveform";
 import { normalizeWaveformData } from "@/lib/waveform";
 
 import type { PlaybackTrack } from "@/components/audio/player-store";
-import type { ResolvedPostCard } from "@/features/posts/types";
+import type { ResolvedPostCard, ResolvedReleaseTrack } from "@/features/posts/types";
+
+export function getReleaseTrackVersionId(track: ResolvedReleaseTrack | null | undefined) {
+  return track?.version?.id ?? track?.track.song_version_id ?? null;
+}
 
 export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[] {
   const preferPublicPreview = item.post.visibility === "public";
+  const singleLyrics = item.single?.showLyrics
+    ? item.single.song?.lyrics?.trim() || null
+    : null;
 
   if (
     preferPublicPreview
@@ -42,6 +49,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
           waveform:
             getAssetWaveform(item.single.previewAsset)
             ?? normalizeWaveformData(item.single.protectedPreview?.asset.waveform_data),
+          lyrics: singleLyrics,
           versionLabel: item.single.featuredVersion?.version_label ?? null,
           queueGroupLabel: item.post.title,
         },
@@ -64,6 +72,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
         protectedAssetId: asset.id,
         durationSeconds: asset.duration_seconds,
         waveform: normalizeWaveformData(asset.waveform_data),
+        lyrics: singleLyrics,
         versionLabel: item.single.featuredVersion?.version_label ?? null,
         queueGroupLabel: item.post.title,
       },
@@ -85,6 +94,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
           srcCandidates: getPreviewPlaybackUrls(item.single.previewAsset),
           durationSeconds: item.single.previewAsset.duration_seconds ?? null,
           waveform: getAssetWaveform(item.single.previewAsset),
+          lyrics: singleLyrics,
           versionLabel: item.single.featuredVersion?.version_label ?? null,
           queueGroupLabel: item.post.title,
         },
@@ -93,6 +103,8 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
   }
 
   return item.releaseTracks.reduce<PlaybackTrack[]>((tracks, track) => {
+    const lyrics = track.track.show_lyrics ? track.song?.lyrics?.trim() || null : null;
+
     if (
       preferPublicPreview
       && track.previewAsset
@@ -104,6 +116,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
         tracks.push({
           id: track.track.id,
           postId: item.post.id,
+          releaseTrackId: track.track.id,
           versionId: track.version?.id ?? track.track.song_version_id,
           title: track.track.track_title,
           artistName: item.owner?.display_name ?? "Unknown artist",
@@ -121,6 +134,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
           waveform:
             getAssetWaveform(track.previewAsset)
             ?? normalizeWaveformData(track.protectedPreview?.asset.waveform_data),
+          lyrics,
           versionLabel: track.versionLabel ?? track.track.production_stage,
           queueGroupLabel: item.post.title,
         });
@@ -133,6 +147,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
       tracks.push({
         id: track.track.id,
         postId: item.post.id,
+        releaseTrackId: track.track.id,
         versionId: track.version?.id ?? track.track.song_version_id,
         title: track.track.track_title,
         artistName: item.owner?.display_name ?? "Unknown artist",
@@ -142,6 +157,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
         protectedAssetId: asset.id,
         durationSeconds: asset.duration_seconds,
         waveform: normalizeWaveformData(asset.waveform_data),
+        lyrics,
         versionLabel: track.versionLabel ?? track.track.production_stage,
         queueGroupLabel: item.post.title,
       });
@@ -160,6 +176,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
     tracks.push({
       id: track.track.id,
       postId: item.post.id,
+      releaseTrackId: track.track.id,
       versionId: track.version?.id ?? track.track.song_version_id,
       title: track.track.track_title,
       artistName: item.owner?.display_name ?? "Unknown artist",
@@ -168,6 +185,7 @@ export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[]
       srcCandidates: getPreviewPlaybackUrls(track.previewAsset),
       durationSeconds: track.previewAsset?.duration_seconds ?? null,
       waveform: getAssetWaveform(track.previewAsset),
+      lyrics,
       versionLabel: track.versionLabel ?? track.track.production_stage,
       queueGroupLabel: item.post.title,
     });

@@ -147,6 +147,7 @@ export function CreateReleasePage({
   const [releaseUrl, setReleaseUrl] = useState("");
   const [visibility, setVisibility] = useState<Visibility>("public");
   const [selectedSongIds, setSelectedSongIds] = useState<string[]>([]);
+  const [lyricsVisibleSongIds, setLyricsVisibleSongIds] = useState<string[]>([]);
   const [quickSongTitle, setQuickSongTitle] = useState("");
   const [artworkAssetId, setArtworkAssetId] = useState<string | null>(null);
   const [uploadProviderId, setUploadProviderId] = useState<CloudProvider | null>(null);
@@ -199,6 +200,7 @@ export function CreateReleasePage({
     setReleaseUrl(draft.payload.releaseUrl);
     setVisibility(draft.payload.visibility);
     setSelectedSongIds(draft.payload.selectedSongIds);
+    setLyricsVisibleSongIds(draft.payload.lyricsVisibleSongIds ?? []);
     setQuickSongTitle(draft.payload.quickSongTitle);
     setArtworkAssetId(draft.payload.artworkAssetId);
     setUploadProviderId(draft.payload.uploadProviderId);
@@ -239,6 +241,7 @@ export function CreateReleasePage({
     releaseUrl,
     visibility,
     selectedSongIds,
+    lyricsVisibleSongIds,
     quickSongTitle,
     artworkAssetId,
     uploadProviderId: providerId,
@@ -249,6 +252,7 @@ export function CreateReleasePage({
     providerId,
     quickSongTitle,
     releaseUrl,
+    lyricsVisibleSongIds,
     selectedSongIds,
     title,
     visibility,
@@ -384,6 +388,7 @@ export function CreateReleasePage({
           track_title: song.title,
           track_number: index + 1,
           production_stage: latestVersion?.production_stage ?? null,
+          show_lyrics: Boolean(song.lyrics?.trim() && lyricsVisibleSongIds.includes(song.id)),
         })),
       });
 
@@ -647,6 +652,9 @@ export function CreateReleasePage({
                       setSelectedSongIds((current) =>
                         active ? current.filter((id) => id !== song.id) : [...current, song.id],
                       );
+                      if (active) {
+                        setLyricsVisibleSongIds((current) => current.filter((id) => id !== song.id));
+                      }
                     }}
                     className="gap-3"
                   >
@@ -677,7 +685,32 @@ export function CreateReleasePage({
                             statusLabel={status.label}
                           />
                           <div className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-white/[0.05] bg-white/[0.02] px-4 py-3 text-sm text-muted-foreground">
-                            <span>{status.description}</span>
+                            <div className="min-w-0 space-y-3">
+                              <span className="block">{status.description}</span>
+                              {song!.lyrics?.trim() ? (
+                                <label className="flex cursor-pointer items-start gap-3 text-foreground">
+                                  <input
+                                    className="mt-0.5 size-4 accent-[rgb(var(--accent-rgb))]"
+                                    type="checkbox"
+                                    checked={lyricsVisibleSongIds.includes(song!.id)}
+                                    onChange={(event) => {
+                                      const shouldShowLyrics = event.currentTarget.checked;
+                                      setLyricsVisibleSongIds((current) =>
+                                        shouldShowLyrics
+                                          ? [...new Set([...current, song!.id])]
+                                          : current.filter((id) => id !== song!.id),
+                                      );
+                                    }}
+                                  />
+                                  <span>
+                                    <span className="block text-sm font-medium">Show lyrics on the release</span>
+                                    <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                                      Adds an expandable lyrics view to this track.
+                                    </span>
+                                  </span>
+                                </label>
+                              ) : null}
+                            </div>
                             <Link to={`/library/songs/${song!.id}`}>
                               <Button variant="ghost" size="sm">
                                 <FolderOpen className="size-4" />

@@ -3,6 +3,7 @@ import { create } from "zustand";
 export interface PlaybackTrack {
   id: string;
   postId?: string | null;
+  releaseTrackId?: string | null;
   versionId?: string | null;
   title: string;
   artistName: string;
@@ -12,6 +13,7 @@ export interface PlaybackTrack {
   protectedAssetId?: string | null;
   durationSeconds?: number | null;
   waveform?: import("@/types/domain").WaveformDataV1 | null;
+  lyrics?: string | null;
   versionLabel?: string | null;
   queueGroupLabel?: string | null;
 }

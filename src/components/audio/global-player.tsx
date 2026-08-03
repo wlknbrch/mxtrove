@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+  BookOpenText,
   ChevronDown,
   ChevronUp,
   Heart,
@@ -9,6 +10,7 @@ import {
   Pause,
   Play,
   Repeat2,
+  Share2,
   SkipBack,
   SkipForward,
   Volume2,
@@ -27,12 +29,16 @@ import {
   useResolvedMediaUrl,
 } from "@/hooks/use-resolved-media-url";
 import { queryClient } from "@/lib/query-client";
+import { shareWithSystemDialog } from "@/lib/native-share";
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/utils";
 import { usePlayerStore } from "@/components/audio/player-store";
 import { useAppearance } from "@/features/appearance/appearance-provider";
 import { createProtectedMediaReadUrl } from "@/features/media-processing/api";
 import { getResolvedPostById, togglePostHeart, toggleVersionHeart } from "@/features/posts/api";
+import { getReleaseTrackVersionId } from "@/features/posts/post-playback";
+import { buildPublicReleaseShareUrl, buildPublicTrackShareUrl } from "@/features/posts/share-urls";
+import { LyricsDialog } from "@/features/songs/lyrics-dialog";
 
 const STALL_RECOVERY_DELAY_MS = 7_000;
 const MAX_SOURCE_RELOADS = 1;
@@ -73,6 +79,7 @@ export function GlobalPlayer() {
   const sourceReloadCountRef = useRef(0);
   const protectedRefreshTrackIdRef = useRef<string | null>(null);
   const recoveryInFlightRef = useRef(false);
+  const lyricsButtonRef = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
   const viewer = useAppViewer();
   const { settings: appearance, updateSettings: updateAppearance } = useAppearance();
@@ -82,6 +89,7 @@ export function GlobalPlayer() {
     appearance.remember_volume ? appearance.player_volume : 0.8,
   );
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isLyricsOpen, setIsLyricsOpen] = useState(false);
   const [sourceSelection, setSourceSelection] = useState<{
     trackId: string | null;
     candidateIndex: number;
@@ -120,6 +128,12 @@ export function GlobalPlayer() {
     () => queue.findIndex((track) => track.id === activeTrackId),
     [activeTrackId, queue],
   );
+
+  useEffect(() => {
+    if (!activeTrack?.lyrics?.trim()) {
+      setIsLyricsOpen(false);
+    }
+  }, [activeTrack?.id, activeTrack?.lyrics]);
   const trackSources = useMemo(() => getTrackSources(activeTrack), [activeTrack]);
   const selectedCandidateIndex =
     sourceSelection.trackId === activeTrackId
@@ -151,13 +165,15 @@ export function GlobalPlayer() {
   });
   const activeReleaseTrack = playerPostQuery.data?.releaseTracks.find(
     (entry) =>
-      entry.track.song_version_id === activeTrack?.versionId
+      entry.track.id === activeTrack?.releaseTrackId
+      || entry.track.song_version_id === activeTrack?.versionId
       || entry.version?.id === activeTrack?.versionId,
   ) ?? null;
+  const activeReleaseTrackId = activeTrack?.releaseTrackId ?? activeReleaseTrack?.track.id ?? null;
+  const activeReleaseVersionId = getReleaseTrackVersionId(activeReleaseTrack);
   const heartsIndividualTrack = Boolean(
     playerPostQuery.data
-    && playerPostQuery.data.post.post_type !== "single"
-    && activeReleaseTrack?.version?.id,
+    && playerPostQuery.data.post.post_type !== "single",
   );
   const activeHeartState = heartsIndividualTrack
     ? Boolean(activeReleaseTrack?.viewerHasHeartedVersion)
@@ -171,9 +187,12 @@ export function GlobalPlayer() {
         throw new Error("No playable post is attached to this track.");
       }
 
-      if (heartsIndividualTrack && activeReleaseTrack?.version?.id) {
+      if (heartsIndividualTrack) {
+        if (!activeReleaseVersionId || !activeReleaseTrack) {
+          throw new Error("This release song is not linked to a heartable version.");
+        }
         const result = await toggleVersionHeart({
-          versionId: activeReleaseTrack.version.id,
+          versionId: activeReleaseVersionId,
           profileId: viewer.userId,
           active: !activeReleaseTrack.viewerHasHeartedVersion,
         });
@@ -679,6 +698,7 @@ export function GlobalPlayer() {
   const isHearted = activeHeartState;
   const isOwnPost = Boolean(playerPostQuery.data?.owner?.id && viewer.userId === playerPostQuery.data.owner.id);
   const canOpenActivePost = Boolean(activePostId);
+  const canShareActivePost = playerPostQuery.data?.post.visibility === "public";
   const repeatLabel =
     repeatMode === "off"
       ? "Repeat off"
@@ -768,7 +788,33 @@ export function GlobalPlayer() {
       return;
     }
 
-    navigate(`/post/${activePostId}`);
+    navigate(
+      activeReleaseTrackId
+        ? `/post/${activePostId}?track=${encodeURIComponent(activeReleaseTrackId)}`
+        : `/post/${activePostId}`,
+    );
+  }
+
+  async function shareActivePost() {
+    const post = playerPostQuery.data?.post;
+    if (!post || !canShareActivePost || !activePostId || !activeTrack) {
+      toast.error("This song does not have a public share link.");
+      return;
+    }
+
+    const url = activeReleaseTrackId
+      ? buildPublicTrackShareUrl(window.location.origin, activePostId, activeReleaseTrackId, post.updated_at)
+      : buildPublicReleaseShareUrl(window.location.origin, activePostId, post.updated_at);
+    const result = await shareWithSystemDialog({
+      title: `${activeTrack.title} · ${activeTrack.artistName}`,
+      text: activeReleaseTrackId && activeTrack.queueGroupLabel
+        ? `${activeTrack.title} by ${activeTrack.artistName}, from ${activeTrack.queueGroupLabel} on MxTrove.`
+        : `Listen to ${activeTrack.title} by ${activeTrack.artistName} on MxTrove.`,
+      url,
+    });
+    if (result === "copied") {
+      toast.success("Native sharing is unavailable here, so the link was copied.");
+    }
   }
 
   function changeVolume(nextVolume: number) {
@@ -916,6 +962,14 @@ export function GlobalPlayer() {
             document.body,
           )
         : null}
+      <LyricsDialog
+        open={isLyricsOpen}
+        onOpenChange={setIsLyricsOpen}
+        lyrics={activeTrack.lyrics}
+        title={activeTrack.title}
+        artistName={activeTrack.artistName}
+        returnFocusRef={lyricsButtonRef}
+      />
       <audio
         ref={audioRef}
         onEnded={handleEnded}
@@ -992,11 +1046,11 @@ export function GlobalPlayer() {
                 />
               </div>
             </button>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-3">
               {canOpenActivePost ? (
                 <button
                   type="button"
-                  className="size-12 overflow-hidden rounded-[16px] border border-border bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_12px_28px_rgba(7,3,20,0.24)] transition-[transform,border-color] hover:scale-[1.02] hover:border-accent/25"
+                  className="size-12 shrink-0 overflow-hidden rounded-[16px] border border-border bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_12px_28px_rgba(7,3,20,0.24)] transition-[transform,border-color] hover:scale-[1.02] hover:border-accent/25 max-[420px]:hidden"
                   onClick={openActivePost}
                   aria-label="Open current release"
                 >
@@ -1009,7 +1063,7 @@ export function GlobalPlayer() {
                   ) : null}
                 </button>
               ) : (
-                <div className="size-12 overflow-hidden rounded-[16px] border border-border bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_12px_28px_rgba(7,3,20,0.24)]">
+                <div className="size-12 shrink-0 overflow-hidden rounded-[16px] border border-border bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_12px_28px_rgba(7,3,20,0.24)] max-[420px]:hidden">
                   {activeTrack.artworkUrl ? (
                     <ResolvedImage
                       className="size-full object-cover"
@@ -1035,7 +1089,7 @@ export function GlobalPlayer() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="rounded-full border border-white/8 bg-white/[0.03]"
+                className="size-9 shrink-0 rounded-full border border-white/8 bg-white/[0.03] p-0 sm:size-auto sm:px-3"
                 onClick={handlePreviousClick}
                 disabled={!hasPreviousTrack && currentTime <= 3}
                 aria-label="Previous track"
@@ -1045,7 +1099,7 @@ export function GlobalPlayer() {
 
               <Button
                 size="sm"
-                className="size-11 rounded-full border-accent/35 p-0 shadow-[0_14px_34px_rgba(var(--accent-rgb),0.32)]"
+                className="size-11 shrink-0 rounded-full border-accent/35 p-0 shadow-[0_14px_34px_rgba(var(--accent-rgb),0.32)]"
                 onClick={toggle}
                 aria-label={isPlaying ? "Pause" : "Play"}
               >
@@ -1055,7 +1109,7 @@ export function GlobalPlayer() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="rounded-full border border-white/8 bg-white/[0.03]"
+                className="size-9 shrink-0 rounded-full border border-white/8 bg-white/[0.03] p-0 sm:size-auto sm:px-3"
                 onClick={playNext}
                 disabled={!hasNextTrack}
                 aria-label="Next track"
@@ -1063,10 +1117,25 @@ export function GlobalPlayer() {
                 <SkipForward className="size-4" />
               </Button>
 
+              {activeTrack.lyrics?.trim() ? (
+                <Button
+                  ref={lyricsButtonRef}
+                  variant="ghost"
+                  size="sm"
+                  className="size-9 shrink-0 rounded-full border border-accent/18 bg-accent/[0.07] p-0 text-accent-secondary sm:size-auto sm:px-3"
+                  onClick={() => setIsLyricsOpen(true)}
+                  aria-label={`Open current song lyrics for ${activeTrack.title}`}
+                  aria-haspopup="dialog"
+                  aria-expanded={isLyricsOpen}
+                >
+                  <BookOpenText className="size-4" aria-hidden="true" />
+                </Button>
+              ) : null}
+
               <Button
                 variant="ghost"
                 size="sm"
-                className="rounded-full border border-white/8 bg-white/[0.03]"
+                className="size-9 shrink-0 rounded-full border border-white/8 bg-white/[0.03] p-0 sm:size-auto sm:px-3"
                 onClick={toggleCollapsed}
                 aria-label="Expand player"
                 aria-pressed={!isCollapsed}
@@ -1207,7 +1276,13 @@ export function GlobalPlayer() {
                       isOwnPost && "opacity-55",
                     )}
                     onClick={() => void heartMutation.mutateAsync()}
-                    disabled={heartMutation.isPending || !activePostId || isOwnPost}
+                    disabled={
+                      heartMutation.isPending
+                      || playerPostQuery.isPending
+                      || !activePostId
+                      || isOwnPost
+                      || (heartsIndividualTrack && !activeReleaseVersionId)
+                    }
                     aria-label={
                       isOwnPost
                         ? `You cannot heart your own ${heartsIndividualTrack ? "song" : "post"}`
@@ -1248,6 +1323,16 @@ export function GlobalPlayer() {
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="rounded-full border border-white/8 bg-white/[0.03]"
+                  onClick={() => void shareActivePost()}
+                  disabled={!canShareActivePost}
+                  aria-label={activeReleaseTrackId ? "Share current song" : "Share current release"}
+                >
+                  <Share2 className="size-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className="hidden rounded-full border border-white/8 bg-white/[0.03] xl:inline-flex"
                   onClick={toggleCollapsed}
                   aria-label="Collapse player"
@@ -1256,6 +1341,21 @@ export function GlobalPlayer() {
                   <ChevronDown className="size-4" />
                 </Button>
               </div>
+                {activeTrack.lyrics?.trim() ? (
+                  <Button
+                    ref={lyricsButtonRef}
+                    variant="ghost"
+                    size="sm"
+                    className="w-full rounded-full border border-accent/18 bg-accent/[0.07] text-accent-secondary xl:max-w-[260px]"
+                    onClick={() => setIsLyricsOpen(true)}
+                    aria-label={`Open current song lyrics for ${activeTrack.title}`}
+                    aria-haspopup="dialog"
+                    aria-expanded={isLyricsOpen}
+                  >
+                    <BookOpenText className="size-4" aria-hidden="true" />
+                    Lyrics
+                  </Button>
+                ) : null}
                 <div className="flex w-full items-center gap-3 rounded-full border border-white/8 bg-white/[0.03] px-4 py-3 xl:max-w-[260px]">
                   <Volume2 className="size-4 text-muted-foreground" />
                   <input
