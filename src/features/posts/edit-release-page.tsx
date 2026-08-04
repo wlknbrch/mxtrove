@@ -25,6 +25,7 @@ import { getLibraryDashboard } from "@/features/library/api";
 import { generateProtectedPreviewFromSourceAsset } from "@/features/media-processing/automatic-preview";
 import {
   getResolvedPostById,
+  makeVersionsPubliclyReadable,
   replaceReleaseCredits,
   replaceReleaseExternalLinks,
   updateReleasePost,
@@ -439,6 +440,9 @@ export function EditReleasePage() {
           featuredVersionId: selectedSingleVersion.id,
           showLyrics: Boolean(singleShowLyrics && singleSong.lyrics?.trim()),
         });
+        if (visibility === "public") {
+          await makeVersionsPubliclyReadable([selectedSingleVersion.id]);
+        }
         await Promise.all([
           savePresentation(),
           updatePostVisibility(postId, visibility),
@@ -491,6 +495,9 @@ export function EditReleasePage() {
         artworkAssetId,
         tracks: resolvedTracks,
       });
+      if (visibility === "public") {
+        await makeVersionsPubliclyReadable(resolvedVersions.map((version) => version.id));
+      }
       await Promise.all([
         savePresentation(),
         updatePostVisibility(postId, visibility),

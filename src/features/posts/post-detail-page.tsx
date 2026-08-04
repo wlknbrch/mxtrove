@@ -49,7 +49,12 @@ import {
   updateCommentOnPost,
   updateSingleLyricsVisibility,
 } from "@/features/posts/api";
-import { buildPostPlaybackTracks, getPlaybackQueueDurationSeconds, getReleaseTrackVersionId } from "@/features/posts/post-playback";
+import {
+  buildPostPlaybackTracks,
+  getPlaybackQueueDurationSeconds,
+  getReleasePlaybackSelection,
+  getReleaseTrackVersionId,
+} from "@/features/posts/post-playback";
 import { sortCommentThreads, type CommentSortMode } from "@/features/posts/comment-sorting";
 import { ReleaseQrCode } from "@/features/posts/release-qr-code";
 import { buildPublicReleaseShareUrl, buildPublicTrackShareUrl } from "@/features/posts/share-urls";
@@ -402,9 +407,11 @@ export function PostDetailPage() {
     ? item.releaseTracks.find((entry) => entry.track.id === requestedTrackId) ?? null
     : null;
   const isTrackShareView = Boolean(sharedReleaseTrack);
-  const playbackTracks = isTrackShareView
-    ? allPlaybackTracks.filter((track) => track.releaseTrackId === sharedReleaseTrack?.track.id)
-    : allPlaybackTracks;
+  const playbackSelection = getReleasePlaybackSelection(
+    allPlaybackTracks,
+    sharedReleaseTrack?.track.id,
+  );
+  const playbackTracks = playbackSelection.tracks;
   const commentThreads = useMemo(
     () => sortCommentThreads(item ? buildCommentThreads(item.comments) : [], commentSort),
     [commentSort, item],
@@ -581,8 +588,8 @@ export function PostDetailPage() {
               <div className="flex flex-wrap gap-3">
                 <Button
                   onClick={() => {
-                    if (playbackTracks.length > 0) {
-                      enqueue(playbackTracks, playbackTracks[0].id);
+                    if (playbackSelection.initialTrackId) {
+                      enqueue(playbackTracks, playbackSelection.initialTrackId);
                     }
                   }}
                   disabled={playbackTracks.length === 0}
@@ -591,10 +598,10 @@ export function PostDetailPage() {
                   {item.post.post_type === "single"
                     ? "Play"
                     : isTrackShareView
-                      ? "Play shared song"
+                      ? "Play from shared song"
                       : "Play release"}
                 </Button>
-                {!isTrackShareView && playbackTracks.length > 1 ? (
+                {playbackTracks.length > 1 ? (
                   <Button
                     variant="ghost"
                     onClick={() => enqueue(playbackTracks, playbackTracks[0].id)}
@@ -697,7 +704,7 @@ export function PostDetailPage() {
                   <p className="font-medium">Tracklist</p>
                   <p className="mt-2 text-sm text-muted-foreground">
                     {isTrackShareView
-                      ? `Shared song: ${sharedReleaseTrack?.track.track_title}. The full release remains visible for context.`
+                      ? `Shared song: ${sharedReleaseTrack?.track.track_title}. Playback starts there, and the complete release remains available.`
                       : "Ordered front to back with direct per-track playback and sharing."}
                   </p>
                 </div>
@@ -715,7 +722,7 @@ export function PostDetailPage() {
                 {item.releaseTracks.map((track) => {
                   const playbackTrack = allPlaybackTracks.find((entry) => entry.id === track.track.id) ?? null;
                   const isSharedTrack = sharedReleaseTrack?.track.id === track.track.id;
-                  const canPlayFromThisView = Boolean(playbackTrack && (!isTrackShareView || isSharedTrack));
+                  const canPlayFromThisView = Boolean(playbackTrack);
                   return (
                     <div
                       key={track.track.id}
@@ -723,7 +730,6 @@ export function PostDetailPage() {
                       className={cn(
                         "grid gap-4 rounded-[24px] border border-white/[0.08] bg-white/[0.035] px-4 py-4 transition-colors hover:border-accent/22 hover:bg-white/[0.05] md:px-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center",
                         isSharedTrack && "border-accent/40 bg-accent/10 shadow-[0_18px_54px_rgba(var(--accent-rgb),0.14)]",
-                        isTrackShareView && !isSharedTrack && "opacity-65",
                       )}
                     >
                       <div className="flex min-w-0 items-start gap-4">
@@ -793,7 +799,7 @@ export function PostDetailPage() {
                           disabled={!canPlayFromThisView}
                           onClick={() => {
                             if (canPlayFromThisView && playbackTrack) {
-                              enqueue([playbackTrack], playbackTrack.id);
+                              enqueue(allPlaybackTracks, playbackTrack.id);
                             }
                           }}
                         >

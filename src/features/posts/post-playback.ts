@@ -14,6 +14,20 @@ export function getReleaseTrackVersionId(track: ResolvedReleaseTrack | null | un
   return track?.version?.id ?? track?.track.song_version_id ?? null;
 }
 
+export function getReleasePlaybackSelection(
+  tracks: PlaybackTrack[],
+  preferredReleaseTrackId?: string | null,
+) {
+  const preferredTrack = preferredReleaseTrackId
+    ? tracks.find((track) => track.releaseTrackId === preferredReleaseTrackId) ?? null
+    : null;
+
+  return {
+    tracks,
+    initialTrackId: preferredTrack?.id ?? tracks[0]?.id ?? null,
+  };
+}
+
 export function buildPostPlaybackTracks(item: ResolvedPostCard): PlaybackTrack[] {
   const preferPublicPreview = item.post.visibility === "public";
   const singleLyrics = item.single?.showLyrics

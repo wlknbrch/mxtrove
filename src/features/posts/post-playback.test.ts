@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildPostPlaybackTracks,
+  getReleasePlaybackSelection,
   getReleaseTrackVersionId,
   getPlaybackQueueDurationSeconds,
 } from "@/features/posts/post-playback";
@@ -76,6 +77,18 @@ describe("post playback queues", () => {
       lyrics: demoSongs[0].lyrics,
     });
     expect(tracks[0].src).toBeTruthy();
+  });
+
+  it("keeps the complete release queue while starting at a shared song", () => {
+    const tracks = [
+      { id: "track-one", releaseTrackId: "release-track-one" },
+      { id: "track-two", releaseTrackId: "release-track-two" },
+    ] as ReturnType<typeof buildPostPlaybackTracks>;
+
+    const selection = getReleasePlaybackSelection(tracks, "release-track-two");
+
+    expect(selection.tracks).toEqual(tracks);
+    expect(selection.initialTrackId).toBe("track-two");
   });
 
   it("does not expose lyrics that were hidden for a release track", () => {

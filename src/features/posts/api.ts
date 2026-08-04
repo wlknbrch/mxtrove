@@ -801,6 +801,29 @@ export async function updatePostVisibility(postId: string, visibility: Visibilit
   if (error) throw error;
 }
 
+export async function makeVersionsPubliclyReadable(versionIds: string[]) {
+  if (isDemoModeEnabled() || versionIds.length === 0) {
+    return;
+  }
+
+  const client = requireSupabase();
+  const uniqueVersionIds = Array.from(new Set(versionIds));
+  const now = new Date().toISOString();
+  const { error } = await client
+    .from("song_versions")
+    .update({
+      is_published: true,
+      published_at: now,
+      updated_at: now,
+    })
+    .in("id", uniqueVersionIds)
+    .eq("is_published", false);
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function updateSinglePost(input: {
   postId: string;
   title: string;
