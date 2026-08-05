@@ -280,6 +280,12 @@ export function LibraryPage() {
     return activeFolders.audioPreviewsFolderId;
   }
 
+  function submitQuickAdd() {
+    if (!createSongMutation.isPending && title.trim()) {
+      void createSongMutation.mutateAsync();
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -287,9 +293,16 @@ export function LibraryPage() {
         title="Your working archive"
         description="Songs stay private here until you deliberately publish a public single, EP, or album preview."
         actions={
-          <div className="flex flex-wrap items-center gap-3">
+          <form
+            className="flex flex-wrap items-center gap-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              submitQuickAdd();
+            }}
+          >
             <Button
               variant="secondary"
+              type="button"
               onClick={() => void repairPlaybackMutation.mutateAsync()}
               disabled={repairPlaybackMutation.isPending || repairPlan.length === 0}
             >
@@ -299,12 +312,19 @@ export function LibraryPage() {
               placeholder="Quick-add a song"
               value={title}
               onChange={(event) => setTitle(event.currentTarget.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  submitQuickAdd();
+                }
+              }}
+              aria-label="Quick-add a song"
             />
-            <Button onClick={() => void createSongMutation.mutateAsync()}>
+            <Button type="submit" disabled={createSongMutation.isPending || !title.trim()}>
               <PlusCircle className="size-4" />
               Add & open
             </Button>
-          </div>
+          </form>
         }
       />
 

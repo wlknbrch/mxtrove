@@ -11,6 +11,26 @@ const LoginPage = lazy(async () => {
   const module = await import("@/features/auth/login-page");
   return { default: module.LoginPage };
 });
+const ForgotPasswordPage = lazy(async () => {
+  const module = await import("@/features/auth/password-recovery-pages");
+  return { default: module.ForgotPasswordPage };
+});
+const ResetPasswordPage = lazy(async () => {
+  const module = await import("@/features/auth/password-recovery-pages");
+  return { default: module.ResetPasswordPage };
+});
+const AboutPage = lazy(async () => {
+  const module = await import("@/features/legal/legal-pages");
+  return { default: module.AboutPage };
+});
+const PrivacyPolicyPage = lazy(async () => {
+  const module = await import("@/features/legal/legal-pages");
+  return { default: module.PrivacyPolicyPage };
+});
+const TermsOfServicePage = lazy(async () => {
+  const module = await import("@/features/legal/legal-pages");
+  return { default: module.TermsOfServicePage };
+});
 const OAuthCallbackPage = lazy(async () => {
   const module = await import("@/features/cloud-providers/oauth-callback-page");
   return { default: module.OAuthCallbackPage };
@@ -178,6 +198,14 @@ export const router = createBrowserRouter([
         element: routeElement(<LoginPage />),
       },
       {
+        path: "/forgot-password",
+        element: routeElement(<ForgotPasswordPage />),
+      },
+      {
+        path: "/reset-password",
+        element: routeElement(<ResetPasswordPage />),
+      },
+      {
         path: "/oauth/callback/:provider",
         element: routeElement(<OAuthCallbackPage />),
       },
@@ -192,6 +220,9 @@ export const router = createBrowserRouter([
       {
         element: <OptionalPublicShell />,
         children: [
+          { path: "/about", element: routeElement(<AboutPage />) },
+          { path: "/privacy", element: routeElement(<PrivacyPolicyPage />) },
+          { path: "/terms", element: routeElement(<TermsOfServicePage />) },
           { path: "/post/:postId", element: routeElement(<PostDetailPage />) },
           { path: "/:username", element: routeElement(<ProfilePage />) },
         ],

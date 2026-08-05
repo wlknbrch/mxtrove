@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 
 import { usePlayerStore } from "@/components/audio/player-store";
+import { LegalFooter } from "@/components/layout/legal-footer";
 import { MxShareMark } from "@/components/layout/mxshare-mark";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -348,6 +349,7 @@ export function AppShell() {
 
         <main className="flex min-w-0 flex-col">
           <Outlet />
+          <LegalFooter className="mt-auto px-1 pb-4 pt-10" />
         </main>
       </div>
 

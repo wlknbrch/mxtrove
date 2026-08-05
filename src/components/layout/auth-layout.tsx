@@ -1,6 +1,7 @@
 import type { PropsWithChildren } from "react";
 
 import { MxShareMark } from "@/components/layout/mxshare-mark";
+import { LegalFooter } from "@/components/layout/legal-footer";
 import { Card } from "@/components/ui/card";
 
 export function AuthLayout({ children }: PropsWithChildren) {
@@ -23,7 +24,7 @@ export function AuthLayout({ children }: PropsWithChildren) {
           <div className="grid grid-cols-3 gap-4">
             <Card className="min-h-28 border-white/6 bg-white/3">
               <p className="text-sm text-muted-foreground">Private Originals</p>
-              <p className="mt-3 font-display text-2xl font-semibold">Google Drive</p>
+              <p className="mt-3 font-display text-2xl font-semibold">Your Cloud</p>
             </Card>
             <Card className="min-h-28 border-white/6 bg-white/3">
               <p className="text-sm text-muted-foreground">Singles Update</p>
@@ -35,7 +36,10 @@ export function AuthLayout({ children }: PropsWithChildren) {
             </Card>
           </div>
         </section>
-        <section>{children}</section>
+        <section className="flex min-w-0 flex-col gap-6">
+          {children}
+          <LegalFooter className="mt-auto px-1" />
+        </section>
       </div>
     </div>
   );

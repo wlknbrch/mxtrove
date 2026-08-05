@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
@@ -25,6 +25,7 @@ import { shouldReportPlaybackError } from "@/components/audio/playback-error";
 import { Waveform } from "@/components/audio/waveform";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import {
+  prefetchResolvedMediaSource,
   useResolvedMediaSource,
   useResolvedMediaUrl,
 } from "@/hooks/use-resolved-media-url";
@@ -79,6 +80,7 @@ export function GlobalPlayer() {
   const sourceReloadCountRef = useRef(0);
   const protectedRefreshTrackIdRef = useRef<string | null>(null);
   const recoveryInFlightRef = useRef(false);
+  const readyTrackSourcesRef = useRef(new Map<string, string>());
   const lyricsButtonRef = useRef<HTMLButtonElement>(null);
   const navigate = useNavigate();
   const viewer = useAppViewer();
@@ -108,8 +110,6 @@ export function GlobalPlayer() {
     isQueueOpen,
     isSurfaceHidden,
     playTrack,
-    playNext,
-    playPrevious,
     toggle,
     setPlaying,
     setCurrentTimeSeconds,
@@ -128,6 +128,12 @@ export function GlobalPlayer() {
     () => queue.findIndex((track) => track.id === activeTrackId),
     [activeTrackId, queue],
   );
+  const nextTrackToPreload =
+    activeTrackIndex >= 0 && activeTrackIndex < queue.length - 1
+      ? queue[activeTrackIndex + 1]
+      : repeatMode === "all"
+        ? queue[0] ?? null
+        : null;
 
   useEffect(() => {
     if (!activeTrack?.lyrics?.trim()) {
@@ -227,6 +233,59 @@ export function GlobalPlayer() {
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Could not update the heart.");
     },
+  });
+
+  const handleMediaSessionAction = useEffectEvent((
+    action: MediaSessionAction,
+    details?: MediaSessionActionDetails,
+  ) => {
+    const audio = audioRef.current;
+
+    switch (action) {
+      case "play":
+        setPlaying(true);
+        if (audio && loadedTrackIdRef.current === usePlayerStore.getState().activeTrackId) {
+          void audio.play().catch((error) => {
+            schedulePlaybackError("This track could not be resumed in the browser.", error);
+          });
+        }
+        break;
+      case "pause":
+        audio?.pause();
+        setPlaying(false);
+        break;
+      case "previoustrack":
+        handlePreviousClick();
+        break;
+      case "nexttrack":
+        handleNextClick();
+        break;
+      case "seekbackward":
+        if (audio) {
+          handleSeek(Math.max(0, audio.currentTime - (details?.seekOffset ?? 10)));
+        }
+        break;
+      case "seekforward":
+        if (audio) {
+          handleSeek(Math.min(
+            Number.isFinite(audio.duration) ? audio.duration : Number.MAX_SAFE_INTEGER,
+            audio.currentTime + (details?.seekOffset ?? 10),
+          ));
+        }
+        break;
+      case "seekto":
+        if (typeof details?.seekTime === "number") {
+          handleSeek(details.seekTime);
+        }
+        break;
+      case "stop":
+        handleSeek(0);
+        audio?.pause();
+        setPlaying(false);
+        break;
+      default:
+        break;
+    }
   });
 
   function clearPendingPlaybackError() {
@@ -411,6 +470,30 @@ export function GlobalPlayer() {
   }, [volume]);
 
   useEffect(() => {
+    if (activeTrack && resolvedAudioSrc) {
+      readyTrackSourcesRef.current.set(activeTrack.id, resolvedAudioSrc);
+    }
+  }, [activeTrack, resolvedAudioSrc]);
+
+  useEffect(() => {
+    if (!nextTrackToPreload) {
+      return;
+    }
+
+    let active = true;
+    void prefetchResolvedMediaSource(getTrackSources(nextTrackToPreload), "audio")
+      .then((url) => {
+        if (active && url) {
+          readyTrackSourcesRef.current.set(nextTrackToPreload.id, url);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [nextTrackToPreload]);
+
+  useEffect(() => {
     if (appearance.remember_volume && !hasAdjustedVolume.current) {
       setVolume(appearance.player_volume);
     }
@@ -566,21 +649,9 @@ export function GlobalPlayer() {
   }, [closeQueue, isCollapsed, isQueueOpen]);
 
   useEffect(() => {
-    if (!activeTrack || !("mediaSession" in navigator)) {
+    if (!("mediaSession" in navigator)) {
       return;
     }
-
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: activeTrack.title,
-      artist: activeTrack.artistName,
-      album: activeTrack.queueGroupLabel ?? "MxTrove",
-      artwork: [
-        {
-          src: resolvedArtworkUrl ?? `${window.location.origin}/mxtrove-icon-512.png`,
-          sizes: "512x512",
-        },
-      ],
-    });
 
     const setHandler = (
       action: MediaSessionAction,
@@ -593,43 +664,14 @@ export function GlobalPlayer() {
       }
     };
 
-    setHandler("play", () => setPlaying(true));
-    setHandler("pause", () => setPlaying(false));
-    setHandler("previoustrack", () => {
-      const audio = audioRef.current;
-      if (audio && audio.currentTime > 3) {
-        handleSeek(0);
-        return;
-      }
-      playPrevious();
-    });
-    setHandler("nexttrack", playNext);
-    setHandler("seekbackward", (details) => {
-      const audio = audioRef.current;
-      if (audio) {
-        handleSeek(Math.max(0, audio.currentTime - (details.seekOffset ?? 10)));
-      }
-    });
-    setHandler("seekforward", (details) => {
-      const audio = audioRef.current;
-      if (audio) {
-        handleSeek(
-          Math.min(
-            Number.isFinite(audio.duration) ? audio.duration : Number.MAX_SAFE_INTEGER,
-            audio.currentTime + (details.seekOffset ?? 10),
-          ),
-        );
-      }
-    });
-    setHandler("seekto", (details) => {
-      if (typeof details.seekTime === "number") {
-        handleSeek(details.seekTime);
-      }
-    });
-    setHandler("stop", () => {
-      handleSeek(0);
-      setPlaying(false);
-    });
+    setHandler("play", (details) => handleMediaSessionAction("play", details));
+    setHandler("pause", (details) => handleMediaSessionAction("pause", details));
+    setHandler("previoustrack", (details) => handleMediaSessionAction("previoustrack", details));
+    setHandler("nexttrack", (details) => handleMediaSessionAction("nexttrack", details));
+    setHandler("seekbackward", (details) => handleMediaSessionAction("seekbackward", details));
+    setHandler("seekforward", (details) => handleMediaSessionAction("seekforward", details));
+    setHandler("seekto", (details) => handleMediaSessionAction("seekto", details));
+    setHandler("stop", (details) => handleMediaSessionAction("stop", details));
 
     return () => {
       for (const action of [
@@ -645,13 +687,25 @@ export function GlobalPlayer() {
         setHandler(action, null);
       }
     };
-  }, [
-    activeTrack,
-    playNext,
-    playPrevious,
-    resolvedArtworkUrl,
-    setPlaying,
-  ]);
+  }, []);
+
+  useEffect(() => {
+    if (!activeTrack || !("mediaSession" in navigator)) {
+      return;
+    }
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: activeTrack.title,
+      artist: activeTrack.artistName,
+      album: activeTrack.queueGroupLabel ?? "MxTrove",
+      artwork: [
+        {
+          src: resolvedArtworkUrl ?? `${window.location.origin}/mxtrove-icon-512.png`,
+          sizes: "512x512",
+        },
+      ],
+    });
+  }, [activeTrack, resolvedArtworkUrl]);
 
   useEffect(() => {
     if (!("mediaSession" in navigator)) {
@@ -740,7 +794,54 @@ export function GlobalPlayer() {
       return;
     }
 
-    playPrevious();
+    const previousIndex = activeTrackIndex > 0
+      ? activeTrackIndex - 1
+      : repeatMode === "all" && queue.length > 1
+        ? queue.length - 1
+        : -1;
+    const previousTrack = previousIndex >= 0 ? queue[previousIndex] : null;
+    if (previousTrack) {
+      activateQueueTrack(previousTrack);
+    }
+  }
+
+  function activateQueueTrack(track: (typeof queue)[number]) {
+    const audio = audioRef.current;
+    const readySource = readyTrackSourcesRef.current.get(track.id) ?? null;
+
+    if (audio && readySource) {
+      clearPendingPlaybackError();
+      clearStallRecovery();
+      audio.pause();
+      audio.src = readySource;
+      audio.load();
+      loadedTrackIdRef.current = track.id;
+      pendingResumeSecondsRef.current = 0;
+      setCurrentTime(0);
+      setCurrentTimeSeconds(0);
+      setLoadedDuration(null);
+    }
+
+    playTrack(track.id);
+
+    if (audio && readySource) {
+      void audio.play().catch((error) => {
+        schedulePlaybackError("The next track could not be started in the browser.", error);
+      });
+    }
+  }
+
+  function handleNextClick() {
+    const nextTrack =
+      activeTrackIndex >= 0 && activeTrackIndex < queue.length - 1
+        ? queue[activeTrackIndex + 1]
+        : repeatMode === "all"
+          ? queue[0] ?? null
+          : null;
+
+    if (nextTrack) {
+      activateQueueTrack(nextTrack);
+    }
   }
 
   function handleEnded() {
@@ -760,17 +861,8 @@ export function GlobalPlayer() {
       return;
     }
 
-    if (
-      appearance.autoplay_next &&
-      activeTrackIndex >= 0 &&
-      activeTrackIndex < queue.length - 1
-    ) {
-      playNext();
-      return;
-    }
-
-    if (appearance.autoplay_next && repeatMode === "all" && queue[0]) {
-      playTrack(queue[0].id);
+    if (appearance.autoplay_next && nextTrackToPreload) {
+      activateQueueTrack(nextTrackToPreload);
       return;
     }
 
@@ -1110,7 +1202,7 @@ export function GlobalPlayer() {
                 variant="ghost"
                 size="sm"
                 className="size-9 shrink-0 rounded-full border border-white/8 bg-white/[0.03] p-0 sm:size-auto sm:px-3"
-                onClick={playNext}
+                onClick={handleNextClick}
                 disabled={!hasNextTrack}
                 aria-label="Next track"
               >
@@ -1220,7 +1312,7 @@ export function GlobalPlayer() {
                     variant="ghost"
                     size="sm"
                     className="rounded-full border border-white/8 bg-white/[0.03]"
-                    onClick={playNext}
+                    onClick={handleNextClick}
                     disabled={!hasNextTrack}
                     aria-label="Next track"
                   >

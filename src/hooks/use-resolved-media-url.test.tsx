@@ -2,6 +2,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  prefetchResolvedMediaSource,
   useResolvedMediaSource,
   useResolvedMediaUrl,
 } from "@/hooks/use-resolved-media-url";
@@ -11,6 +12,13 @@ afterEach(() => {
 });
 
 describe("useResolvedMediaUrl", () => {
+  it("pre-resolves the next direct media source for a seamless queue handoff", async () => {
+    await expect(prefetchResolvedMediaSource(
+      "https://media.example/next-track.mp3",
+      "audio",
+    )).resolves.toBe("https://media.example/next-track.mp3");
+  });
+
   it("never exposes the previous track URL under a new candidate key", async () => {
     const { result, rerender } = renderHook(
       ({ source }) => useResolvedMediaUrl(source, "audio"),

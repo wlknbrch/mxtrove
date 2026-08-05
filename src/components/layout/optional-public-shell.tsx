@@ -1,6 +1,7 @@
 import { Link, Outlet } from "react-router-dom";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { LegalFooter } from "@/components/layout/legal-footer";
 import { MxShareMark } from "@/components/layout/mxshare-mark";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -40,6 +41,7 @@ export function OptionalPublicShell() {
       <main className="mx-auto max-w-7xl">
         <Outlet />
       </main>
+      <LegalFooter className="mx-auto mt-10 max-w-7xl pb-4" />
     </div>
   );
 }
