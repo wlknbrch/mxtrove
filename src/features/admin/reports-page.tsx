@@ -35,8 +35,8 @@ export function AdminReportsPage() {
     <div className="space-y-7">
       <PageHeader
         eyebrow="Administration"
-        title="Reports"
-        description="Review reports in context, document decisions, and apply narrowly scoped moderation actions."
+        title="Reports and feedback"
+        description="Review moderation reports and signed-in product feedback, document decisions, and apply narrowly scoped actions."
       />
       <Tabs
         value={status}
@@ -56,7 +56,7 @@ export function AdminReportsPage() {
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <CardTitle>{report.target_type.replaceAll("_", " ")}</CardTitle>
+                    <CardTitle>{report.subject ?? report.target_type.replaceAll("_", " ")}</CardTitle>
                     <Badge variant="warning">{report.reason.replaceAll("_", " ")}</Badge>
                     <Badge variant="neutral">{report.status.replaceAll("_", " ")}</Badge>
                   </div>

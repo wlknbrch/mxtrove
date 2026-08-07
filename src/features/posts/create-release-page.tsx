@@ -28,8 +28,15 @@ import {
 import { getCloudStorageProvider } from "@/features/cloud-providers/provider-registry";
 import { useCloudUploadProvider } from "@/features/cloud-providers/use-cloud-upload-provider";
 import { createSong, getLibraryDashboard } from "@/features/library/api";
+import { GroupedSongPicker } from "@/features/library/grouped-song-picker";
 import { generateProtectedPreviewFromSourceAsset } from "@/features/media-processing/automatic-preview";
 import { createReleasePost } from "@/features/posts/api";
+import {
+  ReleasePresentationValidationError,
+  validateOptionalHttpsUrl,
+  validateReleaseTitle,
+  type ReleasePresentationField,
+} from "@/features/posts/release-presentation";
 import { getPostDraft } from "@/features/posts/drafts-api";
 import {
   hasMeaningfulReleaseDraft,
@@ -145,6 +152,7 @@ export function CreateReleasePage({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [releaseUrl, setReleaseUrl] = useState("");
+  const [presentationErrors, setPresentationErrors] = useState<Partial<Record<ReleasePresentationField, string>>>({});
   const [visibility, setVisibility] = useState<Visibility>("public");
   const [selectedSongIds, setSelectedSongIds] = useState<string[]>([]);
   const [lyricsVisibleSongIds, setLyricsVisibleSongIds] = useState<string[]>([]);
@@ -353,6 +361,18 @@ export function CreateReleasePage({
       if (!viewer.userId) {
         throw new Error("Please sign in first.");
       }
+      let validatedTitle: string;
+      let validatedReleaseUrl: string | undefined;
+      try {
+        validatedTitle = validateReleaseTitle(title);
+        validatedReleaseUrl = validateOptionalHttpsUrl(releaseUrl);
+        setPresentationErrors({});
+      } catch (error) {
+        if (error instanceof ReleasePresentationValidationError) {
+          setPresentationErrors({ [error.field]: error.message });
+        }
+        throw error;
+      }
       if (selectedSongs.length === 0) {
         throw new Error("Add at least one song to the release.");
       }
@@ -376,9 +396,9 @@ export function CreateReleasePage({
 
       const post = await createReleasePost({
         postType,
-        title: title.trim(),
+        title: validatedTitle,
         description: description.trim(),
-        releaseUrl: releaseUrl.trim() || undefined,
+        releaseUrl: validatedReleaseUrl,
         artworkAssetId: artworkAssetId ?? selectedArtwork?.id ?? null,
         visibility,
         tracks: resolvedTracks.map(({ song, latestVersion }, index) => ({
@@ -540,11 +560,30 @@ export function CreateReleasePage({
               </label>
               <label className="grid gap-2">
                 <span className="text-sm font-medium">Title</span>
-                <Input value={title} onChange={(event) => setTitle(event.currentTarget.value)} />
+                <Input
+                  value={title}
+                  aria-invalid={Boolean(presentationErrors.title)}
+                  className={presentationErrors.title ? "border-warning/50" : undefined}
+                  onChange={(event) => {
+                    setTitle(event.currentTarget.value);
+                    setPresentationErrors((current) => ({ ...current, title: undefined }));
+                  }}
+                />
+                {presentationErrors.title ? <span role="alert" className="text-sm text-warning">{presentationErrors.title}</span> : null}
               </label>
               <label className="grid gap-2">
                 <span className="text-sm font-medium">External release URL</span>
-                <Input value={releaseUrl} onChange={(event) => setReleaseUrl(event.currentTarget.value)} />
+                <Input
+                  value={releaseUrl}
+                  aria-invalid={Boolean(presentationErrors.releaseUrl)}
+                  className={presentationErrors.releaseUrl ? "border-warning/50" : undefined}
+                  placeholder="https://example.com/release"
+                  onChange={(event) => {
+                    setReleaseUrl(event.currentTarget.value);
+                    setPresentationErrors((current) => ({ ...current, releaseUrl: undefined }));
+                  }}
+                />
+                {presentationErrors.releaseUrl ? <span role="alert" className="text-sm text-warning">{presentationErrors.releaseUrl}</span> : null}
               </label>
               <label className="grid gap-2 md:col-span-2">
                 <span className="text-sm font-medium">Artwork</span>
@@ -638,31 +677,25 @@ export function CreateReleasePage({
               </p>
             </div>
 
-            <div className="mt-5 flex flex-wrap gap-3">
-              {songs.map((song) => {
-                const active = selectedSongIds.includes(song.id);
-                const latestVersion = getLatestSongVersion(song.id, versions);
-                const status = getTrackStatus(latestVersion);
-
-                return (
-                  <Button
-                    key={song.id}
-                    variant={active ? "primary" : "secondary"}
-                    onClick={() => {
-                      setSelectedSongIds((current) =>
-                        active ? current.filter((id) => id !== song.id) : [...current, song.id],
-                      );
-                      if (active) {
-                        setLyricsVisibleSongIds((current) => current.filter((id) => id !== song.id));
-                      }
-                    }}
-                    className="gap-3"
-                  >
-                    <span>{song.title}</span>
-                    <Badge variant={status.badgeVariant}>{status.label}</Badge>
-                  </Button>
-                );
-              })}
+            <div className="mt-5">
+              <GroupedSongPicker
+                songs={songs}
+                selectedSongIds={selectedSongIds}
+                mode="multiple"
+                accessory={(song) => {
+                  const status = getTrackStatus(getLatestSongVersion(song.id, versions));
+                  return <Badge variant={status.badgeVariant}>{status.label}</Badge>;
+                }}
+                onToggleSong={(song) => {
+                  const active = selectedSongIds.includes(song.id);
+                  setSelectedSongIds((current) =>
+                    active ? current.filter((id) => id !== song.id) : [...current, song.id],
+                  );
+                  if (active) {
+                    setLyricsVisibleSongIds((current) => current.filter((id) => id !== song.id));
+                  }
+                }}
+              />
             </div>
 
             <div className="mt-5 space-y-4">

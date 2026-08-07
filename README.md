@@ -328,13 +328,24 @@ PROTECTED_MEDIA_MIN_FREE_BYTES=1073741824
 new protected-media upload before it would consume the final reserved disk
 space; it never deletes an existing message attachment automatically.
 
-Build and start:
+Build and start. Keep the internal Compose project name `mxshare`: existing
+persistent volume names depend on it even though the public product is MxTrove.
+The images are built before any running container is replaced, and build
+parallelism is limited to protect smaller VPS instances from memory pressure:
 
 ```bash
 docker compose \
+  --project-name mxshare \
+  --parallel 1 \
   --env-file deploy/mxshare.vps.env \
   -f docker-compose.production.yml \
-  up -d --build
+  build
+
+docker compose \
+  --project-name mxshare \
+  --env-file deploy/mxshare.vps.env \
+  -f docker-compose.production.yml \
+  up -d --no-build
 ```
 
 The compose file creates persistent volumes for worker temp data and protected
@@ -413,15 +424,43 @@ Inspect containers:
 
 ```bash
 docker compose \
+  --project-name mxshare \
   --env-file deploy/mxshare.vps.env \
   -f docker-compose.production.yml \
   ps
 
 docker compose \
+  --project-name mxshare \
   --env-file deploy/mxshare.vps.env \
   -f docker-compose.production.yml \
   logs -f web media-worker
 ```
+
+### Keep other Docker sites isolated
+
+`docker compose up` only reconciles resources in the selected Compose project;
+it should not stop unrelated sites. Always use a unique, stable project name for
+every stack and run MxTrove with `--project-name mxshare`. Do not reuse that name
+for another site. The shared `traefik-public` network is intentionally external,
+and every site's Traefik router, middleware, and service labels must also use
+unique names.
+
+If several unrelated sites disappear during an MxTrove deployment, check the
+host before rebuilding them:
+
+```bash
+free -h
+docker stats --no-stream
+docker inspect --format '{{.Name}} OOMKilled={{.State.OOMKilled}} Exit={{.State.ExitCode}}' $(docker ps -aq)
+docker logs --since 15m traefik
+```
+
+An `OOMKilled=true` container or kernel out-of-memory entry means the concurrent
+image build exhausted VPS memory; retain the two-step, `--parallel 1` deployment
+above and add swap or more RAM if the host still runs out. Traefik log errors
+about duplicate routers/services instead indicate reused label names in another
+Compose file. Neither case requires rebuilding every site: after fixing the
+resource or routing conflict, restart only the stopped containers.
 
 Deploy later updates:
 
@@ -430,9 +469,16 @@ git pull
 supabase db push
 supabase functions deploy drive-media --no-verify-jwt
 docker compose \
+  --project-name mxshare \
+  --parallel 1 \
   --env-file deploy/mxshare.vps.env \
   -f docker-compose.production.yml \
-  up -d --build
+  build
+docker compose \
+  --project-name mxshare \
+  --env-file deploy/mxshare.vps.env \
+  -f docker-compose.production.yml \
+  up -d --no-build
 ```
 
 Every `VITE_*` change requires rebuilding the frontend image.

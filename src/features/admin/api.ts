@@ -6,7 +6,7 @@ export type ReportStatus = "open" | "reviewing" | "action_taken" | "dismissed";
 export interface AdminReport {
   id: string;
   reporter_id: string;
-  target_type: "profile" | "post" | "comment" | "message" | "project_invite" | "share_link";
+  target_type: "profile" | "post" | "comment" | "message" | "project_invite" | "share_link" | "app_feedback";
   target_id: string;
   reason: ReportReason;
   details: string | null;
@@ -14,6 +14,10 @@ export interface AdminReport {
   reviewed_by: string | null;
   reviewed_at: string | null;
   target_hidden_at: string | null;
+  subject: string | null;
+  page_context: string | null;
+  attachment_url: string | null;
+  client_context: Record<string, string | number | boolean | null>;
   created_at: string;
   reporter: Pick<Profile, "id" | "username" | "display_name"> | null;
 }

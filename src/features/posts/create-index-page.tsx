@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { deletePostDraft, listPostDrafts } from "@/features/posts/drafts-api";
-import { getDraftFallbackTitle, getDraftRoute } from "@/features/posts/drafts";
+import { getDraftFallbackTitle, getDraftRoute, isReleaseEditDraftPayload } from "@/features/posts/drafts";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { queryClient } from "@/lib/query-client";
 import { formatRelativeTime } from "@/lib/utils";
@@ -125,7 +125,9 @@ export function CreateIndexPage() {
                     <div className="flex items-start justify-between gap-3">
                       <Link to={getDraftRoute(draft)} className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="neutral">{draft.post_type.toUpperCase()}</Badge>
+                          <Badge variant="neutral">
+                            {isReleaseEditDraftPayload(draft.payload) ? `EDIT ${draft.post_type.toUpperCase()}` : draft.post_type.toUpperCase()}
+                          </Badge>
                           <span className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Clock3 className="size-3.5" />
                             {formatRelativeTime(draft.updated_at)}
@@ -134,7 +136,9 @@ export function CreateIndexPage() {
                         <p className="mt-3 truncate font-medium">
                           {draft.title.trim() || getDraftFallbackTitle(draft.post_type)}
                         </p>
-                        <p className="mt-1 text-sm text-accent-secondary">Continue draft →</p>
+                        <p className="mt-1 text-sm text-accent-secondary">
+                          {isReleaseEditDraftPayload(draft.payload) ? "Continue editing →" : "Continue draft →"}
+                        </p>
                       </Link>
                       <Button
                         type="button"

@@ -7,8 +7,6 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getCloudConnection } from "@/features/drive/api";
-import { getStoredDriveFolders } from "@/features/drive/google-drive-connection";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { queryClient } from "@/lib/query-client";
 import type { ProfileFormValues } from "@/lib/validators";
@@ -44,12 +42,6 @@ export function ProfileSettingsPage() {
     queryFn: () => getCurrentProfile(viewer.userId),
     enabled: Boolean(viewer.userId),
   });
-  const connectionQuery = useQuery({
-    queryKey: ["cloud-connection", viewer.userId],
-    queryFn: () => getCloudConnection(viewer.userId!),
-    enabled: Boolean(viewer.userId),
-  });
-
   const mutation = useMutation({
     mutationFn: async (values: Parameters<typeof saveProfile>[1]) => {
       if (!viewer.userId) {
@@ -76,8 +68,6 @@ export function ProfileSettingsPage() {
     profile?.youtube_url,
     profile?.support_url,
   ].filter(Boolean).length;
-  const driveReady = Boolean(getStoredDriveFolders(connectionQuery.data));
-
   return (
     <div className="space-y-8">
       <PageHeader
@@ -87,7 +77,7 @@ export function ProfileSettingsPage() {
       />
 
       <div className="grid gap-6 xl:grid-cols-[310px_minmax(0,1fr)_360px]">
-        <SettingsSidebar driveReady={driveReady} />
+        <SettingsSidebar />
 
         <ProfileFormPanel
           title="Public profile"
@@ -165,7 +155,7 @@ export function ProfileSettingsPage() {
                 ) : null}
                 <Link to="/settings/storage">
                   <Button variant="ghost">
-                    Check Drive setup
+                    Check storage setup
                     <Link2 className="size-4" />
                   </Button>
                 </Link>

@@ -1,7 +1,7 @@
 import type { PropsWithChildren } from "react";
 import { Link } from "react-router-dom";
 
-const CONTACT_EMAIL = "contact@wlknbrch.com";
+const CONTACT_EMAIL = "mxtrove@wlknbrch.com";
 
 function TermsSection({ title, children }: PropsWithChildren<{ title: string }>) {
   return (

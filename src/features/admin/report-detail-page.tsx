@@ -66,27 +66,59 @@ export function AdminReportDetailPage() {
       </Link>
       <PageHeader
         eyebrow="Moderation case"
-        title={`${report.target_type.replaceAll("_", " ")} report`}
-        description={`Reason: ${report.reason.replaceAll("_", " ")} · submitted ${formatRelativeTime(report.created_at)}`}
+        title={report.subject ?? `${report.target_type.replaceAll("_", " ")} report`}
+        description={report.target_type === "app_feedback"
+          ? `${String(report.client_context?.kind ?? "feedback").replaceAll("_", " ")} · submitted ${formatRelativeTime(report.created_at)}`
+          : `Reason: ${report.reason.replaceAll("_", " ")} · submitted ${formatRelativeTime(report.created_at)}`}
       />
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-6">
           <Card>
             <CardHeader>
               <div>
-                <CardTitle>Reported target</CardTitle>
-                <CardDescription className="mt-2">Server identifier and reporter-provided context.</CardDescription>
+                <CardTitle>{report.target_type === "app_feedback" ? "Product feedback" : "Reported target"}</CardTitle>
+                <CardDescription className="mt-2">
+                  {report.target_type === "app_feedback"
+                    ? "Reporter-provided reproduction details and automatic client context."
+                    : "Server identifier and reporter-provided context."}
+                </CardDescription>
               </div>
               <Badge variant="neutral">{report.status.replaceAll("_", " ")}</Badge>
             </CardHeader>
             <div className="space-y-4">
-              <div className="rounded-[20px] border border-border bg-white/3 p-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-accent-secondary">Target ID</p>
-                <p className="mt-2 break-all font-mono text-sm">{report.target_id}</p>
-              </div>
+              {report.target_type === "app_feedback" ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-[20px] border border-border bg-white/3 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-accent-secondary">Affected area</p>
+                    <p className="mt-2 text-sm">{report.page_context ?? "Screenshot supplied instead"}</p>
+                  </div>
+                  <div className="rounded-[20px] border border-border bg-white/3 p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-accent-secondary">Client</p>
+                    <p className="mt-2 break-words text-sm text-muted-foreground">
+                      {String(report.client_context?.viewport ?? "Unknown viewport")}
+                      {report.client_context?.installed_app ? " · installed app" : " · browser"}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-[20px] border border-border bg-white/3 p-4">
+                  <p className="text-xs uppercase tracking-[0.2em] text-accent-secondary">Target ID</p>
+                  <p className="mt-2 break-all font-mono text-sm">{report.target_id}</p>
+                </div>
+              )}
               <p className="whitespace-pre-wrap text-sm leading-7 text-muted-foreground">
                 {report.details || "No additional details were supplied."}
               </p>
+              {report.attachment_url ? (
+                <a
+                  href={report.attachment_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex text-sm font-medium text-accent-secondary hover:text-foreground"
+                >
+                  Open attached screenshot
+                </a>
+              ) : null}
             </div>
           </Card>
           <Card>
@@ -122,26 +154,30 @@ export function AdminReportDetailPage() {
             <Button fullWidth onClick={() => mutation.mutate({})} disabled={mutation.isPending}>
               <ShieldCheck className="size-4" /> Save decision
             </Button>
-            <Button
-              fullWidth
-              variant="secondary"
-              onClick={() => mutation.mutate({ hideTarget: true })}
-              disabled={mutation.isPending}
-            >
-              <EyeOff className="size-4" /> Hide or revoke target
-            </Button>
-            <Button
-              fullWidth
-              variant="danger"
-              onClick={() => {
-                if (window.confirm("Temporarily suspend the responsible account for seven days?")) {
-                  mutation.mutate({ suspensionDays: 7 });
-                }
-              }}
-              disabled={mutation.isPending}
-            >
-              Suspend account for 7 days
-            </Button>
+            {report.target_type !== "app_feedback" ? (
+              <>
+                <Button
+                  fullWidth
+                  variant="secondary"
+                  onClick={() => mutation.mutate({ hideTarget: true })}
+                  disabled={mutation.isPending}
+                >
+                  <EyeOff className="size-4" /> Hide or revoke target
+                </Button>
+                <Button
+                  fullWidth
+                  variant="danger"
+                  onClick={() => {
+                    if (window.confirm("Temporarily suspend the responsible account for seven days?")) {
+                      mutation.mutate({ suspensionDays: 7 });
+                    }
+                  }}
+                  disabled={mutation.isPending}
+                >
+                  Suspend account for 7 days
+                </Button>
+              </>
+            ) : null}
           </div>
         </Card>
       </div>

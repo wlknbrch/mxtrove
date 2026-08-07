@@ -7,8 +7,8 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getAssetById, getCloudConnection } from "@/features/drive/api";
-import { getStoredDriveFolders } from "@/features/drive/google-drive-connection";
+import { getCloudProviderLabel, getCloudStorageStatus } from "@/features/cloud-providers/status";
+import { getAssetById, getCloudConnections } from "@/features/drive/api";
 import { getCurrentProfile } from "@/features/profile/api";
 import { SettingsSidebar } from "@/features/settings/settings-shell";
 import { useAppViewer } from "@/hooks/use-app-viewer";
@@ -33,9 +33,9 @@ export function SettingsIndexPage() {
     enabled: Boolean(viewer.userId),
   });
 
-  const connectionQuery = useQuery({
-    queryKey: ["cloud-connection", viewer.userId],
-    queryFn: () => getCloudConnection(viewer.userId!),
+  const connectionsQuery = useQuery({
+    queryKey: ["cloud-connections", viewer.userId],
+    queryFn: () => getCloudConnections(viewer.userId!),
     enabled: Boolean(viewer.userId),
   });
 
@@ -46,20 +46,25 @@ export function SettingsIndexPage() {
   });
 
   const profile = profileQuery.data ?? null;
-  const storedFolders = getStoredDriveFolders(connectionQuery.data);
   const connectedLinks = countConnectedLinks(profile);
-  const driveReady = Boolean(storedFolders);
+  const {
+    activeConnection,
+    activeFolders,
+    connectedConnections,
+    storageReady,
+  } = getCloudStorageStatus(connectionsQuery.data);
+  const activeProviderName = getCloudProviderLabel(activeConnection?.provider);
 
   return (
     <div className="space-y-8">
       <PageHeader
         eyebrow="Settings"
         title="Control room"
-        description="Manage your public identity, keep Google Drive healthy, and make sure the surfaces fans see stay polished."
+        description="Manage your public identity, keep your preferred cloud storage healthy, and make sure the surfaces fans see stay polished."
       />
 
       <div className="grid gap-6 xl:grid-cols-[310px_minmax(0,1fr)]">
-        <SettingsSidebar driveReady={driveReady} />
+        <SettingsSidebar />
 
         <div className="min-w-0 space-y-6">
           <div className="grid min-w-0 gap-6 min-[1800px]:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
@@ -80,8 +85,8 @@ export function SettingsIndexPage() {
                       ready: Boolean(profile?.display_name && profile?.username && profile?.bio?.trim()),
                     },
                     {
-                      label: "Google Drive connection has a full folder structure",
-                      ready: driveReady,
+                      label: "At least one cloud provider is connected and upload-ready",
+                      ready: storageReady,
                     },
                     {
                       label: "Avatar is visible across the shell and profile",
@@ -127,8 +132,8 @@ export function SettingsIndexPage() {
                     className="flex items-center justify-between rounded-[20px] border border-white/[0.06] bg-white/[0.02] px-4 py-4 transition-colors hover:border-accent/25 hover:bg-white/[0.04]"
                   >
                     <div>
-                      <p className="font-medium">Google Drive setup</p>
-                      <p className="mt-1 text-sm text-muted-foreground">Reconnect, repair, and inspect your folder map.</p>
+                      <p className="font-medium">Cloud storage setup</p>
+                      <p className="mt-1 text-sm text-muted-foreground">Connect providers, choose a default, and inspect the active folder map.</p>
                     </div>
                     <ExternalLink className="size-4 text-accent-secondary" />
                   </Link>
@@ -177,12 +182,12 @@ export function SettingsIndexPage() {
                 <div className="min-w-0 rounded-[24px] border border-white/[0.06] bg-white/[0.02] p-4">
                   <div className="mb-3 flex flex-wrap items-center gap-3">
                     <p className="text-xs uppercase tracking-[0.22em] text-accent-secondary/75">Storage status</p>
-                    <Badge variant={driveReady ? "success" : "warning"}>{driveReady ? "Connected" : "Needs setup"}</Badge>
+                    <Badge variant={storageReady ? "success" : "warning"}>{storageReady ? "Connected" : "Needs setup"}</Badge>
                   </div>
                   <div className="space-y-2 text-sm text-muted-foreground">
-                    <p className="break-all">Drive account: {connectionQuery.data?.provider_account_email ?? "Not connected"}</p>
-                    <p className="break-all">Root folder: {storedFolders?.rootFolderId ?? "Pending"}</p>
-                    <p className="break-all">Avatar folder: {storedFolders?.avatarsFolderId ?? "Pending"}</p>
+                    <p className="break-all">Provider: {activeConnection ? activeProviderName : "Not connected"}</p>
+                    <p className="break-all">Account: {activeConnection?.provider_account_email ?? "Not connected"}</p>
+                    <p>Root folder: {activeFolders?.rootFolderId ? "MxTrove" : "Pending"}</p>
                   </div>
                 </div>
               </div>
@@ -193,15 +198,15 @@ export function SettingsIndexPage() {
             <CardHeader>
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-3">
-                  <Badge variant={driveReady ? "success" : "warning"}>
-                    {driveReady ? "Systems ready" : "Action needed"}
+                  <Badge variant={storageReady ? "success" : "warning"}>
+                    {storageReady ? "Systems ready" : "Action needed"}
                   </Badge>
                   <Badge variant="accent">{connectedLinks} public links</Badge>
                 </div>
                 <div>
                   <CardTitle className="text-3xl md:text-[2.2rem]">Your two live surfaces</CardTitle>
                   <CardDescription className="mt-3 max-w-4xl text-base leading-7">
-                    In V1 the most important settings surfaces are your public profile and your Drive routing. Both are
+                    The most important settings surfaces are your public profile and your cloud routing. Both are
                     shown here with their current readiness so you can fix issues quickly.
                   </CardDescription>
                 </div>
@@ -237,18 +242,18 @@ export function SettingsIndexPage() {
                     <HardDrive className="size-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="font-medium">Google Drive routing</p>
+                    <p className="font-medium">Cloud storage routing</p>
                     <p className="text-sm text-muted-foreground">The home for originals, playback files, artwork, and avatars.</p>
                   </div>
                 </div>
                 <div className="space-y-3 text-sm text-muted-foreground">
-                  <p className="truncate">Connected account: {connectionQuery.data?.provider_account_email ?? "Not connected"}</p>
-                  <p className="truncate">Root folder: {storedFolders?.rootFolderId ?? "Pending"}</p>
-                  <p className="truncate">Avatar folder: {storedFolders?.avatarsFolderId ?? "Pending"}</p>
+                  <p className="truncate">Active provider: {activeConnection ? activeProviderName : "Not connected"}</p>
+                  <p className="truncate">Connected providers: {connectedConnections.length}</p>
+                  <p className="truncate">Root folder: {activeFolders?.rootFolderId ? "MxTrove" : "Pending"}</p>
                 </div>
                 <div className="mt-5 flex flex-wrap gap-3">
                   <Link to="/settings/storage">
-                    <Button size="sm">{driveReady ? "Manage storage" : "Connect Drive"}</Button>
+                    <Button size="sm">{storageReady ? "Manage storage" : "Connect storage"}</Button>
                   </Link>
                 </div>
               </div>

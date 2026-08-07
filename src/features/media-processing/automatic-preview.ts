@@ -328,6 +328,12 @@ export async function uploadOriginalWithAutomaticPreview(params: {
       automationError: null,
     };
   } catch (error) {
+    if (
+      params.signal?.aborted
+      || (error instanceof DOMException && error.name === "AbortError")
+    ) {
+      throw error;
+    }
     return {
       originalAsset,
       previewAsset: null,

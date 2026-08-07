@@ -8,11 +8,15 @@ import {
   Shield,
   UserRound,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, NavLink, useLocation } from "react-router-dom";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { getCloudStorageStatus } from "@/features/cloud-providers/status";
+import { getCloudConnections } from "@/features/drive/api";
+import { useAppViewer } from "@/hooks/use-app-viewer";
 import { cn } from "@/lib/utils";
 
 type ImplementedSection =
@@ -98,12 +102,15 @@ const implementedSections: Array<{
   },
 ];
 
-export function SettingsSidebar({
-  driveReady,
-}: {
-  driveReady: boolean;
-}) {
+export function SettingsSidebar() {
   const location = useLocation();
+  const viewer = useAppViewer();
+  const connectionsQuery = useQuery({
+    queryKey: ["cloud-connections", viewer.userId],
+    queryFn: () => getCloudConnections(viewer.userId!),
+    enabled: Boolean(viewer.userId),
+  });
+  const { storageReady } = getCloudStorageStatus(connectionsQuery.data);
 
   return (
     <Card className="space-y-6 p-4 md:p-5">
@@ -143,7 +150,7 @@ export function SettingsSidebar({
                 <div className="flex items-center gap-2">
                   <p className="font-medium">{item.title}</p>
                   {item.id === "storage" ? (
-                    <Badge variant={driveReady ? "success" : "warning"}>{driveReady ? "Ready" : "Setup"}</Badge>
+                    <Badge variant={storageReady ? "success" : "warning"}>{storageReady ? "Ready" : "Setup"}</Badge>
                   ) : null}
                 </div>
                 <p className="mt-1 text-sm leading-6 text-muted-foreground">{item.description}</p>

@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Tabs } from "@/components/ui/tabs";
 import { getCloudStorageProvider } from "@/features/cloud-providers/provider-registry";
+import { useCloudUploadProvider } from "@/features/cloud-providers/use-cloud-upload-provider";
 import {
   getCloudConnection,
   deleteAssetRecord,
@@ -19,10 +20,14 @@ import {
   getAssetReferenceSummary,
   upsertCloudConnection,
 } from "@/features/drive/api";
+import { UploadDropzone } from "@/features/drive/components/upload-dropzone";
 import { buildCloudConnectionUpsert, getStoredDriveFolders } from "@/features/drive/google-drive-connection";
 import { useGoogleDriveProvider } from "@/features/drive/use-google-drive-provider";
 import { createSong, deleteSong, getLibraryDashboard, updateSongVersionPreview } from "@/features/library/api";
-import { generateAutomaticPreviewFromSourceAsset } from "@/features/media-processing/automatic-preview";
+import {
+  generateAutomaticPreviewFromSourceAsset,
+  uploadOriginalWithAutomaticPreview,
+} from "@/features/media-processing/automatic-preview";
 import { deletePost, listResolvedPosts } from "@/features/posts/api";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { needsVersionPlaybackRepair } from "@/lib/playback-health";
@@ -45,6 +50,7 @@ export function LibraryPage() {
   const viewer = useAppViewer();
   const navigate = useNavigate();
   const provider = useGoogleDriveProvider();
+  const cloudUpload = useCloudUploadProvider(viewer.userId);
   const [activeTab, setActiveTab] = useState("songs");
   const [title, setTitle] = useState("");
 
@@ -88,6 +94,71 @@ export function LibraryPage() {
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Could not create song.");
+    },
+  });
+
+  const uploadSongMutation = useMutation({
+    mutationFn: async ({
+      file,
+      signal,
+      onProgress,
+    }: {
+      file: File;
+      signal?: AbortSignal;
+      onProgress?: (progress: number) => void;
+    }) => {
+      if (!viewer.userId) {
+        throw new Error("Please sign in first.");
+      }
+      if (!cloudUpload.connection) {
+        throw new Error("Connect a cloud provider before dropping an audio file into the library.");
+      }
+
+      const filenameWithoutExtension = file.name.replace(/\.[^.]+$/, "").trim();
+      const song = await createSong(viewer.userId, {
+        title: filenameWithoutExtension || "Untitled song",
+        notes: "",
+        default_artwork_asset_id: null,
+      });
+
+      try {
+        const folders = await cloudUpload.ensureFolders();
+        const result = await uploadOriginalWithAutomaticPreview({
+          ownerId: viewer.userId,
+          provider: cloudUpload.provider,
+          originalFile: file,
+          songId: song.id,
+          originalsFolderId: folders.audioOriginalsFolderId,
+          previewsFolderId: folders.audioPreviewsFolderId,
+          signal,
+          onProgress,
+        });
+
+        return { song, result };
+      } catch (error) {
+        await queryClient.invalidateQueries({ queryKey: ["library", viewer.userId] });
+        navigate(`/library/songs/${song.id}`);
+        throw new Error(
+          `The song workspace was created, but the audio upload did not finish. ${error instanceof Error ? error.message : "Retry the upload in the workspace."}`,
+        );
+      }
+    },
+    onSuccess: async ({ song, result }) => {
+      await queryClient.invalidateQueries({ queryKey: ["library", viewer.userId] });
+      if (result.automationError) {
+        toast.warning("Song added. The original is safe, but preview generation still needs attention.");
+      } else {
+        toast.success("Song and audio assets added. Set up the first version in the workspace.");
+      }
+      navigate(`/library/songs/${song.id}`, {
+        state: {
+          uploadedSourceAssetId: result.originalAsset.id,
+          uploadedPreviewAssetId: result.previewAsset?.id ?? null,
+        },
+      });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Could not add this audio file.");
     },
   });
 
@@ -340,6 +411,33 @@ export function LibraryPage() {
           { value: "assets", label: `Assets (${assets.length})` },
         ]}
       />
+
+      {activeTab === "songs" ? (
+        <UploadDropzone
+          compact
+          multiple
+          parentFolderId={cloudUpload.storedFolders?.audioOriginalsFolderId ?? "library-drop"}
+          disabled={!cloudUpload.connection || uploadSongMutation.isPending}
+          onMultipleFiles={(files) => navigate("/library/import", { state: { files } })}
+          onUpload={async (input) => {
+            const { result } = await uploadSongMutation.mutateAsync({
+              file: input.file,
+              signal: input.signal,
+              onProgress: input.onProgress,
+            });
+            return {
+              fileId: result.originalAsset.remote_file_id,
+              filename: result.originalAsset.filename,
+              mimeType: result.originalAsset.mime_type,
+              bytes: result.originalAsset.bytes ?? input.file.size,
+              parentFolderId: result.originalAsset.remote_parent_folder_id ?? input.parentFolderId,
+              shareUrl: result.originalAsset.share_url,
+              viewUrl: result.originalAsset.view_url,
+              thumbnailUrl: result.originalAsset.thumbnail_url,
+            };
+          }}
+        />
+      ) : null}
 
       {activeTab === "songs" ? (
         songs.length ? (

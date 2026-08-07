@@ -59,6 +59,10 @@ const LibraryPage = lazy(async () => {
   const module = await import("@/features/library/library-page");
   return { default: module.LibraryPage };
 });
+const LibraryImportPage = lazy(async () => {
+  const module = await import("@/features/library/library-import-page");
+  return { default: module.LibraryImportPage };
+});
 const ConversationPage = lazy(async () => {
   const module = await import("@/features/messages/conversation-page");
   return { default: module.ConversationPage };
@@ -246,6 +250,8 @@ export const router = createBrowserRouter([
               { path: "/search", element: routeElement(<SearchPage />) },
               { path: "/library", element: routeElement(<LibraryPage />) },
               { path: "/library/songs", element: routeElement(<LibraryPage />) },
+              { path: "/library/import", element: routeElement(<LibraryImportPage />) },
+              { path: "/library/import/:batchId", element: routeElement(<LibraryImportPage />) },
               { path: "/library/songs/:songId", element: routeElement(<SongDetailPage />) },
               { path: "/projects", element: routeElement(<ProjectsPage />) },
               { path: "/projects/new", element: routeElement(<NewProjectPage />) },

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowRightLeft, CheckCircle2, Cloud, FolderKanban, RefreshCcw, ShieldCheck, Star, Unplug } from "lucide-react";
 import { toast } from "sonner";
@@ -8,14 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
-import { getCurrentProfile } from "@/features/profile/api";
+import { getCloudProviderLabel, getCloudStorageStatus } from "@/features/cloud-providers/status";
 import { SettingsSidebar } from "@/features/settings/settings-shell";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { envState } from "@/lib/env";
 import { queryClient } from "@/lib/query-client";
 
 import {
-  getCloudConnection,
   getCloudConnections,
   getProtectedMediaQuota,
   listOwnedAssets,
@@ -25,8 +24,7 @@ import {
   upsertCloudConnection,
 } from "@/features/drive/api";
 import { getCloudStorageProvider } from "@/features/cloud-providers/provider-registry";
-import { buildCloudConnectionUpsert, getStoredDriveFolders } from "@/features/drive/google-drive-connection";
-import { useGoogleDriveProvider } from "@/features/drive/use-google-drive-provider";
+import { buildCloudConnectionUpsert } from "@/features/drive/google-drive-connection";
 import type { CloudProvider } from "@/types/domain";
 
 const providerOptions: Array<{
@@ -57,20 +55,8 @@ const providerOptions: Array<{
 
 export function StorageSettingsPage() {
   const viewer = useAppViewer();
-  const provider = useGoogleDriveProvider();
   const [migrationAssetId, setMigrationAssetId] = useState("");
   const [migrationTarget, setMigrationTarget] = useState<CloudProvider>("dropbox");
-  const profileQuery = useQuery({
-    queryKey: ["profile", viewer.userId],
-    queryFn: () => getCurrentProfile(viewer.userId),
-    enabled: Boolean(viewer.userId),
-  });
-
-  const connectionQuery = useQuery({
-    queryKey: ["cloud-connection", viewer.userId],
-    queryFn: () => getCloudConnection(viewer.userId!),
-    enabled: Boolean(viewer.userId),
-  });
   const connectionsQuery = useQuery({
     queryKey: ["cloud-connections", viewer.userId],
     queryFn: () => getCloudConnections(viewer.userId!),
@@ -86,45 +72,51 @@ export function StorageSettingsPage() {
     queryFn: () => getProtectedMediaQuota(viewer.userId!),
     enabled: Boolean(viewer.userId),
   });
-  const storedFolders = getStoredDriveFolders(connectionQuery.data);
-  const needsRepair = Boolean(connectionQuery.data && !storedFolders);
-  const profile = profileQuery.data ?? null;
-  const publicProfilePath = profile?.username ? `/@${profile.username}` : null;
-  const driveReady = Boolean(storedFolders);
+  const {
+    activeConnection,
+    activeFolders: storedFolders,
+    connectedConnections,
+    storageReady,
+  } = getCloudStorageStatus(connectionsQuery.data);
+  const activeProviderName = getCloudProviderLabel(activeConnection?.provider);
+  const activeProvider = activeConnection
+    ? getCloudStorageProvider(activeConnection.provider)
+    : null;
+  const activeProviderOption = providerOptions.find(
+    (option) => option.id === activeConnection?.provider,
+  );
+  const needsRepair = Boolean(
+    activeConnection?.connection_status === "connected" && !storedFolders,
+  );
   const folderRows = [
     {
       label: "MxTrove root",
       helper: "Private home folder for all uploads.",
-      value: storedFolders?.rootFolderId ?? "Pending",
+      value: storedFolders?.rootFolderId ? "MxTrove" : "Pending",
     },
     {
       label: "Originals",
       helper: "Private source audio files.",
-      value: storedFolders?.audioOriginalsFolderId ?? "Pending",
+      value: storedFolders?.audioOriginalsFolderId ? "Audio / Originals" : "Pending",
     },
     {
       label: "Previews",
       helper: "Public playback files only.",
-      value: storedFolders?.audioPreviewsFolderId ?? "Pending",
+      value: storedFolders?.audioPreviewsFolderId ? "Audio / Previews" : "Pending",
     },
     {
       label: "Artwork",
       helper: "Public cover art and visuals.",
-      value: storedFolders?.artworkFolderId ?? "Pending",
+      value: storedFolders?.artworkFolderId
+        ? activeConnection?.provider === "google_drive" ? "Artwork" : "Artwork / Covers"
+        : "Pending",
     },
     {
       label: "Avatars",
       helper: "Public profile images.",
-      value: storedFolders?.avatarsFolderId ?? "Pending",
+      value: storedFolders?.avatarsFolderId ? "Artwork / Avatars" : "Pending",
     },
   ];
-
-  useEffect(() => {
-    provider.hydrateConnection({
-      email: connectionQuery.data?.provider_account_email ?? null,
-      folders: storedFolders,
-    });
-  }, [connectionQuery.data?.provider_account_email, provider, storedFolders]);
 
   const connectMutation = useMutation({
     mutationFn: async (providerId: CloudProvider = "google_drive") => {
@@ -157,7 +149,7 @@ export function StorageSettingsPage() {
       toast.success(`${providerOptions.find((option) => option.id === connection.provider)?.name ?? "Cloud provider"} connected.`);
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Could not connect Google Drive.");
+      toast.error(error instanceof Error ? error.message : "Could not connect the cloud provider.");
     },
   });
   const defaultMutation = useMutation({
@@ -285,7 +277,7 @@ export function StorageSettingsPage() {
       />
 
       <div className="grid gap-6 xl:grid-cols-[270px_minmax(320px,1.15fr)_minmax(260px,0.85fr)]">
-        <SettingsSidebar driveReady={driveReady} />
+        <SettingsSidebar />
 
         <div className="min-w-0 space-y-6">
           <Card>
@@ -422,20 +414,20 @@ export function StorageSettingsPage() {
             <CardHeader>
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-3">
-                  {storedFolders ? (
+                  {storageReady ? (
                     <Badge variant="success">Connected</Badge>
                   ) : needsRepair ? (
                     <Badge variant="warning">Needs repair</Badge>
                   ) : (
                     <Badge variant="warning">Not connected</Badge>
                   )}
-                  <Badge variant="accent">drive.file scope</Badge>
+                  <Badge variant="accent">{activeConnection ? activeProviderName : "Choose a provider"}</Badge>
                 </div>
                 <div>
                   <CardTitle className="text-3xl md:text-[2.2rem]">Connection status</CardTitle>
                   <CardDescription className="mt-3 max-w-3xl text-base leading-7">
-                    We request only the Google scope needed for files MxTrove creates and manages in your Drive.
-                    Originals stay private there, while only the previews and artwork you explicitly choose become public.
+                    MxTrove uses your selected personal cloud provider for originals, previews, artwork, and avatars.
+                    Originals stay private, while only media you explicitly publish receives a shareable provider link.
                   </CardDescription>
                 </div>
               </div>
@@ -450,7 +442,7 @@ export function StorageSettingsPage() {
                   <div>
                     <p className="font-medium">Connected account</p>
                     <p className="text-sm text-muted-foreground">
-                      {connectionQuery.data?.provider_account_email ?? "No Drive account linked yet."}
+                      {activeConnection?.provider_account_email ?? "No cloud account linked yet."}
                     </p>
                   </div>
                 </div>
@@ -479,9 +471,9 @@ export function StorageSettingsPage() {
                     <p className="font-medium">Setup flow</p>
                   </div>
                   <div className="space-y-2 text-sm leading-7 text-muted-foreground">
-                    <p>1. Connect your Google account.</p>
+                    <p>1. Connect Google Drive, Dropbox, or OneDrive.</p>
                     <p>2. MxTrove creates a dedicated root folder.</p>
-                    <p>3. Future originals, previews, artwork, and avatars reuse that structure.</p>
+                    <p>3. Choose a default provider for future uploads.</p>
                   </div>
                 </div>
 
@@ -491,9 +483,9 @@ export function StorageSettingsPage() {
                     <p className="font-medium">Storage rules</p>
                   </div>
                   <div className="space-y-2 text-sm leading-7 text-muted-foreground">
-                    <p>Originals remain private in Drive.</p>
+                    <p>Originals remain private in your chosen cloud.</p>
                     <p>Public playback uses explicit preview files only.</p>
-                    <p>Disconnecting clears only the current browser session link.</p>
+                    <p>Disconnecting clears only that provider's current browser session.</p>
                   </div>
                 </div>
               </div>
@@ -501,40 +493,42 @@ export function StorageSettingsPage() {
 
             {needsRepair ? (
               <div className="mt-5 rounded-[18px] border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-                The saved Drive setup looks incomplete or points to missing folders. Reconnect once to rebuild the
+                The saved {activeProviderName} setup looks incomplete or points to missing folders. Reconnect once to rebuild the
                 dedicated MxTrove folder structure before uploading again.
               </div>
             ) : null}
 
-            {!envState.hasGoogleDrive ? (
+            {!activeConnection && !providerOptions.some((option) => option.enabled()) ? (
               <div className="mt-5 rounded-[18px] border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-                Add `VITE_GOOGLE_DRIVE_CLIENT_ID` to enable the real Google Drive browser flow.
+                Add at least one provider client ID to enable Google Drive, Dropbox, or OneDrive connections.
               </div>
             ) : null}
 
             <div className="mt-6 flex flex-wrap gap-3">
-              <Button
-                onClick={() => void connectMutation.mutateAsync("google_drive")}
-                disabled={connectMutation.isPending || !envState.hasGoogleDrive}
-              >
-                <RefreshCcw className="size-4" />
-                {storedFolders
-                  ? "Reconnect Google Drive"
-                  : needsRepair
-                    ? "Repair Google Drive setup"
-                    : "Connect Google Drive"}
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  void provider.disconnect().then(() => {
-                    toast.success("Current Drive session cleared.");
-                  });
-                }}
-              >
-                <Unplug className="size-4" />
-                Disconnect session
-              </Button>
+              {activeConnection ? (
+                <>
+                  <Button
+                    onClick={() => void connectMutation.mutateAsync(activeConnection.provider)}
+                    disabled={connectMutation.isPending || !activeProviderOption?.enabled()}
+                  >
+                    <RefreshCcw className="size-4" />
+                    {needsRepair ? `Repair ${activeProviderName}` : `Reconnect ${activeProviderName}`}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      void activeProvider?.disconnect().then(() => {
+                        toast.success(`Current ${activeProviderName} session cleared.`);
+                      });
+                    }}
+                  >
+                    <Unplug className="size-4" />
+                    Disconnect session
+                  </Button>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">Choose any available provider in the panel above.</p>
+              )}
             </div>
           </Card>
         </div>
@@ -553,16 +547,16 @@ export function StorageSettingsPage() {
             <div className="space-y-3">
               {[
                 {
-                  label: "Drive account linked",
-                  ready: Boolean(connectionQuery.data?.provider_account_email),
+                  label: "At least one cloud account linked",
+                  ready: connectedConnections.length > 0,
                 },
                 {
-                  label: "MxTrove folder structure complete",
-                  ready: driveReady,
+                  label: "Default upload provider selected",
+                  ready: connectedConnections.some((connection) => connection.is_default),
                 },
                 {
-                  label: "Browser env has Google client id",
-                  ready: envState.hasGoogleDrive,
+                  label: "Active MxTrove folder structure complete",
+                  ready: storageReady,
                 },
               ].map((item) => (
                 <div
@@ -591,7 +585,7 @@ export function StorageSettingsPage() {
               </div>
             </CardHeader>
             <div className="space-y-3 text-sm leading-7 text-muted-foreground">
-              <p>Single uploads can reuse the same Drive structure instead of asking for setup again.</p>
+              <p>Uploads reuse the active provider structure instead of asking for setup again.</p>
               <p>Artwork and avatars share the same public-ready pipeline.</p>
               <p>Public profile surfaces can safely point to the assets you decide to expose.</p>
             </div>

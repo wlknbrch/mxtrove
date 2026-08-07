@@ -133,7 +133,6 @@ export function NotificationSettingsPage() {
   const browserCanPush = supportsWebPush();
   const preferences = preferencesQuery.data ?? null;
   const activeDeviceCount = (subscriptionsQuery.data ?? []).filter((entry) => entry.is_active).length;
-  const driveReady = true;
 
   const togglePreferenceMutation = useMutation({
     mutationFn: async (input: {
@@ -232,7 +231,7 @@ export function NotificationSettingsPage() {
       />
 
       <div className="grid gap-6 xl:grid-cols-[310px_minmax(0,1fr)_360px]">
-        <SettingsSidebar driveReady={driveReady} />
+        <SettingsSidebar />
 
         <div className="space-y-6">
           <Card>

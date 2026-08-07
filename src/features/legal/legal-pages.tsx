@@ -1,5 +1,20 @@
 import type { PropsWithChildren, ReactNode } from "react";
-import { Cloud, ExternalLink, HeartHandshake, Music2, Server, ShieldCheck } from "lucide-react";
+import {
+  Bug,
+  ChevronDown,
+  Cloud,
+  ExternalLink,
+  FolderClock,
+  HeartHandshake,
+  LibraryBig,
+  MessageCircleMore,
+  Music2,
+  Radio,
+  Server,
+  ShieldCheck,
+  Sparkles,
+  UsersRound,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { PageHeader } from "@/components/layout/page-header";
@@ -8,10 +23,11 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { TermsOfServiceContent } from "@/features/legal/terms-content";
 import { CURRENT_TERMS_LAST_UPDATED } from "@/features/legal/terms";
+import { FeedbackPanel } from "@/features/legal/feedback-panel";
 import { cn } from "@/lib/utils";
 
-const CONTACT_EMAIL = "contact@wlknbrch.com";
-const LAST_UPDATED = "August 4, 2026";
+const CONTACT_EMAIL = "mxtrove@wlknbrch.com";
+const LAST_UPDATED = "August 6, 2026";
 
 function DocumentSection({ title, children }: PropsWithChildren<{ title: string }>) {
   return (
@@ -135,6 +151,79 @@ export function AboutPage() {
         ))}
       </div>
 
+      <section className="space-y-5">
+        <div className="max-w-3xl">
+          <Badge variant="neutral">What is inside</Badge>
+          <h2 className="mt-4 font-display text-3xl font-semibold tracking-[-0.035em] md:text-4xl">
+            From first sketch to shared release
+          </h2>
+          <p className="mt-3 text-base leading-8 text-muted-foreground">
+            MxTrove combines a private music workspace with flexible publishing and collaboration tools, while keeping the source files in storage you control.
+          </p>
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {[
+            {
+              icon: LibraryBig,
+              title: "Versioned song library",
+              copy: "Keep songs, source files, artwork, lyrics, tempo, key, and every production stage together without losing earlier versions.",
+            },
+            {
+              icon: Radio,
+              title: "Singles, EPs, and albums",
+              copy: "Build releases from existing library tracks, control visibility, publish lyrics, and share a full release or one highlighted song.",
+            },
+            {
+              icon: FolderClock,
+              title: "Drafts and autosave",
+              copy: "Leave a release halfway through and return with track order, artwork, metadata, and provider choices preserved.",
+            },
+            {
+              icon: UsersRound,
+              title: "Social discovery",
+              copy: "Follow creators, heart releases or individual tracks, discuss work in comments, and discover music through the feed and search.",
+            },
+            {
+              icon: MessageCircleMore,
+              title: "Projects and private exchange",
+              copy: "Invite collaborators, review versions with time-coded feedback, share protected links, and keep direct conversations connected to the work.",
+            },
+            {
+              icon: Sparkles,
+              title: "Audio intelligence",
+              copy: "Generate playback-ready previews and detailed waveforms, analyze tempo and musical key, and carry that context into every release surface.",
+            },
+          ].map(({ icon: Icon, title, copy }) => (
+            <Card key={title} className="rounded-[26px]">
+              <div className="flex size-11 items-center justify-center rounded-2xl border border-accent/20 bg-accent/10 text-accent-secondary">
+                <Icon className="size-5" />
+              </div>
+              <h3 className="mt-5 font-display text-xl font-semibold">{title}</h3>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground">{copy}</p>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <details className="group rounded-[30px] border border-accent/18 bg-white/[0.018] p-3">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-[24px] px-4 py-4 transition-colors hover:bg-white/[0.035] marker:hidden sm:px-5">
+          <div className="flex min-w-0 items-center gap-4">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-accent/20 bg-accent/10 text-accent-secondary">
+              <Bug className="size-5" />
+            </span>
+            <div>
+              <p className="font-display text-xl font-semibold">Send feedback or report a bug</p>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">Open the private report form when you need it.</p>
+            </div>
+          </div>
+          <ChevronDown className="size-5 shrink-0 text-muted-foreground transition-transform duration-300 group-open:rotate-180" />
+        </summary>
+        <div className="pt-3">
+          <FeedbackPanel />
+        </div>
+      </details>
+
       <Card className="flex flex-col gap-5 rounded-[26px] sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="font-medium">The practical details</p>
@@ -177,10 +266,11 @@ export function PrivacyPolicyPage() {
 
       <DocumentSection title="2. Data MxTrove processes">
         <p><strong className="text-foreground">Account and authentication data:</strong> email address, authentication identifiers, login/session information, and optional identity-provider data supplied through Supabase Auth.</p>
-        <p><strong className="text-foreground">Profile and social data:</strong> username, display name, biography, avatar reference, links, follows, hearts, comments, messages, notifications, blocks, reports, and privacy preferences.</p>
+        <p><strong className="text-foreground">Profile and social data:</strong> username, display name, biography, avatar reference, links, follows, hearts, comments, messages, notifications, blocks, reports, feedback, and privacy preferences.</p>
         <p><strong className="text-foreground">Music and collaboration metadata:</strong> songs, versions, lyrics, credits, release settings, projects, memberships, feedback, markers, drafts, cloud file identifiers, filenames, technical audio metadata, and sharing status.</p>
         <p><strong className="text-foreground">Protected media:</strong> browser-safe previews and permitted message attachments may be processed and stored on the MxTrove server when required for restricted playback, collaboration, or messaging.</p>
         <p><strong className="text-foreground">Technical data:</strong> IP address and ordinary server logs, browser/device information, error and security events, and local app state required for sessions, appearance, offline snapshots, and upload continuity.</p>
+        <p><strong className="text-foreground">Feedback attachments:</strong> a feedback submission may include its subject, description, affected app area, basic browser/device context, and an optional screenshot link. The screenshot remains with your connected cloud provider. Depending on that provider, anyone with the generated share link may be able to view it, so sensitive information should be removed before submission.</p>
       </DocumentSection>
 
       <DocumentSection title="3. Your cloud files">

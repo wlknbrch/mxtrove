@@ -149,19 +149,22 @@ export function ProfileAvatarPanel({
         </div>
       </CardHeader>
 
-      <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+      <div className="grid min-w-0 gap-5">
         <div className="flex min-w-0 items-center gap-4">
           <Avatar
             alt={profile?.display_name ?? viewer.email ?? "Current profile"}
             src={getAvatarAssetUrls(currentAvatar)}
             initials={(profile?.display_name ?? viewer.email ?? "MX").slice(0, 2).toUpperCase()}
-            className="size-24 text-lg"
+            className="size-24 shrink-0 text-lg"
           />
-          <div className="min-w-0 space-y-2">
-            <p className="font-medium">
+          <div className="min-w-0 flex-1 space-y-2">
+            <p
+              className="truncate font-medium"
+              title={currentAvatar?.display_name ?? currentAvatar?.filename ?? undefined}
+            >
               {currentAvatar?.display_name ?? currentAvatar?.filename ?? "No avatar uploaded yet"}
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="break-words text-sm leading-6 text-muted-foreground">
               {storedFolders?.avatarsFolderId
                 ? `Public avatar ready in ${providerId.replace("_", " ")}.`
                 : "Connect a cloud provider once if you have not set up an avatar folder yet."}
@@ -174,7 +177,7 @@ export function ProfileAvatarPanel({
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex min-w-0 flex-wrap gap-3">
           <input
             id={inputId}
             ref={inputRef}

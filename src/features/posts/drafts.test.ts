@@ -54,6 +54,16 @@ describe("post draft helpers", () => {
 
   it("builds stable resume routes and labels", () => {
     expect(getDraftRoute({ id: "draft-1", post_type: "ep" })).toBe("/create/ep?draft=draft-1");
+    expect(getDraftRoute({
+      id: "22222222-2222-2222-2222-222222222222",
+      post_type: "album",
+      payload: {
+        schemaVersion: postDraftSchemaVersion,
+        kind: "release_edit",
+        postId: "11111111-1111-1111-1111-111111111111",
+        tracks: [],
+      },
+    })).toBe("/post/11111111-1111-1111-1111-111111111111/edit");
     expect(getDraftFallbackTitle("album")).toBe("Untitled album");
   });
 });

@@ -1,10 +1,10 @@
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Disc3, FolderOpen, GripVertical, ImagePlus, Save, ShieldCheck } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { ArrowLeft, Disc3, FolderOpen, GripVertical, ImagePlus, RotateCcw, Save, ShieldCheck } from "lucide-react";
+import { Link, useBlocker, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/layout/page-header";
@@ -22,7 +22,14 @@ import {
 import { useCloudUploadProvider } from "@/features/cloud-providers/use-cloud-upload-provider";
 import { getCloudStorageProvider } from "@/features/cloud-providers/provider-registry";
 import { getLibraryDashboard } from "@/features/library/api";
+import { GroupedSongPicker } from "@/features/library/grouped-song-picker";
 import { generateProtectedPreviewFromSourceAsset } from "@/features/media-processing/automatic-preview";
+import { getPostDraft } from "@/features/posts/drafts-api";
+import {
+  isReleaseEditDraftPayload,
+  postDraftSchemaVersion,
+  type ReleaseEditDraftPayload,
+} from "@/features/posts/drafts";
 import {
   getResolvedPostById,
   makeVersionsPubliclyReadable,
@@ -33,6 +40,18 @@ import {
   updatePostVisibility,
   updateSinglePost,
 } from "@/features/posts/api";
+import {
+  parseReleaseCredits,
+  parseReleaseExternalLinks,
+  mergePrimaryReleaseUrl,
+  ReleasePresentationValidationError,
+  validateOptionalHttpsUrl,
+  validateReleaseTitle,
+  type ReleasePresentationField,
+} from "@/features/posts/release-presentation";
+import { ReleaseCreditsInput } from "@/features/posts/release-credits-input";
+import { ReleaseEditLeaveDialog } from "@/features/posts/release-edit-leave-dialog";
+import { useReleaseEditDraft } from "@/features/posts/use-release-edit-draft";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { getArtworkAssetUrls } from "@/lib/asset-urls";
 import { queryClient } from "@/lib/query-client";
@@ -122,6 +141,9 @@ export function EditReleasePage() {
   const sensors = useSensors(useSensor(PointerSensor));
   const artworkInputId = useId();
   const artworkInputRef = useRef<HTMLInputElement | null>(null);
+  const hydratedPostIdRef = useRef<string | null>(null);
+  const publishedPayloadRef = useRef<ReleaseEditDraftPayload | null>(null);
+  const navigationBypassRef = useRef(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<Visibility>("public");
@@ -131,6 +153,7 @@ export function EditReleasePage() {
   const [allowEmbed, setAllowEmbed] = useState(true);
   const [creditsText, setCreditsText] = useState("");
   const [externalLinksText, setExternalLinksText] = useState("");
+  const [presentationErrors, setPresentationErrors] = useState<Partial<Record<ReleasePresentationField, string>>>({});
   const [artworkAssetId, setArtworkAssetId] = useState<string | null>(null);
   const [uploadProviderId, setUploadProviderId] = useState<CloudProvider | null>(null);
   const {
@@ -143,6 +166,9 @@ export function EditReleasePage() {
   const [singleSongVersionId, setSingleSongVersionId] = useState<string | null>(null);
   const [singleShowLyrics, setSingleShowLyrics] = useState(false);
   const [tracks, setTracks] = useState<EditableTrack[]>([]);
+  const [draftHydrated, setDraftHydrated] = useState(false);
+  const [publishedFingerprint, setPublishedFingerprint] = useState("");
+  const [leaveAction, setLeaveAction] = useState<"publish" | "draft" | "discard" | null>(null);
 
   const postQuery = useQuery({
     queryKey: ["post", postId],
@@ -154,6 +180,11 @@ export function EditReleasePage() {
     queryKey: ["library", viewer.userId],
     queryFn: () => getLibraryDashboard(viewer.userId!),
     enabled: Boolean(viewer.userId),
+  });
+  const editDraftQuery = useQuery({
+    queryKey: ["release-edit-draft", postId],
+    queryFn: () => getPostDraft(postId),
+    enabled: Boolean(postId && viewer.userId),
   });
 
   const item = postQuery.data;
@@ -173,38 +204,138 @@ export function EditReleasePage() {
       ? getTrackStatus(selectedSingleVersion, visibility === "public")
       : null;
 
+  function applyEditPayload(payload: ReleaseEditDraftPayload) {
+    setTitle(payload.title);
+    setDescription(payload.description);
+    setVisibility(payload.visibility);
+    setRevokeOldPublicPreviews(payload.revokeOldPublicPreviews);
+    setReleaseUrl(payload.releaseUrl);
+    setReleaseNotes(payload.releaseNotes);
+    setAllowEmbed(payload.allowEmbed);
+    setCreditsText(payload.creditsText);
+    setExternalLinksText(payload.externalLinksText);
+    setArtworkAssetId(payload.artworkAssetId);
+    setUploadProviderId(payload.uploadProviderId);
+    setSingleSongVersionId(payload.singleSongVersionId);
+    setSingleShowLyrics(payload.singleShowLyrics);
+    setTracks(payload.tracks);
+    setPresentationErrors({});
+  }
+
   useEffect(() => {
-    if (!item) {
-      return;
+    if (!item || !editDraftQuery.isFetched || hydratedPostIdRef.current === postId) return;
+
+    const publishedPayload: ReleaseEditDraftPayload = {
+      schemaVersion: postDraftSchemaVersion,
+      kind: "release_edit",
+      postId,
+      title: item.post.title,
+      description: item.post.description ?? "",
+      visibility: item.post.visibility,
+      revokeOldPublicPreviews: false,
+      releaseUrl: item.post.release_url ?? "",
+      releaseNotes: item.post.release_notes ?? "",
+      allowEmbed: item.post.allow_embed,
+      creditsText: item.credits.map((credit) => `${credit.display_name} | ${credit.role}`).join("\n"),
+      externalLinksText: item.externalLinks.map((link) => `${link.label} | ${link.url} | ${link.platform}`).join("\n"),
+      artworkAssetId: item.post.artwork_asset_id ?? null,
+      uploadProviderId: null,
+      singleSongVersionId: item.post.post_type === "single" ? item.single?.featuredVersion?.id ?? null : null,
+      singleShowLyrics: item.post.post_type === "single" ? item.single?.showLyrics ?? false : false,
+      tracks: item.post.post_type === "single"
+        ? []
+        : item.releaseTracks.map((track) => ({
+            songId: track.track.song_id,
+            trackTitle: track.track.track_title,
+            songVersionId: track.track.song_version_id,
+            showLyrics: track.track.show_lyrics,
+          })),
+    };
+    publishedPayloadRef.current = publishedPayload;
+    setPublishedFingerprint(JSON.stringify(publishedPayload));
+
+    const storedPayload = editDraftQuery.data?.payload;
+    if (
+      isReleaseEditDraftPayload(storedPayload)
+      && storedPayload.postId === postId
+      && editDraftQuery.data?.owner_id === viewer.userId
+    ) {
+      applyEditPayload(storedPayload);
+      toast.info("Your saved release edit draft has been restored.");
+    } else {
+      applyEditPayload(publishedPayload);
     }
 
-    setTitle(item.post.title);
-    setDescription(item.post.description ?? "");
-    setVisibility(item.post.visibility);
-    setReleaseUrl(item.post.release_url ?? "");
-    setReleaseNotes(item.post.release_notes ?? "");
-    setAllowEmbed(item.post.allow_embed);
-    setCreditsText(item.credits.map((credit) => `${credit.display_name} | ${credit.role}`).join("\n"));
-    setExternalLinksText(item.externalLinks.map((link) => `${link.label} | ${link.url} | ${link.platform}`).join("\n"));
-    setArtworkAssetId(item.post.artwork_asset_id ?? null);
-    if (item.post.post_type === "single") {
-      setSingleSongVersionId(item.single?.featuredVersion?.id ?? null);
-      setSingleShowLyrics(item.single?.showLyrics ?? false);
-      setTracks([]);
-      return;
-    }
+    hydratedPostIdRef.current = postId;
+    setDraftHydrated(true);
+  }, [editDraftQuery.data, editDraftQuery.isFetched, item, postId, viewer.userId]);
 
-    setSingleSongVersionId(null);
-    setSingleShowLyrics(false);
-    setTracks(
-      item.releaseTracks.map((track) => ({
-        songId: track.track.song_id,
-        trackTitle: track.track.track_title,
-        songVersionId: track.track.song_version_id,
-        showLyrics: track.track.show_lyrics,
-      })),
-    );
-  }, [item]);
+  const editDraftPayload = useMemo<ReleaseEditDraftPayload>(() => ({
+    schemaVersion: postDraftSchemaVersion,
+    kind: "release_edit",
+    postId,
+    title,
+    description,
+    visibility,
+    revokeOldPublicPreviews,
+    releaseUrl,
+    releaseNotes,
+    allowEmbed,
+    creditsText,
+    externalLinksText,
+    artworkAssetId,
+    uploadProviderId,
+    singleSongVersionId,
+    singleShowLyrics,
+    tracks,
+  }), [
+    allowEmbed,
+    artworkAssetId,
+    creditsText,
+    description,
+    externalLinksText,
+    postId,
+    releaseNotes,
+    releaseUrl,
+    revokeOldPublicPreviews,
+    singleShowLyrics,
+    singleSongVersionId,
+    title,
+    tracks,
+    uploadProviderId,
+    visibility,
+  ]);
+  const editFingerprint = JSON.stringify(editDraftPayload);
+  const hasUnpublishedChanges = Boolean(
+    draftHydrated
+    && publishedFingerprint
+    && editFingerprint !== publishedFingerprint,
+  );
+  const editDraft = useReleaseEditDraft({
+    ownerId: viewer.userId ?? "",
+    postId,
+    postType: item?.post.post_type ?? "single",
+    title,
+    payload: editDraftPayload,
+    enabled: Boolean(viewer.userId && isOwner && hasUnpublishedChanges),
+  });
+  const navigationBlocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      hasUnpublishedChanges
+      && !navigationBypassRef.current
+      && (
+        currentLocation.pathname !== nextLocation.pathname
+        || currentLocation.search !== nextLocation.search
+      ),
+  );
+
+  async function resetToPublishedRelease() {
+    const publishedPayload = publishedPayloadRef.current;
+    if (!publishedPayload) return;
+    await editDraft.discardDraft();
+    applyEditPayload(publishedPayload);
+    toast.success("Draft discarded. The live release has been restored in the editor.");
+  }
 
   async function resolveArtworkFolder() {
     return (await ensureFolders()).artworkFolderId;
@@ -389,26 +520,25 @@ export function EditReleasePage() {
       if (!isOwner) {
         throw new Error("Only the release owner can edit this post.");
       }
-      const credits = creditsText
-        .split("\n")
-        .map((line) => line.split("|").map((part) => part.trim()))
-        .filter(([name]) => Boolean(name))
-        .map(([display_name, role], position) => ({
-          profile_id: null,
-          display_name,
-          role: role || "other",
-          position: position + 1,
-        }));
-      const externalLinks = externalLinksText
-        .split("\n")
-        .map((line) => line.split("|").map((part) => part.trim()))
-        .filter(([, url]) => Boolean(url))
-        .map(([label, url, platform], position) => ({
-          label: label || "Release link",
-          url,
-          platform: platform || "other",
-          position: position + 1,
-        }));
+      let validatedTitle: string;
+      let validatedReleaseUrl: string | undefined;
+      let credits: ReturnType<typeof parseReleaseCredits>;
+      let externalLinks: ReturnType<typeof parseReleaseExternalLinks>;
+      try {
+        validatedTitle = validateReleaseTitle(title);
+        validatedReleaseUrl = validateOptionalHttpsUrl(releaseUrl);
+        credits = parseReleaseCredits(creditsText);
+        externalLinks = mergePrimaryReleaseUrl(
+          validatedReleaseUrl,
+          parseReleaseExternalLinks(externalLinksText),
+        );
+        setPresentationErrors({});
+      } catch (error) {
+        if (error instanceof ReleasePresentationValidationError) {
+          setPresentationErrors({ [error.field]: error.message });
+        }
+        throw error;
+      }
       const savePresentation = () => Promise.all([
         updateReleasePresentation({
           postId,
@@ -433,9 +563,9 @@ export function EditReleasePage() {
 
         await updateSinglePost({
           postId,
-          title: title.trim(),
+          title: validatedTitle,
           description: description.trim(),
-          releaseUrl: releaseUrl.trim() || undefined,
+          releaseUrl: validatedReleaseUrl,
           artworkAssetId,
           featuredVersionId: selectedSingleVersion.id,
           showLyrics: Boolean(singleShowLyrics && singleSong.lyrics?.trim()),
@@ -489,9 +619,9 @@ export function EditReleasePage() {
 
       await updateReleasePost({
         postId,
-        title: title.trim(),
+        title: validatedTitle,
         description: description.trim(),
-        releaseUrl: releaseUrl.trim() || undefined,
+        releaseUrl: validatedReleaseUrl,
         artworkAssetId,
         tracks: resolvedTracks,
       });
@@ -505,6 +635,9 @@ export function EditReleasePage() {
       await revokePublicPreviewsWhenUnused(resolvedVersions);
     },
     onSuccess: async () => {
+      publishedPayloadRef.current = editDraftPayload;
+      setPublishedFingerprint(editFingerprint);
+      await editDraft.discardDraft();
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["post", postId] }),
         queryClient.invalidateQueries({ queryKey: ["player-post", postId] }),
@@ -541,7 +674,45 @@ export function EditReleasePage() {
     });
   }
 
-  if (postQuery.isPending) {
+  async function leaveAndPublish() {
+    setLeaveAction("publish");
+    try {
+      await updateMutation.mutateAsync();
+      navigationBypassRef.current = true;
+      navigationBlocker.proceed?.();
+    } finally {
+      setLeaveAction(null);
+    }
+  }
+
+  async function leaveAndKeepDraft() {
+    setLeaveAction("draft");
+    try {
+      await editDraft.saveNow();
+      navigationBypassRef.current = true;
+      toast.success("Edit draft saved. You can continue it later.");
+      navigationBlocker.proceed?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The edit draft could not be saved.");
+    } finally {
+      setLeaveAction(null);
+    }
+  }
+
+  async function leaveAndDiscard() {
+    setLeaveAction("discard");
+    try {
+      await editDraft.discardDraft();
+      navigationBypassRef.current = true;
+      navigationBlocker.proceed?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The edit draft could not be discarded.");
+    } finally {
+      setLeaveAction(null);
+    }
+  }
+
+  if (postQuery.isPending || (item && !draftHydrated)) {
     return (
       <Card>
         <CardTitle>Loading release</CardTitle>
@@ -606,10 +777,38 @@ export function EditReleasePage() {
             : "Reorder tracks, remap versions, rename slots, and update the release metadata without creating fake public version history."
         }
         actions={
-          <Button onClick={() => void updateMutation.mutateAsync()} disabled={updateMutation.isPending || !isOwner}>
-            <Save className="size-4" />
-            Save changes
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {hasUnpublishedChanges ? (
+              <Badge variant={editDraft.status === "error" ? "warning" : "neutral"}>
+                {editDraft.status === "saving"
+                  ? "Saving draft…"
+                  : editDraft.status === "saved"
+                    ? "Draft autosaved"
+                    : editDraft.status === "error"
+                      ? "Draft needs attention"
+                      : "Unsaved changes"}
+              </Badge>
+            ) : null}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="size-10 p-0"
+              aria-label="Discard edit draft and restore live release"
+              title="Discard draft and restore the live release"
+              disabled={!hasUnpublishedChanges || updateMutation.isPending}
+              onClick={() => {
+                if (window.confirm("Discard this edit draft and restore the current live release?")) {
+                  void resetToPublishedRelease();
+                }
+              }}
+            >
+              <RotateCcw className="size-4" />
+            </Button>
+            <Button onClick={() => void updateMutation.mutateAsync()} disabled={updateMutation.isPending || !isOwner || !hasUnpublishedChanges}>
+              <Save className="size-4" />
+              Save changes
+            </Button>
+          </div>
         }
       />
 
@@ -630,11 +829,30 @@ export function EditReleasePage() {
             <div className="grid gap-5 md:grid-cols-2">
               <label className="grid gap-2">
                 <span className="text-sm font-medium">Title</span>
-                <Input value={title} onChange={(event) => setTitle(event.currentTarget.value)} />
+                <Input
+                  value={title}
+                  aria-invalid={Boolean(presentationErrors.title)}
+                  className={presentationErrors.title ? "border-warning/50" : undefined}
+                  onChange={(event) => {
+                    setTitle(event.currentTarget.value);
+                    setPresentationErrors((current) => ({ ...current, title: undefined }));
+                  }}
+                />
+                {presentationErrors.title ? <span role="alert" className="text-sm text-warning">{presentationErrors.title}</span> : null}
               </label>
               <label className="grid gap-2">
                 <span className="text-sm font-medium">External release URL</span>
-                <Input value={releaseUrl} onChange={(event) => setReleaseUrl(event.currentTarget.value)} />
+                <Input
+                  value={releaseUrl}
+                  aria-invalid={Boolean(presentationErrors.releaseUrl)}
+                  className={presentationErrors.releaseUrl ? "border-warning/50" : undefined}
+                  placeholder="https://example.com/release"
+                  onChange={(event) => {
+                    setReleaseUrl(event.currentTarget.value);
+                    setPresentationErrors((current) => ({ ...current, releaseUrl: undefined }));
+                  }}
+                />
+                {presentationErrors.releaseUrl ? <span role="alert" className="text-sm text-warning">{presentationErrors.releaseUrl}</span> : null}
               </label>
               <label className="grid gap-2">
                 <span className="text-sm font-medium">Visibility</span>
@@ -763,21 +981,30 @@ export function EditReleasePage() {
               </div>
             </CardHeader>
             <div className="grid gap-5 lg:grid-cols-2">
-              <label className="grid gap-2">
+              <div className="grid gap-2">
                 <span className="text-sm font-medium">Credits</span>
-                <Textarea
+                <ReleaseCreditsInput
                   value={creditsText}
-                  onChange={(event) => setCreditsText(event.currentTarget.value)}
-                  placeholder={"Ari Vega | producer\nMina Cole | mix_engineer"}
+                  error={presentationErrors.credits}
+                  onChange={(value) => {
+                    setCreditsText(value);
+                    setPresentationErrors((current) => ({ ...current, credits: undefined }));
+                  }}
                 />
-              </label>
+              </div>
               <label className="grid gap-2">
                 <span className="text-sm font-medium">External links</span>
                 <Textarea
                   value={externalLinksText}
-                  onChange={(event) => setExternalLinksText(event.currentTarget.value)}
+                  aria-invalid={Boolean(presentationErrors.externalLinks)}
+                  className={presentationErrors.externalLinks ? "border-warning/50" : undefined}
+                  onChange={(event) => {
+                    setExternalLinksText(event.currentTarget.value);
+                    setPresentationErrors((current) => ({ ...current, externalLinks: undefined }));
+                  }}
                   placeholder={"Spotify | https://open.spotify.com/... | spotify\nWebsite | https://example.com | website"}
                 />
+                {presentationErrors.externalLinks ? <span role="alert" className="text-sm text-warning">{presentationErrors.externalLinks}</span> : null}
               </label>
             </div>
           </Card>
@@ -874,36 +1101,39 @@ export function EditReleasePage() {
                 </div>
               </CardHeader>
 
-              <div className="mt-5 flex flex-wrap gap-3">
-                {songs.map((song) => {
-                  const active = tracks.some((track) => track.songId === song.id);
-                  return (
-                    <Button
-                      key={song.id}
-                      variant={active ? "primary" : "secondary"}
-                      onClick={() => {
-                        setTracks((current) => {
-                          if (active) {
-                            return current.filter((track) => track.songId !== song.id);
-                          }
+              <div className="mt-5">
+                <GroupedSongPicker
+                  songs={songs}
+                  selectedSongIds={tracks.map((track) => track.songId)}
+                  mode="multiple"
+                  accessory={(song) => {
+                    const selectedTrack = tracks.find((track) => track.songId === song.id);
+                    const selectedVersion = selectedTrack?.songVersionId
+                      ? versions.find((version) => version.id === selectedTrack.songVersionId) ?? null
+                      : getLatestSongVersion(song.id, versions);
+                    const status = getTrackStatus(selectedVersion, visibility === "public");
+                    return <Badge variant={status.badgeVariant}>{status.label}</Badge>;
+                  }}
+                  onToggleSong={(song) => {
+                    const active = tracks.some((track) => track.songId === song.id);
+                    setTracks((current) => {
+                      if (active) {
+                        return current.filter((track) => track.songId !== song.id);
+                      }
 
-                          const latestVersion = getLatestSongVersion(song.id, versions);
-                          return [
-                            ...current,
-                            {
-                              songId: song.id,
-                              trackTitle: song.title,
-                              songVersionId: latestVersion?.id ?? null,
-                              showLyrics: false,
-                            },
-                          ];
-                        });
-                      }}
-                    >
-                      {song.title}
-                    </Button>
-                  );
-                })}
+                      const latestVersion = getLatestSongVersion(song.id, versions);
+                      return [
+                        ...current,
+                        {
+                          songId: song.id,
+                          trackTitle: song.title,
+                          songVersionId: latestVersion?.id ?? null,
+                          showLyrics: false,
+                        },
+                      ];
+                    });
+                  }}
+                />
               </div>
 
               <div className="mt-5 space-y-4">
@@ -1088,6 +1318,14 @@ export function EditReleasePage() {
           </Card>
         </div>
       </div>
+      <ReleaseEditLeaveDialog
+        open={navigationBlocker.state === "blocked"}
+        pendingAction={leaveAction}
+        onPublish={() => void leaveAndPublish()}
+        onKeepDraft={() => void leaveAndKeepDraft()}
+        onDiscard={() => void leaveAndDiscard()}
+        onCancel={() => navigationBlocker.reset?.()}
+      />
     </div>
   );
 }

@@ -134,6 +134,12 @@ export function GlobalPlayer() {
       : repeatMode === "all"
         ? queue[0] ?? null
         : null;
+  const previousTrackToPreload =
+    activeTrackIndex > 0
+      ? queue[activeTrackIndex - 1]
+      : repeatMode === "all" && queue.length > 1
+        ? queue[queue.length - 1] ?? null
+        : null;
 
   useEffect(() => {
     if (!activeTrack?.lyrics?.trim()) {
@@ -244,6 +250,7 @@ export function GlobalPlayer() {
     switch (action) {
       case "play":
         setPlaying(true);
+        setMediaSessionPlaybackState("playing");
         if (audio && loadedTrackIdRef.current === usePlayerStore.getState().activeTrackId) {
           void audio.play().catch((error) => {
             schedulePlaybackError("This track could not be resumed in the browser.", error);
@@ -253,6 +260,7 @@ export function GlobalPlayer() {
       case "pause":
         audio?.pause();
         setPlaying(false);
+        setMediaSessionPlaybackState("paused");
         break;
       case "previoustrack":
         handlePreviousClick();
@@ -282,6 +290,7 @@ export function GlobalPlayer() {
         handleSeek(0);
         audio?.pause();
         setPlaying(false);
+        setMediaSessionPlaybackState("none");
         break;
       default:
         break;
@@ -292,6 +301,15 @@ export function GlobalPlayer() {
     if (playbackErrorTimeoutRef.current !== null) {
       window.clearTimeout(playbackErrorTimeoutRef.current);
       playbackErrorTimeoutRef.current = null;
+    }
+  }
+
+  function setMediaSessionPlaybackState(state: MediaSessionPlaybackState) {
+    if (!("mediaSession" in navigator)) return;
+    try {
+      navigator.mediaSession.playbackState = state;
+    } catch {
+      // Android WebViews vary in how much Media Session state they expose.
     }
   }
 
@@ -476,22 +494,28 @@ export function GlobalPlayer() {
   }, [activeTrack, resolvedAudioSrc]);
 
   useEffect(() => {
-    if (!nextTrackToPreload) {
+    const adjacentTracks = [previousTrackToPreload, nextTrackToPreload].filter(
+      (track, index, tracks): track is NonNullable<typeof track> =>
+        Boolean(track) && tracks.findIndex((candidate) => candidate?.id === track?.id) === index,
+    );
+    if (!adjacentTracks.length) {
       return;
     }
 
     let active = true;
-    void prefetchResolvedMediaSource(getTrackSources(nextTrackToPreload), "audio")
-      .then((url) => {
-        if (active && url) {
-          readyTrackSourcesRef.current.set(nextTrackToPreload.id, url);
-        }
-      });
+    for (const track of adjacentTracks) {
+      void prefetchResolvedMediaSource(getTrackSources(track), "audio")
+        .then((url) => {
+          if (active && url) {
+            readyTrackSourcesRef.current.set(track.id, url);
+          }
+        });
+    }
 
     return () => {
       active = false;
     };
-  }, [nextTrackToPreload]);
+  }, [nextTrackToPreload, previousTrackToPreload]);
 
   useEffect(() => {
     if (appearance.remember_volume && !hasAdjustedVolume.current) {
@@ -809,26 +833,48 @@ export function GlobalPlayer() {
     const audio = audioRef.current;
     const readySource = readyTrackSourcesRef.current.get(track.id) ?? null;
 
-    if (audio && readySource) {
+    const attachAndPlay = (source: string) => {
+      const currentAudio = audioRef.current;
+      if (!currentAudio || usePlayerStore.getState().activeTrackId !== track.id) return;
+      const alreadyLoaded =
+        loadedTrackIdRef.current === track.id
+        && normalizeMediaSource(currentAudio.currentSrc || currentAudio.src) === normalizeMediaSource(source);
       clearPendingPlaybackError();
       clearStallRecovery();
-      audio.pause();
-      audio.src = readySource;
-      audio.load();
-      loadedTrackIdRef.current = track.id;
-      pendingResumeSecondsRef.current = 0;
-      setCurrentTime(0);
-      setCurrentTimeSeconds(0);
-      setLoadedDuration(null);
-    }
+      if (!alreadyLoaded) {
+        currentAudio.pause();
+        currentAudio.src = source;
+        currentAudio.load();
+        loadedTrackIdRef.current = track.id;
+        pendingResumeSecondsRef.current = 0;
+        setCurrentTime(0);
+        setCurrentTimeSeconds(0);
+        setLoadedDuration(null);
+      }
+      setMediaSessionPlaybackState("playing");
+      void currentAudio.play().catch((error) => {
+        schedulePlaybackError("The next track could not be started in the browser.", error);
+      });
+    };
 
     playTrack(track.id);
 
     if (audio && readySource) {
-      void audio.play().catch((error) => {
-        schedulePlaybackError("The next track could not be started in the browser.", error);
-      });
+      attachAndPlay(readySource);
+      return;
     }
+
+    // Resolve directly from the Media Session action as well as through React. This
+    // avoids waiting for a background-throttled render after an Android control tap.
+    void prefetchResolvedMediaSource(getTrackSources(track), "audio")
+      .then((source) => {
+        if (!source) return;
+        readyTrackSourcesRef.current.set(track.id, source);
+        attachAndPlay(source);
+      })
+      .catch((error) => {
+        schedulePlaybackError("The selected track could not be prepared in the background.", error);
+      });
   }
 
   function handleNextClick() {

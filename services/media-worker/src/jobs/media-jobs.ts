@@ -3,8 +3,7 @@ import { createHash } from "node:crypto";
 import type { ChildProcess } from "node:child_process";
 
 import { config } from "../config.js";
-import { analyzeAudioPcm, type AudioAnalysisResult } from "../audio-analysis/analyze-audio.js";
-import { transcodeToMp3, decodeToAnalysisPcm, decodeToMonoPcm } from "../media/ffmpeg.js";
+import { transcodeToMp3, decodeToMonoPcm } from "../media/ffmpeg.js";
 import { probeAudioFile } from "../media/ffprobe.js";
 import { ensureJobDir, getJobPaths, removeJobDir } from "../media/paths.js";
 import { protectedMediaStorage } from "../protected-media/index.js";
@@ -321,44 +320,6 @@ async function ensureNotCancelled(jobId: string) {
   }
 }
 
-async function persistDetectedSongMetadata(job: MediaJobRecord, analysis: AudioAnalysisResult) {
-  let songId = job.song_id;
-  if (!songId && job.song_version_id) {
-    const { data: version, error } = await supabaseAdmin
-      .from("song_versions")
-      .select("song_id")
-      .eq("id", job.song_version_id)
-      .maybeSingle();
-    if (error) throw error;
-    songId = version?.song_id ?? null;
-  }
-  if (!songId || (!analysis.tempoBpm && !analysis.musicalKey)) return;
-
-  const { data: song, error: songError } = await supabaseAdmin
-    .from("songs")
-    .select("id, tempo_bpm, musical_key")
-    .eq("id", songId)
-    .eq("owner_id", job.owner_id)
-    .maybeSingle();
-  if (songError) throw songError;
-  if (!song) return;
-
-  const updates: Record<string, unknown> = {
-    audio_analysis_updated_at: new Date().toISOString(),
-  };
-  if (song.tempo_bpm == null && analysis.tempoBpm != null) {
-    updates.tempo_bpm = analysis.tempoBpm;
-    updates.tempo_confidence = analysis.tempoConfidence;
-  }
-  if (!song.musical_key && analysis.musicalKey) {
-    updates.musical_key = analysis.musicalKey;
-    updates.key_confidence = analysis.keyConfidence;
-  }
-
-  const { error: updateError } = await supabaseAdmin.from("songs").update(updates).eq("id", songId);
-  if (updateError) throw updateError;
-}
-
 export async function processMediaJob(jobId: string) {
   const job = await getJobForOwner(jobId, (await getJobOwnerId(jobId)) ?? "");
   if (!job) {
@@ -381,7 +342,7 @@ export async function processMediaJob(jobId: string) {
 
     await updateJob(jobId, {
       status: "probing",
-      stage: "Analyzing audio",
+      stage: "Inspecting audio file",
       progress: 15,
       updated_at: new Date().toISOString(),
     });
@@ -415,35 +376,8 @@ export async function processMediaJob(jobId: string) {
 
     await updateJob(jobId, {
       status: "generating_waveform",
-      stage: "Detecting tempo and musical key",
-      progress: 68,
-      updated_at: new Date().toISOString(),
-    });
-    let analysis: AudioAnalysisResult = {
-      tempoBpm: null,
-      tempoConfidence: null,
-      musicalKey: null,
-      keyConfidence: null,
-    };
-    try {
-      const analysisPcm = await decodeToAnalysisPcm(paths.previewPath, (child) => {
-        activeProcesses.set(jobId, child);
-      });
-      activeProcesses.delete(jobId);
-      analysis = analyzeAudioPcm(analysisPcm.stdout);
-      await persistDetectedSongMetadata(job, analysis);
-    } catch (analysisError) {
-      activeProcesses.delete(jobId);
-      console.warn(`Audio metadata analysis failed for job ${jobId}; preview generation will continue.`, analysisError);
-    }
-
-    await updateJob(jobId, {
       stage: "Generating waveform",
-      progress: 78,
-      detected_tempo_bpm: analysis.tempoBpm,
-      detected_musical_key: analysis.musicalKey,
-      tempo_confidence: analysis.tempoConfidence,
-      key_confidence: analysis.keyConfidence,
+      progress: 68,
       updated_at: new Date().toISOString(),
     });
     const pcm = await decodeToMonoPcm(paths.previewPath, (child) => {

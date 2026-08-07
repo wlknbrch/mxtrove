@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { FolderOpen, ImagePlus, LoaderCircle, Play, Sparkles, Trash2 } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useForm } from "react-hook-form";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/layout/page-header";
@@ -32,6 +32,8 @@ import {
   updateSong,
   updateSongVersionPreview,
 } from "@/features/library/api";
+import { LibraryImportNavigator } from "@/features/library/library-import-navigator";
+import { readLibraryImportSession } from "@/features/library/library-import-session";
 import { MediaProcessingStatusCard } from "@/features/media-processing/media-processing-status-card";
 import {
   analyzeSongMetadataFromSourceAsset,
@@ -40,6 +42,7 @@ import {
   uploadOriginalWithAutomaticPreview,
 } from "@/features/media-processing/automatic-preview";
 import { useAppViewer } from "@/hooks/use-app-viewer";
+import { getSongFormValues, useSongFormHydration } from "@/features/songs/use-song-form-hydration";
 import { getArtworkAssetUrls, getPreviewPlaybackUrl, getPreviewPlaybackUrls } from "@/lib/asset-urls";
 import { musicalKeys, productionStages } from "@/lib/constants";
 import { hasUsablePreviewAsset, needsVersionPlaybackRepair } from "@/lib/playback-health";
@@ -61,15 +64,18 @@ const privatePlaybackUrlCache = new Map<string, string>();
 export function SongDetailPage() {
   const { songId = "" } = useParams();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const viewer = useAppViewer();
   const projectId = searchParams.get("project");
   const projectTrackId = searchParams.get("track");
+  const batchId = searchParams.get("batch");
   const isProjectVersionFlow = Boolean(projectId && projectTrackId);
   const enqueue = usePlayerStore((state) => state.enqueue);
   const artworkInputId = useId();
   const musicalKeyListId = useId();
   const artworkInputRef = useRef<HTMLInputElement | null>(null);
+  const assignedImportAssetsRef = useRef("");
   const [mediaProcessingJob, setMediaProcessingJob] = useState<MediaProcessingJob | null>(null);
   const [mediaProcessingError, setMediaProcessingError] = useState<string | null>(null);
   const [analysisProgress, setAnalysisProgress] = useState<number | null>(null);
@@ -127,6 +133,9 @@ export function SongDetailPage() {
     ? assetsById.get(song.default_artwork_asset_id) ?? null
     : null;
   const artworkUrls = getArtworkAssetUrls(artworkAsset);
+  const batchImportItem = batchId
+    ? readLibraryImportSession(batchId)?.items.find((item) => item.songId === songId) ?? null
+    : null;
 
   const originalAssets = useMemo(
     () => assets.filter((asset) => asset.asset_type === "audio_original"),
@@ -159,20 +168,42 @@ export function SongDetailPage() {
     [assetsById, selectedSourceAssetId, versions],
   );
 
+  useSongFormHydration(songForm, song);
+
   useEffect(() => {
-    if (!song) {
+    const uploadState = location.state as {
+      uploadedSourceAssetId?: string;
+      uploadedPreviewAssetId?: string | null;
+    } | null;
+    const sourceAssetId = uploadState?.uploadedSourceAssetId ?? batchImportItem?.sourceAssetId ?? undefined;
+    const previewAssetId = uploadState?.uploadedPreviewAssetId ?? batchImportItem?.previewAssetId ?? null;
+    if (!sourceAssetId || !assetsById.has(sourceAssetId)) {
       return;
     }
 
-    songForm.reset({
-      title: song.title,
-      notes: song.notes ?? "",
-      lyrics: song.lyrics ?? "",
-      musical_key: song.musical_key ?? "",
-      tempo_bpm: song.tempo_bpm,
-      default_artwork_asset_id: song.default_artwork_asset_id,
+    const assignmentKey = `${songId}:${sourceAssetId}:${previewAssetId ?? ""}`;
+    if (assignedImportAssetsRef.current === assignmentKey) return;
+    assignedImportAssetsRef.current = assignmentKey;
+
+    versionForm.setValue("source_asset_id", sourceAssetId, { shouldDirty: true, shouldValidate: true });
+    versionForm.setValue("preview_asset_id", previewAssetId, {
+      shouldDirty: true,
+      shouldValidate: true,
     });
-  }, [song, songForm]);
+    if (uploadState) {
+      navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+    }
+  }, [
+    assetsById,
+    batchImportItem?.previewAssetId,
+    batchImportItem?.sourceAssetId,
+    location.pathname,
+    location.search,
+    location.state,
+    navigate,
+    songId,
+    versionForm,
+  ]);
 
   async function refreshSongQueries() {
     await Promise.all([
@@ -224,7 +255,8 @@ export function SongDetailPage() {
 
   const saveSongMutation = useMutation({
     mutationFn: async (values: SongFormValues) => persistSong(values),
-    onSuccess: () => {
+    onSuccess: (updatedSong) => {
+      songForm.reset(getSongFormValues(updatedSong));
       toast.success("Song details saved.");
     },
     onError: (error) => {
@@ -614,6 +646,7 @@ export function SongDetailPage() {
 
   return (
     <div className="space-y-6">
+      {batchId ? <LibraryImportNavigator batchId={batchId} currentSongId={song.id} /> : null}
       <PageHeader
         eyebrow="Song workspace"
         title={song.title}
@@ -760,9 +793,9 @@ export function SongDetailPage() {
 
                 <div className="grid gap-4 rounded-[22px] border border-accent/20 bg-accent/8 p-4">
                   <div className="min-w-0">
-                    <p className="font-medium">Automatic audio analysis</p>
+                    <p className="font-medium">Audio analysis</p>
                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                      Detect tempo and musical key from the selected private original. Re-running replaces the previous detected values.
+                      Run this when you want MxTrove to detect tempo and musical key; re-running replaces the previous detected values.
                     </p>
                   </div>
                   <div className="grid min-w-0 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">

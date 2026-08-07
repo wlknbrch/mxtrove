@@ -38,6 +38,59 @@ export function roundDetectedTempoBpm(tempoBpm: number | null) {
   return tempoBpm == null ? null : Math.round(tempoBpm);
 }
 
+export function normalizeDetectedTempoOctave(
+  tempoBpm: number | null,
+  onsets: number[],
+  hopDurationSeconds: number,
+) {
+  if (tempoBpm == null || tempoBpm < 150 || tempoBpm > 205 || onsets.length < 32) {
+    return tempoBpm;
+  }
+
+  const halfTempo = tempoBpm / 2;
+  if (halfTempo < 65 || halfTempo > 110) {
+    return tempoBpm;
+  }
+
+  const beatInterval = 60 / (tempoBpm * hopDurationSeconds);
+  const phaseCount = Math.max(1, Math.round(beatInterval));
+  let strongestPulseTrain: number[] = [];
+  let strongestPulseTotal = 0;
+
+  for (let phase = 0; phase < phaseCount; phase += 1) {
+    const pulseTrain: number[] = [];
+    for (let position = phase; position < onsets.length; position += beatInterval) {
+      const center = Math.round(position);
+      pulseTrain.push(Math.max(
+        onsets[Math.max(0, center - 1)] ?? 0,
+        onsets[center] ?? 0,
+        onsets[Math.min(onsets.length - 1, center + 1)] ?? 0,
+      ));
+    }
+    const total = pulseTrain.reduce((sum, value) => sum + value, 0);
+    if (total > strongestPulseTotal) {
+      strongestPulseTotal = total;
+      strongestPulseTrain = pulseTrain;
+    }
+  }
+
+  if (strongestPulseTrain.length < 8) {
+    return tempoBpm;
+  }
+
+  const evenPulses = strongestPulseTrain.filter((_, index) => index % 2 === 0);
+  const oddPulses = strongestPulseTrain.filter((_, index) => index % 2 === 1);
+  const evenMean = evenPulses.reduce((sum, value) => sum + value, 0) / evenPulses.length;
+  const oddMean = oddPulses.reduce((sum, value) => sum + value, 0) / oddPulses.length;
+  const strongestMean = Math.max(evenMean, oddMean);
+  const alternatingAccent = strongestMean > Number.EPSILON
+    ? Math.abs(evenMean - oddMean) / strongestMean
+    : 0;
+
+  // A strong alternating pulse is the practical signal that a tracker locked to subdivisions.
+  return alternatingAccent >= 0.22 ? halfTempo : tempoBpm;
+}
+
 function correlation(left: number[], right: number[]) {
   const leftMean = left.reduce((sum, value) => sum + value, 0) / left.length;
   const rightMean = right.reduce((sum, value) => sum + value, 0) / right.length;
@@ -238,13 +291,18 @@ export function analyzeAudioPcm(pcm: Buffer): AudioAnalysisResult {
     AUDIO_ANALYSIS_HOP_SIZE / AUDIO_ANALYSIS_SAMPLE_RATE,
   );
   const tempo = beatrootTempo.tempoBpm != null ? beatrootTempo : fallbackTempo;
+  const normalizedTempo = normalizeDetectedTempoOctave(
+    tempo.tempoBpm,
+    onsets,
+    AUDIO_ANALYSIS_HOP_SIZE / AUDIO_ANALYSIS_SAMPLE_RATE,
+  );
   const normalizedChroma = chromaWeight > 0
     ? accumulatedChroma.map((value) => value / chromaWeight)
     : accumulatedChroma;
   const key = detectKeyFromChroma(normalizedChroma);
 
   return {
-    tempoBpm: roundDetectedTempoBpm(tempo.tempoBpm),
+    tempoBpm: roundDetectedTempoBpm(normalizedTempo),
     tempoConfidence: tempo.confidence,
     musicalKey: key.musicalKey,
     keyConfidence: key.confidence,

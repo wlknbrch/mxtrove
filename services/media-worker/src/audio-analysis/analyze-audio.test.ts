@@ -8,6 +8,7 @@ import {
   detectKeyFromChroma,
   detectTempoFromPcm,
   detectTempoFromOnsetEnvelope,
+  normalizeDetectedTempoOctave,
   roundDetectedTempoBpm,
 } from "./analyze-audio.js";
 
@@ -41,6 +42,30 @@ describe("audio metadata analysis", () => {
     expect(result.tempoBpm).toBeGreaterThanOrEqual(115);
     expect(result.tempoBpm).toBeLessThanOrEqual(125);
     expect(result.confidence).toBeGreaterThan(0.5);
+  });
+
+  it("normalizes a double-time estimate when alternating pulses reveal an 85 BPM beat", () => {
+    const hopDuration = AUDIO_ANALYSIS_HOP_SIZE / AUDIO_ANALYSIS_SAMPLE_RATE;
+    const beatInterval = 60 / (170 * hopDuration);
+    const onsets = new Array<number>(320).fill(0);
+    let pulseIndex = 0;
+    for (let position = 0; position < onsets.length; position += beatInterval) {
+      onsets[Math.round(position)] = pulseIndex % 2 === 0 ? 1 : 0.2;
+      pulseIndex += 1;
+    }
+
+    expect(normalizeDetectedTempoOctave(169, onsets, hopDuration)).toBeCloseTo(84.5, 1);
+  });
+
+  it("keeps genuinely fast music when its pulse does not alternate", () => {
+    const hopDuration = AUDIO_ANALYSIS_HOP_SIZE / AUDIO_ANALYSIS_SAMPLE_RATE;
+    const beatInterval = 60 / (174 * hopDuration);
+    const onsets = new Array<number>(320).fill(0);
+    for (let position = 0; position < onsets.length; position += beatInterval) {
+      onsets[Math.round(position)] = 1;
+    }
+
+    expect(normalizeDetectedTempoOctave(174, onsets, hopDuration)).toBe(174);
   });
 
   it("matches a C-major chroma profile", () => {

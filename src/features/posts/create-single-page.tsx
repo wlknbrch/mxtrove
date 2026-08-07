@@ -29,6 +29,7 @@ import {
   createSongVersion,
   type LibraryDashboardData,
 } from "@/features/library/api";
+import { GroupedSongPicker } from "@/features/library/grouped-song-picker";
 import { MediaProcessingStatusCard } from "@/features/media-processing/media-processing-status-card";
 import {
   generateAutomaticPreviewFromSourceAsset,
@@ -619,15 +620,16 @@ export function CreateSinglePage() {
                 </div>
               </CardHeader>
               <div className="grid gap-5 md:grid-cols-2">
-                <label className="grid gap-2">
-                  <span className="text-sm font-medium">Existing song</span>
-                  <Select value={existingSongId} onChange={(event) => selectExistingSong(event.currentTarget.value)}>
-                    <option value="">Create a new song</option>
-                    {libraryQuery.data?.songs.map((song) => (
-                      <option key={song.id} value={song.id}>{song.title}</option>
-                    ))}
-                  </Select>
-                </label>
+                <div className="md:col-span-2">
+                  <GroupedSongPicker
+                    songs={libraryQuery.data?.songs ?? []}
+                    selectedSongIds={existingSongId ? [existingSongId] : []}
+                    mode="single"
+                    newSongSelected={!existingSongId}
+                    onSelectNewSong={() => selectExistingSong("")}
+                    onToggleSong={(song) => selectExistingSong(song.id)}
+                  />
+                </div>
 
                 <label className="grid gap-2">
                   <span className="text-sm font-medium">New song title</span>
