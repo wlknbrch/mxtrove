@@ -11,6 +11,8 @@ interface FullscreenArtworkProps {
   className?: string;
   imageClassName?: string;
   children?: ReactNode;
+  allowFullscreen?: boolean;
+  priority?: boolean;
 }
 
 function hasArtworkSource(src: FullscreenArtworkProps["src"]) {
@@ -23,12 +25,15 @@ export function FullscreenArtwork({
   className,
   imageClassName,
   children,
+  allowFullscreen = true,
+  priority = false,
 }: FullscreenArtworkProps) {
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
   const hasSource = hasArtworkSource(src);
+  const canOpenFullscreen = hasSource && allowFullscreen;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -54,20 +59,25 @@ export function FullscreenArtwork({
       <button
         ref={triggerRef}
         type="button"
-        disabled={!hasSource}
+        disabled={!canOpenFullscreen}
         className={cn(
           "group/artwork relative block overflow-hidden text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/80 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-          hasSource ? "cursor-zoom-in" : "cursor-default",
+          canOpenFullscreen ? "cursor-zoom-in" : "cursor-default",
           className,
         )}
         onClick={() => {
-          if (hasSource) setIsOpen(true);
+          if (canOpenFullscreen) setIsOpen(true);
         }}
-        aria-label={hasSource ? `Open ${alt} artwork fullscreen` : undefined}
+        aria-label={canOpenFullscreen ? `Open ${alt} artwork fullscreen` : undefined}
       >
-        <ResolvedImage src={src} alt={alt} className={imageClassName} />
+        <ResolvedImage
+          src={src}
+          alt={alt}
+          className={imageClassName}
+          {...(priority ? { loading: "eager" as const, fetchPriority: "high" as const } : {})}
+        />
         {children}
-        {hasSource ? (
+        {canOpenFullscreen ? (
           <span className="absolute right-3 top-3 z-30 flex size-9 items-center justify-center rounded-full border border-white/20 bg-black/55 text-white shadow-lg backdrop-blur-md transition md:opacity-0 md:group-hover/artwork:opacity-100 md:group-focus-visible/artwork:opacity-100">
             <Maximize2 className="size-4" aria-hidden="true" />
           </span>

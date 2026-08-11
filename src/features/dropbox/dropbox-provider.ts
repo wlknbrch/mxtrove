@@ -47,6 +47,7 @@ export class DropboxProvider implements CloudStorageProvider {
   readonly provider = "dropbox" as const;
   private session: DropboxSession | null = null;
   private folders: CloudFolderStructure | null = null;
+  private folderScope: string | null = null;
 
   private async api<T>(path: string, body?: unknown): Promise<T> {
     const token = await this.getToken();
@@ -70,7 +71,7 @@ export class DropboxProvider implements CloudStorageProvider {
     return this.session.accessToken;
   }
 
-  async connect(): Promise<CloudConnectionResult> {
+  async connect(profileId?: string): Promise<CloudConnectionResult> {
     if (!env.dropboxClientId) throw new Error("VITE_DROPBOX_CLIENT_ID is missing.");
     const pkce = await createPkcePair();
     const state = crypto.randomUUID();
@@ -114,7 +115,7 @@ export class DropboxProvider implements CloudStorageProvider {
     const account = await this.api<{ email?: string }>("/users/get_current_account");
     this.session.email = account.email ?? null;
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(this.session));
-    const folders = await this.ensureRootStructure();
+    const folders = await this.ensureRootStructure(profileId);
     return {
       provider: this.provider,
       accountId: this.session.accountId,
@@ -131,6 +132,7 @@ export class DropboxProvider implements CloudStorageProvider {
     }
     this.session = null;
     this.folders = null;
+    this.folderScope = null;
     sessionStorage.removeItem(SESSION_KEY);
   }
 
@@ -204,18 +206,22 @@ export class DropboxProvider implements CloudStorageProvider {
     return path.replace(/^\/MxShare(?=\/|$)/i, ROOT_FOLDER_PATH);
   }
 
-  async ensureRootStructure() {
-    if (this.folders) return this.folders;
+  async ensureRootStructure(profileId?: string) {
+    const scope = profileId ?? null;
+    if (this.folders && this.folderScope === scope) return this.folders;
     const root = await this.ensureRootFolder();
-    const audio = await this.ensureFolder(`${root}/Audio`);
+    const profileRoot = profileId
+      ? await this.ensureFolder(`${await this.ensureFolder(`${root}/Profiles`)}/${profileId}`)
+      : root;
+    const audio = await this.ensureFolder(`${profileRoot}/Audio`);
     const originals = await this.ensureFolder(`${audio}/Originals`);
     const previews = await this.ensureFolder(`${audio}/Previews`);
-    const artworkRoot = await this.ensureFolder(`${root}/Artwork`);
+    const artworkRoot = await this.ensureFolder(`${profileRoot}/Artwork`);
     const artwork = await this.ensureFolder(`${artworkRoot}/Covers`);
     const avatars = await this.ensureFolder(`${artworkRoot}/Avatars`);
-    const exportsFolder = await this.ensureFolder(`${root}/Exports`);
+    const exportsFolder = await this.ensureFolder(`${profileRoot}/Exports`);
     this.folders = {
-      rootFolderId: root,
+      rootFolderId: profileRoot,
       audioFolderId: audio,
       audioOriginalsFolderId: originals,
       audioPreviewsFolderId: previews,
@@ -223,6 +229,7 @@ export class DropboxProvider implements CloudStorageProvider {
       avatarsFolderId: avatars,
       exportsFolderId: exportsFolder,
     };
+    this.folderScope = scope;
     return this.folders;
   }
 

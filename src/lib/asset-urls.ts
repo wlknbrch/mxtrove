@@ -162,6 +162,12 @@ export function shouldFetchPublicMediaAsBlob(
 
   try {
     const url = new URL(value);
+    if (
+      mediaType === "image"
+      && (url.pathname === "/api/drive-media" || url.pathname.endsWith("/drive-media"))
+    ) {
+      return true;
+    }
     if (mediaType === "image" && url.hostname === "lh3.googleusercontent.com") {
       return false;
     }

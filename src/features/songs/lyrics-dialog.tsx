@@ -70,12 +70,12 @@ export function LyricsDialog({
     >
       <button
         type="button"
-        className="absolute inset-0 bg-[rgba(3,2,10,0.88)] backdrop-blur-xl"
+        className="modal-scrim absolute inset-0 backdrop-blur-xl"
         onClick={() => onOpenChange(false)}
         aria-label="Close lyrics"
       />
-      <section className="relative z-10 flex max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl flex-col overflow-hidden rounded-[30px] border border-accent/22 bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.2),transparent_35%),linear-gradient(180deg,rgba(19,14,38,0.99),rgba(8,7,20,0.99))] shadow-[0_36px_120px_rgba(0,0,0,0.72)] sm:max-h-[calc(100dvh-3rem)] sm:rounded-[36px]">
-        <header className="flex shrink-0 items-start justify-between gap-4 border-b border-white/[0.08] px-5 py-5 sm:px-8 sm:py-7">
+      <section className="lyrics-panel relative z-10 flex max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl flex-col overflow-hidden rounded-[30px] border border-accent/22 text-foreground shadow-[0_36px_120px_rgba(0,0,0,0.38)] sm:max-h-[calc(100dvh-3rem)] sm:rounded-[36px]">
+        <header className="flex shrink-0 items-start justify-between gap-4 border-b border-border px-5 py-5 sm:px-8 sm:py-7">
           <div className="flex min-w-0 items-start gap-4">
             <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl border border-accent/25 bg-accent/12 text-accent-secondary sm:size-12">
               <BookOpenText className="size-5" aria-hidden="true" />
@@ -94,7 +94,7 @@ export function LyricsDialog({
             ref={closeRef}
             variant="ghost"
             size="sm"
-            className="size-11 shrink-0 rounded-full border border-white/10 bg-white/[0.04] p-0"
+            className="player-control size-11 shrink-0 rounded-full p-0"
             onClick={() => onOpenChange(false)}
             aria-label="Close lyrics"
           >
@@ -106,7 +106,7 @@ export function LyricsDialog({
             {content}
           </p>
         </div>
-        <footer className="shrink-0 border-t border-white/[0.06] px-5 py-3 text-center text-[11px] uppercase tracking-[0.24em] text-muted-foreground/70">
+        <footer className="shrink-0 border-t border-border px-5 py-3 text-center text-[11px] uppercase tracking-[0.24em] text-muted-foreground/70">
           Playback continues while you read
         </footer>
       </section>

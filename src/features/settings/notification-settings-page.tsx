@@ -76,8 +76,8 @@ const notificationPreferenceRows: Array<{
   },
   {
     key: "single_updates_enabled",
-    label: "Single updates",
-    description: "Version updates and public release events.",
+    label: "Release updates",
+    description: "New versions and updates to releases you previously engaged with.",
   },
   {
     key: "project_invites_enabled",
@@ -230,11 +230,11 @@ export function NotificationSettingsPage() {
         description="Choose what should interrupt you, keep browser push on the devices that matter, and leave the rest on in-app unread counts."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[310px_minmax(0,1fr)_360px]">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[310px_minmax(0,1fr)_360px]">
         <SettingsSidebar />
 
-        <div className="space-y-6">
-          <Card>
+        <div className="min-w-0 space-y-6">
+          <Card className="min-w-0 overflow-hidden">
             <CardHeader>
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center gap-3">
@@ -261,9 +261,9 @@ export function NotificationSettingsPage() {
               </div>
             ) : null}
 
-            <div className="grid gap-4 md:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
-              <div className="space-y-4">
-                <div className="rounded-[24px] border border-white/[0.06] bg-white/[0.02] p-4">
+            <div className="grid min-w-0 gap-4 md:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
+              <div className="min-w-0 space-y-4">
+                <div className="min-w-0 rounded-[24px] border border-white/[0.06] bg-white/[0.02] p-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <Bell className="size-5 text-accent-secondary" />
@@ -335,8 +335,8 @@ export function NotificationSettingsPage() {
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="rounded-[24px] border border-white/[0.06] bg-white/[0.02] p-4">
+              <div className="min-w-0 space-y-4">
+                <div className="min-w-0 overflow-hidden rounded-[24px] border border-white/[0.06] bg-white/[0.02] p-4">
                   <p className="text-xs uppercase tracking-[0.22em] text-accent-secondary/75">Active devices</p>
                   <p className="mt-3 font-display text-4xl tracking-[-0.04em]">{activeDeviceCount}</p>
                   <p className="mt-2 text-sm leading-7 text-muted-foreground">
@@ -352,14 +352,14 @@ export function NotificationSettingsPage() {
                   <div className="space-y-3 text-sm text-muted-foreground">
                     {subscriptionsQuery.data?.length ? (
                       subscriptionsQuery.data.map((entry) => (
-                        <div key={entry.id} className="rounded-[18px] border border-white/[0.05] bg-white/[0.02] px-4 py-3">
-                          <div className="flex items-center justify-between gap-3">
+                        <div key={entry.id} className="min-w-0 overflow-hidden rounded-[18px] border border-white/[0.05] bg-white/[0.02] px-4 py-3">
+                          <div className="flex min-w-0 items-center justify-between gap-3">
                             <p className="truncate font-medium text-foreground">
                               {entry.device_label ?? entry.user_agent ?? "Browser subscription"}
                             </p>
                             <DeviceStatusBadge enabled={entry.is_active} />
                           </div>
-                          <p className="mt-2 truncate text-xs uppercase tracking-[0.18em] text-muted-foreground/80">
+                          <p className="mt-2 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs uppercase tracking-[0.12em] text-muted-foreground/80">
                             {entry.endpoint}
                           </p>
                         </div>
@@ -374,7 +374,7 @@ export function NotificationSettingsPage() {
           </Card>
         </div>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <Card>
             <CardHeader>
               <div>

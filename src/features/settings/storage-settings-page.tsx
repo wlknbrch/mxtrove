@@ -90,9 +90,9 @@ export function StorageSettingsPage() {
   );
   const folderRows = [
     {
-      label: "MxTrove root",
-      helper: "Private home folder for all uploads.",
-      value: storedFolders?.rootFolderId ? "MxTrove" : "Pending",
+      label: "Profile workspace",
+      helper: "A private provider folder scoped to this MxTrove profile.",
+      value: storedFolders?.rootFolderId ? "MxTrove / Profiles / your profile" : "Pending",
     },
     {
       label: "Originals",
@@ -125,7 +125,7 @@ export function StorageSettingsPage() {
       }
 
       const activeProvider = getCloudStorageProvider(providerId);
-      const result = await activeProvider.connect();
+      const result = await activeProvider.connect(viewer.userId);
       const existingConnection = (connectionsQuery.data ?? []).find(
         (entry) => entry.provider === providerId,
       );
@@ -185,7 +185,7 @@ export function StorageSettingsPage() {
       if (!destinationConnection) throw new Error("Connect the destination provider first.");
 
       if (!(await sourceProvider.restoreSession())) {
-        const sourceResult = await sourceProvider.connect();
+        const sourceResult = await sourceProvider.connect(viewer.userId);
         await upsertCloudConnection({
           ...buildCloudConnectionUpsert(viewer.userId, sourceResult),
           is_default: Boolean(
@@ -195,14 +195,14 @@ export function StorageSettingsPage() {
       }
       let targetFolders;
       if (!(await targetProvider.restoreSession())) {
-        const targetResult = await targetProvider.connect();
+        const targetResult = await targetProvider.connect(viewer.userId);
         targetFolders = targetResult.folders;
         await upsertCloudConnection({
           ...buildCloudConnectionUpsert(viewer.userId, targetResult),
           is_default: destinationConnection.is_default,
         });
       } else {
-        targetFolders = await targetProvider.ensureRootStructure();
+        targetFolders = await targetProvider.ensureRootStructure(viewer.userId);
       }
 
       if (!window.confirm(
@@ -331,6 +331,9 @@ export function StorageSettingsPage() {
             </div>
             <p className="mt-4 text-xs leading-6 text-muted-foreground">
               Browser-to-browser provider migration is intentionally explicit: download from the current provider, confirm, then upload to another connected provider. No server-side master transfer is performed.
+            </p>
+            <p className="mt-2 text-xs leading-6 text-muted-foreground">
+              New uploads use a profile-specific workspace, so several MxTrove profiles can safely connect the same provider account. Existing files remain in their original folders and keep their saved IDs and links.
             </p>
           </Card>
 

@@ -27,8 +27,8 @@ export async function getLibraryDashboard(ownerId: string): Promise<LibraryDashb
     client.from("songs").select("*").eq("owner_id", ownerId).order("updated_at", { ascending: false }),
     client
       .from("song_versions")
-      .select("*, song:songs!song_versions_song_id_fkey(owner_id)")
-      .eq("song.owner_id", ownerId)
+      .select("*")
+      .eq("owner_id", ownerId)
       .order("created_at", { ascending: false }),
     client.from("assets").select("*").eq("owner_id", ownerId).order("created_at", { ascending: false }),
   ]);
@@ -230,11 +230,11 @@ export async function deleteSong(songId: string) {
   ]);
 
   if (singleUsage.error) {
-    throw singleUsage.error;
+    throw new Error(singleUsage.error.message || "Could not check single usage for this song.");
   }
 
   if (releaseUsage.error) {
-    throw releaseUsage.error;
+    throw new Error(releaseUsage.error.message || "Could not check release usage for this song.");
   }
 
   if ((singleUsage.count ?? 0) > 0) {
@@ -251,7 +251,13 @@ export async function deleteSong(songId: string) {
     .eq("id", songId);
 
   if (error) {
-    throw error;
+    if (
+      error.code === "23503"
+      && error.message.includes("media_processing_jobs_protected_asset_id_fkey")
+    ) {
+      throw new Error("MxTrove could not finish cleaning up this song's media records. Apply the latest database update and try again.");
+    }
+    throw new Error(error.message || "Could not delete this song.");
   }
 }
 

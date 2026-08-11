@@ -53,6 +53,7 @@ export function buildCloudConnectionUpsert(profileId: string, result: CloudConne
       resumable_upload: true,
       public_preview: true,
       browser_transfer: true,
+      profile_scoped_folders: true,
     },
     last_error: null,
     connected_at: new Date().toISOString(),

@@ -487,12 +487,14 @@ export async function listResolvedPosts(params?: {
   ownerId?: string;
   search?: string;
   viewerId?: string | null;
+  limit?: number;
+  offset?: number;
 }) {
   const viewerId = getViewerId(params?.viewerId);
 
   if (isDemoModeEnabled()) {
     await createDemoDelay();
-    return demoPosts
+    const matchingPosts = demoPosts
       .filter((post) => (params?.visibility ? post.visibility === params.visibility : true))
       .filter((post) => (params?.postType && params.postType !== "all" ? post.post_type === params.postType : true))
       .filter((post) => (params?.ownerId ? post.owner_id === params.ownerId : true))
@@ -509,6 +511,10 @@ export async function listResolvedPosts(params?: {
       })
       .map((post) => resolveDemoPost(post.id, viewerId)!)
       .sort((left, right) => new Date(right.post.activity_at).getTime() - new Date(left.post.activity_at).getTime());
+    const offset = Math.max(0, params?.offset ?? 0);
+    return typeof params?.limit === "number"
+      ? matchingPosts.slice(offset, offset + Math.max(0, params.limit))
+      : matchingPosts.slice(offset);
   }
 
   const client = requireSupabase();
@@ -525,6 +531,13 @@ export async function listResolvedPosts(params?: {
   }
   if (params?.search) {
     query = query.or(`title.ilike.%${params.search}%,description.ilike.%${params.search}%`);
+  }
+  if (typeof params?.limit === "number") {
+    const offset = Math.max(0, params.offset ?? 0);
+    const limit = Math.max(1, params.limit);
+    query = query.range(offset, offset + limit - 1);
+  } else if (params?.offset) {
+    query = query.range(Math.max(0, params.offset), Math.max(0, params.offset) + 999);
   }
 
   const { data, error } = await query;

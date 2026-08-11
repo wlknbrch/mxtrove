@@ -6,6 +6,7 @@ import { getResolvedPostById, listResolvedPosts } from "@/features/posts/api";
 import type { ResolvedPostCard } from "@/features/posts/types";
 
 export const HOME_FEED_PAGE_SIZE = 6;
+export const EXPLORE_FEED_PAGE_SIZE = 8;
 
 function mergeUniquePostIds(groups: string[][], limit: number) {
   const seen = new Set<string>();
@@ -202,26 +203,21 @@ export async function listHomeFeedPage(
   };
 }
 
-export async function listExploreFeed(params?: {
+export async function listExploreFeedPage(params?: {
   postType?: "single" | "ep" | "album" | "all";
-  search?: string;
   viewerId?: string | null;
   mode?: "latest" | "trending";
-}) {
-  if (params?.search?.trim()) {
-    const searchResults = await searchExploreCatalog({
-      query: params.search,
-      viewerId: params.viewerId,
-      postType: params.postType,
-    });
-    return searchResults.posts;
-  }
+  offset?: number;
+  limit?: number;
+}): Promise<HomeFeedPage> {
+  const offset = Math.max(0, params?.offset ?? 0);
+  const limit = Math.max(1, params?.limit ?? EXPLORE_FEED_PAGE_SIZE);
 
   if (params?.mode === "trending" && !isDemoModeEnabled()) {
     const client = requireSupabase();
     const { data, error } = await client.rpc("list_trending_public_post_ids", {
-      limit_count: 40,
-      offset_count: 0,
+      limit_count: limit + 1,
+      offset_count: offset,
     });
 
     if (error) {
@@ -229,19 +225,28 @@ export async function listExploreFeed(params?: {
     }
 
     const rankedPostIds = ((data ?? []) as Array<{ post_id: string }>).map((row) => row.post_id);
-    const resolvedPosts = await resolveFeedPosts(rankedPostIds, params.viewerId);
+    const pagePostIds = rankedPostIds.slice(0, limit);
+    const resolvedPosts = await resolveFeedPosts(pagePostIds, params.viewerId);
 
-    return resolvedPosts
+    return {
+      items: resolvedPosts
       .filter(Boolean)
-      .filter((post) => (params?.postType && params.postType !== "all" ? post!.post.post_type === params.postType : true));
+      .filter((post) => (params?.postType && params.postType !== "all" ? post!.post.post_type === params.postType : true)),
+      nextOffset: rankedPostIds.length > limit ? offset + limit : null,
+    };
   }
 
-  return listResolvedPosts({
+  const resolvedPosts = await listResolvedPosts({
     visibility: "public",
     postType: params?.postType ?? "all",
-    search: params?.search,
     viewerId: params?.viewerId,
+    limit: limit + 1,
+    offset,
   });
+  return {
+    items: resolvedPosts.slice(0, limit),
+    nextOffset: resolvedPosts.length > limit ? offset + limit : null,
+  };
 }
 
 export async function searchExploreCatalog(params: {

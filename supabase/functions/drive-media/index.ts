@@ -111,6 +111,14 @@ serve(async (request) => {
       kind === "audio" ? "audio/mpeg" : upstreamResponse.headers.get("content-type") ?? "image/jpeg",
     );
   }
+  if (upstreamResponse.ok && !rangeHeader) {
+    responseHeaders.set(
+      "cache-control",
+      kind === "image"
+        ? "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400"
+        : "public, max-age=3600, s-maxage=86400, stale-while-revalidate=3600",
+    );
+  }
 
   return new Response(request.method === "HEAD" ? null : upstreamResponse.body, {
     status: upstreamResponse.status,

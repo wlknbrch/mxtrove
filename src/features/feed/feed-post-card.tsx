@@ -180,6 +180,8 @@ export function FeedPostCard({
               <FullscreenArtwork
                 src={getArtworkAssetUrls(item.artwork)}
                 alt={item.post.title}
+                allowFullscreen={false}
+                priority={isSpotlight}
                 className={cn(
                   "relative overflow-hidden rounded-[26px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.32),rgba(255,255,255,0.03)_55%,rgba(10,8,24,0.92))]",
                   isSpotlight ? "aspect-[0.96]" : "aspect-square",
@@ -194,9 +196,8 @@ export function FeedPostCard({
                 {getArtworkAssetUrls(item.artwork).length === 0 ? (
                   <div className="absolute inset-0 bg-gradient-to-br from-accent/40 via-accent-secondary/20 to-background" />
                 ) : null}
-                <div className="absolute inset-x-3 bottom-3 z-10 flex items-center justify-between gap-3 rounded-full border border-white/10 bg-[rgba(10,8,24,0.7)] px-3 py-2 text-[0.7rem] uppercase tracking-[0.18em] text-accent-secondary/85 backdrop-blur-xl">
-                  <span className="min-w-0 flex-1 truncate">{eventLabel}</span>
-                  <span className="shrink-0 text-white/70">
+                <div className="absolute inset-x-2 bottom-3 z-10 flex min-w-0 items-center justify-center rounded-full border border-white/10 bg-[rgba(10,8,24,0.7)] px-2 py-2 text-[0.55rem] uppercase tracking-[0.08em] text-white/75 backdrop-blur-xl">
+                  <span className="min-w-0 truncate text-center">
                     {playbackTracks.length > 0
                       ? `${playbackTracks.length} track${playbackTracks.length === 1 ? "" : "s"}${!item.single && releaseDurationSeconds ? ` • ${formatDuration(releaseDurationSeconds)}` : ""}`
                       : "No audio"}

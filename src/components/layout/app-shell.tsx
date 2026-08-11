@@ -32,6 +32,7 @@ import { MxShareMark } from "@/components/layout/mxshare-mark";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { getAssetById, getCloudConnections } from "@/features/drive/api";
+import { useFeedRealtime } from "@/features/feed/use-feed-realtime";
 import { getUnreadConversationSummary } from "@/features/messages/api";
 import { getUnreadNotificationCount } from "@/features/notifications/api";
 import { useNotificationsRealtime } from "@/features/notifications/use-notifications-realtime";
@@ -83,6 +84,7 @@ export function AppShell() {
   const setPlayerSurfaceHidden = usePlayerStore((state) => state.setSurfaceHidden);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   useNotificationsRealtime(viewer.userId);
+  useFeedRealtime();
 
   useEffect(() => {
     setPlayerSurfaceHidden(isMobileMenuOpen);
@@ -357,7 +359,7 @@ export function AppShell() {
         <div className="fixed inset-0 z-[60] xl:hidden">
           <button
             type="button"
-            className="absolute inset-0 bg-black/65 backdrop-blur-sm"
+            className="modal-scrim absolute inset-0 backdrop-blur-sm"
             onClick={() => setIsMobileMenuOpen(false)}
             aria-label="Close navigation menu"
           />
@@ -365,7 +367,7 @@ export function AppShell() {
             role="dialog"
             aria-modal="true"
             aria-label="Mobile navigation and settings"
-            className="absolute inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+6.7rem)] max-h-[calc(100dvh-8rem)] overflow-y-auto rounded-[30px] border border-border bg-[linear-gradient(180deg,rgba(15,11,31,0.98),rgba(9,7,21,0.98))] p-5 shadow-[0_28px_90px_rgba(0,0,0,0.58)] backdrop-blur-xl"
+            className="absolute inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+6.7rem)] max-h-[calc(100dvh-8rem)] overflow-y-auto rounded-[30px] border border-border bg-surface-strong p-5 text-foreground shadow-[0_28px_90px_rgba(0,0,0,0.34)] backdrop-blur-xl"
             onClick={(event) => {
               if (event.target instanceof Element && event.target.closest("a")) {
                 setIsMobileMenuOpen(false);
@@ -394,7 +396,7 @@ export function AppShell() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="size-10 shrink-0 rounded-full border border-white/8 p-0"
+                className="size-10 shrink-0 rounded-full border border-border p-0"
                 onClick={() => setIsMobileMenuOpen(false)}
                 aria-label="Close navigation menu"
               >
@@ -417,7 +419,7 @@ export function AppShell() {
                     "flex items-center gap-3 rounded-[18px] border px-3 py-3 text-sm",
                     isActive
                       ? "border-accent/30 bg-accent/12 text-foreground"
-                      : "border-white/8 bg-white/[0.025] text-muted-foreground",
+                      : "border-border bg-surface-soft text-muted-foreground",
                   )
                 }
               >
@@ -431,7 +433,7 @@ export function AppShell() {
                     "flex min-w-0 items-center gap-3 rounded-[18px] border px-3 py-3 text-sm",
                     isActive
                       ? "border-accent/30 bg-accent/12 text-foreground"
-                      : "border-white/8 bg-white/[0.025] text-muted-foreground",
+                      : "border-border bg-surface-soft text-muted-foreground",
                   )
                 }
               >
@@ -468,7 +470,7 @@ export function AppShell() {
                           "flex min-w-0 items-center gap-2.5 rounded-[17px] border px-3 py-3 text-sm transition-colors",
                           isActive
                             ? "border-accent/30 bg-accent/12 text-foreground"
-                            : "border-white/7 bg-white/[0.02] text-muted-foreground hover:bg-white/[0.05] hover:text-foreground",
+                            : "border-border bg-surface-soft text-muted-foreground hover:border-border-strong hover:text-foreground",
                         )
                       }
                     >
@@ -484,7 +486,7 @@ export function AppShell() {
               {publicProfilePath ? (
                 <Link
                   to={publicProfilePath}
-                  className="flex min-h-11 items-center justify-center gap-2 rounded-[17px] border border-white/8 bg-white/[0.025] px-4 py-2.5 text-sm text-muted-foreground"
+                  className="flex min-h-11 items-center justify-center gap-2 rounded-[17px] border border-border bg-surface-soft px-4 py-2.5 text-sm text-muted-foreground"
                 >
                   <UserRound className="size-4" />
                   Public profile
@@ -505,7 +507,7 @@ export function AppShell() {
         </div>
       ) : null}
 
-      <nav className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-50 flex rounded-full border border-border bg-[rgba(9,7,20,0.94)] p-2 shadow-[0_16px_36px_rgba(0,0,0,0.34)] backdrop-blur-md xl:hidden">
+      <nav className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-50 flex rounded-full border border-border bg-surface-strong p-2 text-foreground shadow-[0_16px_36px_rgba(0,0,0,0.22)] backdrop-blur-md xl:hidden">
         {mobilePrimaryNavigation.map((item) => {
           const Icon = item.icon;
           const badgeCount = unreadNavigationCounts.get(item.to) ?? 0;

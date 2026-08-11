@@ -109,4 +109,33 @@ describe("DropboxProvider MxTrove folder compatibility", () => {
     expect(upload.parentFolderId).toBe("/MxTrove/Audio/Originals");
     expect(upload.fileId).toBe("id:new-file");
   });
+
+  it("creates a profile-scoped workspace for accounts shared by multiple MxTrove profiles", async () => {
+    const requestedPaths: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      const body = init?.body ? JSON.parse(String(init.body)) as { path?: string } : {};
+      if (!url.endsWith("/files/get_metadata")) {
+        throw new Error(`Unexpected Dropbox request: ${url}`);
+      }
+      requestedPaths.push(body.path ?? "");
+      if (body.path === "/MxShare") {
+        return jsonResponse({ error_summary: "path/not_found/" }, 409);
+      }
+      return jsonResponse({
+        id: `id:${body.path}`,
+        name: body.path?.split("/").at(-1),
+        path_display: body.path,
+      });
+    }));
+
+    const provider = new DropboxProvider();
+    expect(await provider.restoreSession()).toBe(true);
+    const folders = await provider.ensureRootStructure("profile-123");
+
+    expect(folders.rootFolderId).toBe("/MxTrove/Profiles/profile-123");
+    expect(folders.audioOriginalsFolderId).toBe("/MxTrove/Profiles/profile-123/Audio/Originals");
+    expect(folders.artworkFolderId).toBe("/MxTrove/Profiles/profile-123/Artwork/Covers");
+    expect(requestedPaths).toContain("/MxTrove/Profiles/profile-123");
+  });
 });

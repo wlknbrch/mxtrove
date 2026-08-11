@@ -54,8 +54,9 @@ describe("GroupedSongPicker", () => {
 
   it("collapses and restores the complete library song panel", async () => {
     const user = userEvent.setup();
+    window.localStorage.removeItem("mxtrove:release-editor:library-songs-expanded");
 
-    const { container } = render(
+    const { container, unmount } = render(
       <GroupedSongPicker
         songs={[makeSong("song", "A Library Song", "2026-02-10T10:00:00.000Z")]}
         selectedSongIds={["song"]}
@@ -64,7 +65,7 @@ describe("GroupedSongPicker", () => {
       />,
     );
 
-    const libraryToggle = container.querySelector("summary");
+    const libraryToggle = container.querySelector('button[aria-controls]');
     expect(libraryToggle).not.toBeNull();
     const searchInput = container.querySelector<HTMLInputElement>('input[placeholder="Search your library"]');
     expect(searchInput).not.toBeNull();
@@ -72,11 +73,24 @@ describe("GroupedSongPicker", () => {
     expect(container).toHaveTextContent("1 selected");
 
     await user.click(libraryToggle!);
-    expect(searchInput).not.toBeVisible();
+    expect(searchInput).not.toBeInTheDocument();
     expect(container).toHaveTextContent("1 selected");
+    expect(window.localStorage.getItem("mxtrove:release-editor:library-songs-expanded")).toBe("false");
 
-    await user.click(libraryToggle!);
-    expect(searchInput).toBeVisible();
-    expect(container).toHaveTextContent("A Library Song");
+    unmount();
+    const restored = render(
+      <GroupedSongPicker
+        songs={[makeSong("song", "A Library Song", "2026-02-10T10:00:00.000Z")]}
+        selectedSongIds={["song"]}
+        onToggleSong={vi.fn()}
+        mode="single"
+      />,
+    );
+    const restoredSearch = restored.container.querySelector<HTMLInputElement>('input[placeholder="Search your library"]');
+    expect(restoredSearch).toBeNull();
+
+    await user.click(restored.container.querySelector('button[aria-controls]')!);
+    expect(restored.container.querySelector('input[placeholder="Search your library"]')).toBeVisible();
+    expect(restored.container).toHaveTextContent("A Library Song");
   });
 });

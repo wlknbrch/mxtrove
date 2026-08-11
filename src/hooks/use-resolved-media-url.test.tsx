@@ -6,6 +6,7 @@ import {
   useResolvedMediaSource,
   useResolvedMediaUrl,
 } from "@/hooks/use-resolved-media-url";
+import { shouldFetchPublicMediaAsBlob } from "@/lib/asset-urls";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -50,5 +51,12 @@ describe("useResolvedMediaUrl", () => {
         isResolving: false,
       });
     });
+  });
+
+  it("validates image proxy responses while keeping audio proxy playback streamable", () => {
+    const proxyUrl = "https://project.functions.supabase.co/drive-media?provider=dropbox&kind=image";
+
+    expect(shouldFetchPublicMediaAsBlob(proxyUrl, "image")).toBe(true);
+    expect(shouldFetchPublicMediaAsBlob(proxyUrl, "audio")).toBe(false);
   });
 });

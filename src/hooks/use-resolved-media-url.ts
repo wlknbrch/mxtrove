@@ -61,6 +61,23 @@ async function resolveMediaUrl(candidates: string[], mediaType: "audio" | "image
   return null;
 }
 
+async function resolveMediaUrlWithRetry(candidates: string[], mediaType: "audio" | "image") {
+  const attempts = mediaType === "image" ? 2 : 1;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const resolvedUrl = await resolveMediaUrl(candidates, mediaType);
+    if (resolvedUrl) {
+      return resolvedUrl;
+    }
+
+    if (attempt < attempts - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+  }
+
+  return null;
+}
+
 export function prefetchResolvedMediaSource(
   input: string | string[] | null | undefined,
   mediaType: "audio" | "image",
@@ -80,9 +97,13 @@ export function prefetchResolvedMediaSource(
     return existing;
   }
 
-  const pending = resolveMediaUrl(candidates, mediaType).then((nextUrl) => {
+  const pending = resolveMediaUrlWithRetry(candidates, mediaType).then((nextUrl) => {
     pendingMediaUrlCache.delete(cacheKey);
-    resolvedMediaUrlCache.set(cacheKey, nextUrl);
+    if (nextUrl) {
+      resolvedMediaUrlCache.set(cacheKey, nextUrl);
+    } else {
+      resolvedMediaUrlCache.delete(cacheKey);
+    }
     return nextUrl;
   });
   pendingMediaUrlCache.set(cacheKey, pending);

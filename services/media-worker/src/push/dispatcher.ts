@@ -46,6 +46,8 @@ function buildPushPayload(row: ClaimedPushRow) {
                 ? `${actorName} replied in a comment thread.`
                 : row.notification_type === "single_version"
                 ? `${actorName} uploaded a new public version of “${postTitle}”.`
+                : row.notification_type === "release_update"
+                  ? `${actorName} updated “${postTitle}”, a release you engaged with.`
                 : row.notification_type === "project_invite"
                   ? `${actorName} invited you to a private project.`
                   : row.notification_type === "project_invite_accepted"

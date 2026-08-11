@@ -126,8 +126,9 @@ export function CreateSinglePage() {
     googleProvider.hydrateConnection({
       email: activeConnection?.provider_account_email ?? null,
       folders: storedDriveFolders,
+      profileId: activeConnection?.capabilities.profile_scoped_folders ? viewer.userId : null,
     });
-  }, [activeConnection?.provider_account_email, storedDriveFolders, uploadProviderId]);
+  }, [activeConnection?.provider_account_email, storedDriveFolders, uploadProviderId, viewer.userId]);
 
   const availableArtwork = useMemo(
     () => (libraryQuery.data?.assets ?? []).filter((asset) => asset.asset_type === "cover_artwork"),
@@ -213,7 +214,7 @@ export function CreateSinglePage() {
     }
 
     const activeProvider = getCloudStorageProvider(providerId);
-    const result = await activeProvider.connect();
+    const result = await activeProvider.connect(viewer.userId);
     const currentConnection = (connectionsQuery.data ?? []).find((entry) => entry.provider === providerId);
     await upsertCloudConnection({
       ...buildCloudConnectionUpsert(viewer.userId, result),
@@ -230,7 +231,7 @@ export function CreateSinglePage() {
     const targetProvider = getCloudStorageProvider(providerId);
     const hasSession = await targetProvider.restoreSession();
     const activeFolders = hasSession
-      ? await targetProvider.ensureRootStructure()
+      ? await targetProvider.ensureRootStructure(viewer.userId ?? undefined)
       : await refreshDriveSetup(providerId);
 
     if (target === "originals") {

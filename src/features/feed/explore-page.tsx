@@ -1,6 +1,6 @@
 import { useDeferredValue, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Clock3, Compass, Heart, Search, Sparkles, UserRound } from "lucide-react";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { Compass, LoaderCircle, Search, Sparkles, UserRound } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { PageHeader } from "@/components/layout/page-header";
@@ -13,7 +13,7 @@ import { Select } from "@/components/ui/select";
 import { Tabs } from "@/components/ui/tabs";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 
-import { listExploreFeed, searchExploreCatalog } from "@/features/feed/api";
+import { listExploreFeedPage, searchExploreCatalog } from "@/features/feed/api";
 import { FeedPostCard } from "@/features/feed/feed-post-card";
 import { CreatorDiscoverySection } from "@/features/follows/creator-discovery-section";
 
@@ -24,15 +24,18 @@ export function ExplorePage() {
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
 
-  const feedQuery = useQuery({
+  const feedQuery = useInfiniteQuery({
     queryKey: ["explore-feed", viewer.userId, postType, deferredSearch, mode],
-    queryFn: () =>
-      listExploreFeed({
+    queryFn: ({ pageParam }) =>
+      listExploreFeedPage({
         postType,
-        search: deferredSearch.trim() || undefined,
         viewerId: viewer.userId,
         mode,
+        offset: pageParam,
       }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
+    enabled: !deferredSearch.trim(),
   });
   const searchCatalogQuery = useQuery({
     queryKey: ["explore-search-catalog", viewer.userId, postType, deferredSearch],
@@ -44,7 +47,7 @@ export function ExplorePage() {
       }),
     enabled: Boolean(deferredSearch.trim()),
   });
-  const items = feedQuery.data ?? [];
+  const items = feedQuery.data?.pages.flatMap((page) => page.items) ?? [];
   const creatorMatches = searchCatalogQuery.data?.creators ?? [];
   const activeItems = (deferredSearch.trim() ? searchCatalogQuery.data?.posts ?? [] : items).filter(
     (item): item is NonNullable<typeof item> => Boolean(item),
@@ -203,6 +206,18 @@ export function ExplorePage() {
           {activeItems.map((item) => (
             <FeedPostCard key={item.post.id} item={item} compact />
           ))}
+          {!deferredSearch.trim() && feedQuery.hasNextPage ? (
+            <div className="flex justify-center pt-2">
+              <Button
+                variant="secondary"
+                disabled={feedQuery.isFetchingNextPage}
+                onClick={() => void feedQuery.fetchNextPage()}
+              >
+                {feedQuery.isFetchingNextPage ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                Load more releases
+              </Button>
+            </div>
+          ) : null}
         </div>
       </div>
 

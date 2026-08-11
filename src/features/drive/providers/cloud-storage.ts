@@ -57,10 +57,10 @@ export interface PublicAssetResult {
 
 export interface CloudStorageProvider {
   provider: CloudProvider;
-  connect(): Promise<CloudConnectionResult>;
+  connect(profileId?: string): Promise<CloudConnectionResult>;
   disconnect(): Promise<void>;
   restoreSession(): Promise<boolean>;
-  ensureRootStructure(): Promise<CloudFolderStructure>;
+  ensureRootStructure(profileId?: string): Promise<CloudFolderStructure>;
   uploadFile(input: UploadFileInput): Promise<CloudAssetResult>;
   uploadResumable(input: UploadFileInput): Promise<CloudAssetResult>;
   getPrivateFileBlob(fileId: string): Promise<Blob>;

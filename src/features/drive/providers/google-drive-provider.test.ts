@@ -82,4 +82,21 @@ describe("GoogleDriveProvider MxTrove folder compatibility", () => {
     });
     expect(requests.some((request) => request.method === "POST")).toBe(false);
   });
+
+  it("keeps cached folder trees isolated by MxTrove profile", () => {
+    const folders = {
+      rootFolderId: "profile-folder-id",
+      audioFolderId: "audio-folder-id",
+      audioOriginalsFolderId: "originals-folder-id",
+      audioPreviewsFolderId: "previews-folder-id",
+      artworkFolderId: "artwork-folder-id",
+      avatarsFolderId: "avatars-folder-id",
+      exportsFolderId: "exports-folder-id",
+    };
+    const provider = new GoogleDriveProvider();
+    provider.hydrateConnection({ folders, email: "artist@example.com", profileId: "profile-a" });
+
+    expect(provider.getCachedFolders("profile-a")).toEqual(folders);
+    expect(provider.getCachedFolders("profile-b")).toBeNull();
+  });
 });

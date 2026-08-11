@@ -36,6 +36,8 @@ function getNotificationHeading(entry: ResolvedNotification) {
       return "Reply";
     case "single_version":
       return "Release update";
+    case "release_update":
+      return "Release updated";
     case "message":
       return "Direct message";
     case "project_invite":
@@ -83,6 +85,8 @@ function getNotificationMessage(entry: ResolvedNotification) {
       return `${actorName} replied to a comment you wrote.`;
     case "single_version":
       return `${actorName} published or updated a release you might want to hear.`;
+    case "release_update":
+      return `${actorName} updated a release you previously engaged with.`;
     case "message":
       return `${actorName} sent you a direct message.`;
     case "project_invite":
@@ -216,7 +220,7 @@ export function NotificationsPage() {
       <PageHeader
         eyebrow="Notifications"
         title="Everything that needs your attention"
-        description="Follows, hearts, comments, single updates, and new messages all collect here."
+        description="Follows, hearts, comments, release updates, and new messages all collect here."
         actions={
           <Button
             variant="secondary"

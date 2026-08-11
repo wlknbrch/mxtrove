@@ -38,6 +38,7 @@ export class OneDriveProvider implements CloudStorageProvider {
   readonly provider = "onedrive" as const;
   private session: OneDriveSession | null = null;
   private folders: CloudFolderStructure | null = null;
+  private folderScope: string | null = null;
 
   private async getToken() {
     if (!this.session) await this.restoreSession();
@@ -61,7 +62,7 @@ export class OneDriveProvider implements CloudStorageProvider {
     return response.json() as Promise<T>;
   }
 
-  async connect(): Promise<CloudConnectionResult> {
+  async connect(profileId?: string): Promise<CloudConnectionResult> {
     if (!env.oneDriveClientId) throw new Error("VITE_ONEDRIVE_CLIENT_ID is missing.");
     const pkce = await createPkcePair();
     const state = crypto.randomUUID();
@@ -104,7 +105,7 @@ export class OneDriveProvider implements CloudStorageProvider {
     this.session.accountId = account.id;
     this.session.email = account.mail ?? account.userPrincipalName ?? null;
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(this.session));
-    const folders = await this.ensureRootStructure();
+    const folders = await this.ensureRootStructure(profileId);
     return {
       provider: this.provider,
       accountId: this.session.accountId,
@@ -118,6 +119,7 @@ export class OneDriveProvider implements CloudStorageProvider {
   async disconnect() {
     this.session = null;
     this.folders = null;
+    this.folderScope = null;
     sessionStorage.removeItem(SESSION_KEY);
   }
 
@@ -162,19 +164,22 @@ export class OneDriveProvider implements CloudStorageProvider {
     return created.id;
   }
 
-  async ensureRootStructure() {
-    if (this.folders) return this.folders;
+  async ensureRootStructure(profileId?: string) {
+    const scope = profileId ?? null;
+    if (this.folders && this.folderScope === scope) return this.folders;
     const driveRoot = await this.graph<DriveItem>("/me/drive/root?$select=id");
     const root = await this.ensureFolder(driveRoot.id, "MxTrove");
-    const audio = await this.ensureFolder(root, "Audio");
+    const profiles = profileId ? await this.ensureFolder(root, "Profiles") : null;
+    const profileRoot = profileId && profiles ? await this.ensureFolder(profiles, profileId) : root;
+    const audio = await this.ensureFolder(profileRoot, "Audio");
     const originals = await this.ensureFolder(audio, "Originals");
     const previews = await this.ensureFolder(audio, "Previews");
-    const artworkRoot = await this.ensureFolder(root, "Artwork");
+    const artworkRoot = await this.ensureFolder(profileRoot, "Artwork");
     const artwork = await this.ensureFolder(artworkRoot, "Covers");
     const avatars = await this.ensureFolder(artworkRoot, "Avatars");
-    const exportsFolder = await this.ensureFolder(root, "Exports");
+    const exportsFolder = await this.ensureFolder(profileRoot, "Exports");
     this.folders = {
-      rootFolderId: root,
+      rootFolderId: profileRoot,
       audioFolderId: audio,
       audioOriginalsFolderId: originals,
       audioPreviewsFolderId: previews,
@@ -182,6 +187,7 @@ export class OneDriveProvider implements CloudStorageProvider {
       avatarsFolderId: avatars,
       exportsFolderId: exportsFolder,
     };
+    this.folderScope = scope;
     return this.folders;
   }
 

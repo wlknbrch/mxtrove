@@ -15,6 +15,7 @@ export type NotificationType =
   | "comment"
   | "comment_reply"
   | "single_version"
+  | "release_update"
   | "message"
   | "project_invite"
   | "project_invite_accepted"

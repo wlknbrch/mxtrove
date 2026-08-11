@@ -217,7 +217,7 @@ export function SongDetailPage() {
       throw new Error("Please sign in first.");
     }
 
-    const result = await provider.connect();
+    const result = await provider.connect(viewer.userId);
     await upsertCloudConnection({
       ...buildCloudConnectionUpsert(viewer.userId, result),
       is_default: activeConnection?.is_default ?? !(connectionsQuery.data?.length),
@@ -229,8 +229,8 @@ export function SongDetailPage() {
   async function resolveCloudFolder(target: "originals" | "previews" | "artwork") {
     const restored = await provider.restoreSession();
     const activeFolders = restored
-      ? await provider.ensureRootStructure()
-      : storedFolders ?? (await refreshCloudSetup());
+      ? await provider.ensureRootStructure(viewer.userId ?? undefined)
+      : await refreshCloudSetup();
 
     if (target === "originals") {
       return activeFolders.audioOriginalsFolderId;
@@ -469,7 +469,7 @@ export function SongDetailPage() {
     const previewFolderId =
       sourceAsset.provider === activeProviderId
         ? await resolveCloudFolder("previews")
-        : (await assetProvider.ensureRootStructure()).audioPreviewsFolderId;
+        : (await assetProvider.ensureRootStructure(viewer.userId)).audioPreviewsFolderId;
     const result = await generateAutomaticPreviewFromSourceAsset({
       ownerId: viewer.userId,
       provider: assetProvider,

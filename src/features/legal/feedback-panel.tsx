@@ -258,7 +258,11 @@ export function FeedbackPanel() {
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs leading-6 text-muted-foreground">
-          Browser, viewport, and app-mode details are included automatically. For urgent matters, email mxtrove@wlknbrch.com.
+          Browser, viewport, and app-mode details are included automatically. For urgent matters, email{" "}
+          <a className="text-accent-secondary underline-offset-4 hover:underline" href="mailto:mxtrove@wlknbrch.com">
+            mxtrove@wlknbrch.com
+          </a>
+          .
         </p>
         <Button
           className="shrink-0"

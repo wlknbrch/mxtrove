@@ -35,4 +35,22 @@ describe("FullscreenArtwork", () => {
       screen.queryByRole("button", { name: "Open Missing release artwork fullscreen" }),
     ).not.toBeInTheDocument();
   });
+
+  it("can render artwork without offering fullscreen viewing", () => {
+    render(
+      <FullscreenArtwork
+        src="data:image/png;base64,aW1hZ2U="
+        alt="Feed release"
+        allowFullscreen={false}
+        priority
+        className="size-40"
+      />,
+    );
+
+    expect(screen.getByAltText("Feed release")).toHaveAttribute("loading", "eager");
+    expect(screen.getByAltText("Feed release")).toHaveAttribute("fetchpriority", "high");
+    expect(
+      screen.queryByRole("button", { name: "Open Feed release artwork fullscreen" }),
+    ).not.toBeInTheDocument();
+  });
 });

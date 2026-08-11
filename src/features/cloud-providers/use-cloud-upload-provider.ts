@@ -32,19 +32,35 @@ export function useCloudUploadProvider(
 
   async function ensureFolders() {
     if (!profileId) throw new Error("Please sign in first.");
-    if (await provider.restoreSession()) {
-      return provider.ensureRootStructure();
-    }
-    const result = await provider.connect();
-    await upsertCloudConnection({
-      ...buildCloudConnectionUpsert(profileId, result),
-      is_default: connection?.is_default ?? !(connectionsQuery.data?.length),
-    });
+    const restored = await provider.restoreSession();
+    const result = restored ? null : await provider.connect(profileId);
+    const folders = result?.folders ?? await provider.ensureRootStructure(profileId);
+    await upsertCloudConnection(result
+      ? {
+          ...buildCloudConnectionUpsert(profileId, result),
+          is_default: connection?.is_default ?? !(connectionsQuery.data?.length),
+        }
+      : {
+          profile_id: profileId,
+          provider: providerId,
+          root_folder_id: folders.rootFolderId,
+          audio_originals_folder_id: folders.audioOriginalsFolderId,
+          audio_previews_folder_id: folders.audioPreviewsFolderId,
+          artwork_folder_id: folders.artworkFolderId,
+          avatars_folder_id: folders.avatarsFolderId,
+          exports_folder_id: folders.exportsFolderId,
+          connection_status: "connected",
+          capabilities: {
+            ...(connection?.capabilities ?? {}),
+            profile_scoped_folders: true,
+          },
+          last_verified_at: new Date().toISOString(),
+        });
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["cloud-connections", profileId] }),
       queryClient.invalidateQueries({ queryKey: ["cloud-connection", profileId] }),
     ]);
-    return result.folders;
+    return folders;
   }
 
   return {

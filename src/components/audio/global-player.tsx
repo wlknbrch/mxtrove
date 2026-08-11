@@ -976,13 +976,13 @@ export function GlobalPlayer() {
   return (
     <div
       className={cn(
-        "fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-40 border-t border-white/10 bg-[radial-gradient(circle_at_center_top,rgba(var(--accent-rgb),0.14),transparent_28%),linear-gradient(180deg,rgba(8,6,19,0.96),rgba(7,5,17,0.98))] shadow-[0_-24px_60px_rgba(0,0,0,0.42)] backdrop-blur-2xl transition-opacity xl:bottom-0",
+        "player-dock fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] z-40 border-t shadow-[0_-24px_60px_rgba(0,0,0,0.24)] backdrop-blur-2xl transition-opacity xl:bottom-0",
         isSurfaceHidden && "pointer-events-none opacity-0 xl:pointer-events-auto xl:opacity-100",
       )}
     >
       {isQueueOpen && !isCollapsed ? (
         <div className="mx-auto hidden max-w-[1600px] px-4 pt-4 md:px-8 xl:block">
-          <div className="rounded-[28px] border border-border bg-[linear-gradient(180deg,rgba(18,14,35,0.96),rgba(11,9,24,0.95))] p-5 shadow-[0_26px_64px_rgba(3,0,14,0.42)]">
+          <div className="player-queue-panel rounded-[28px] border border-border p-5 shadow-[0_26px_64px_rgba(3,0,14,0.24)]">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="font-medium">Playback queue</p>
@@ -1003,7 +1003,7 @@ export function GlobalPlayer() {
                     key={track.id}
                     type="button"
                     className={cn(
-                      "flex items-center justify-between gap-4 rounded-[20px] border border-border px-4 py-3 text-left transition-colors hover:bg-white/6",
+                      "flex items-center justify-between gap-4 rounded-[20px] border border-border px-4 py-3 text-left transition-colors hover:bg-surface-soft",
                       isActive && "border-accent/20 bg-accent/10",
                     )}
                     onClick={() => {
@@ -1038,7 +1038,7 @@ export function GlobalPlayer() {
             <div className="fixed inset-0 z-[70] xl:hidden">
               <button
                 type="button"
-                className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                className="modal-scrim absolute inset-0 backdrop-blur-sm"
                 onClick={closeQueue}
                 aria-label="Close playback queue"
               />
@@ -1046,9 +1046,9 @@ export function GlobalPlayer() {
                 role="dialog"
                 aria-modal="true"
                 aria-label="Playback queue"
-                className="absolute inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+1rem)] max-h-[min(72dvh,620px)] overflow-hidden rounded-[30px] border border-border bg-[linear-gradient(180deg,rgba(18,14,35,0.99),rgba(9,7,21,0.99))] shadow-[0_28px_90px_rgba(0,0,0,0.62)]"
+                className="player-queue-panel absolute inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+1rem)] max-h-[min(72dvh,620px)] overflow-hidden rounded-[30px] border border-border text-foreground shadow-[0_28px_90px_rgba(0,0,0,0.36)]"
               >
-                <div className="flex items-center justify-between border-b border-white/8 px-5 py-4">
+                <div className="flex items-center justify-between border-b border-border px-5 py-4">
                   <div>
                     <p className="font-medium">Playback queue</p>
                     <p className="text-sm text-muted-foreground">
@@ -1058,7 +1058,7 @@ export function GlobalPlayer() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="rounded-full border border-white/8"
+                    className="player-control rounded-full border"
                     onClick={closeQueue}
                   >
                     Close
@@ -1070,7 +1070,7 @@ export function GlobalPlayer() {
                       key={track.id}
                       type="button"
                       className={cn(
-                        "mb-2 flex w-full min-w-0 items-center justify-between gap-3 rounded-[19px] border border-white/8 px-4 py-3 text-left",
+                        "mb-2 flex w-full min-w-0 items-center justify-between gap-3 rounded-[19px] border border-border px-4 py-3 text-left hover:bg-surface-soft",
                         track.id === activeTrackId && "border-accent/30 bg-accent/12",
                       )}
                       onClick={() => {
@@ -1169,7 +1169,7 @@ export function GlobalPlayer() {
         )}
       >
         {isCollapsed ? (
-          <div className="velvet-hero overflow-hidden rounded-[28px] border border-border bg-[linear-gradient(180deg,rgba(12,9,25,0.96),rgba(7,6,18,0.96))] px-4 py-3 shadow-[0_-10px_40px_rgba(0,0,0,0.12)] md:px-5">
+          <div className="player-card velvet-hero overflow-hidden rounded-[28px] border border-border px-4 py-3 shadow-[0_-10px_40px_rgba(0,0,0,0.12)] md:px-5">
             <button
               type="button"
               className="mb-3 block w-full disabled:cursor-default"
@@ -1177,7 +1177,7 @@ export function GlobalPlayer() {
               disabled={!displayDuration}
               aria-label="Seek through the current track"
             >
-              <div className="h-1 overflow-hidden rounded-full bg-white/[0.08]">
+              <div className="h-1 overflow-hidden rounded-full bg-foreground/[0.08]">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-accent to-accent-secondary"
                   style={{ width: `${Math.max(progressPercent, 0)}%` }}
@@ -1227,7 +1227,7 @@ export function GlobalPlayer() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="size-9 shrink-0 rounded-full border border-white/8 bg-white/[0.03] p-0 sm:size-auto sm:px-3"
+                className="player-control size-9 shrink-0 rounded-full border p-0 sm:size-auto sm:px-3"
                 onClick={handlePreviousClick}
                 disabled={!hasPreviousTrack && currentTime <= 3}
                 aria-label="Previous track"
@@ -1247,7 +1247,7 @@ export function GlobalPlayer() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="size-9 shrink-0 rounded-full border border-white/8 bg-white/[0.03] p-0 sm:size-auto sm:px-3"
+                className="player-control size-9 shrink-0 rounded-full border p-0 sm:size-auto sm:px-3"
                 onClick={handleNextClick}
                 disabled={!hasNextTrack}
                 aria-label="Next track"
@@ -1273,7 +1273,7 @@ export function GlobalPlayer() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="size-9 shrink-0 rounded-full border border-white/8 bg-white/[0.03] p-0 sm:size-auto sm:px-3"
+                className="player-control size-9 shrink-0 rounded-full border p-0 sm:size-auto sm:px-3"
                 onClick={toggleCollapsed}
                 aria-label="Expand player"
                 aria-pressed={!isCollapsed}
@@ -1283,12 +1283,12 @@ export function GlobalPlayer() {
             </div>
           </div>
         ) : (
-          <div className="velvet-hero overflow-hidden rounded-[30px] border border-border bg-[linear-gradient(180deg,rgba(12,9,25,0.96),rgba(7,6,18,0.96))] px-4 py-4 shadow-[0_-10px_40px_rgba(0,0,0,0.12)] md:px-6 md:py-5">
+          <div className="player-card velvet-hero overflow-hidden rounded-[30px] border border-border px-4 py-4 shadow-[0_-10px_40px_rgba(0,0,0,0.12)] md:px-6 md:py-5">
             <div className="mb-4 flex items-center justify-end xl:hidden">
               <Button
                 variant="ghost"
                 size="sm"
-                className="rounded-full border border-white/8 bg-white/[0.03] px-3"
+                className="player-control rounded-full border px-3"
                 onClick={toggleCollapsed}
                 aria-label="Collapse player"
                 aria-pressed={!isCollapsed}
@@ -1339,7 +1339,7 @@ export function GlobalPlayer() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="rounded-full border border-white/8 bg-white/[0.03]"
+                    className="player-control rounded-full border"
                     onClick={handlePreviousClick}
                     disabled={!hasPreviousTrack && currentTime <= 3}
                     aria-label="Previous track"
@@ -1357,7 +1357,7 @@ export function GlobalPlayer() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="rounded-full border border-white/8 bg-white/[0.03]"
+                    className="player-control rounded-full border"
                     onClick={handleNextClick}
                     disabled={!hasNextTrack}
                     aria-label="Next track"
@@ -1368,7 +1368,7 @@ export function GlobalPlayer() {
                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
                   <span className="min-w-10 text-right">{formatDuration(currentTime)}</span>
                   <div className="relative flex-1">
-                    <div className="rounded-full border border-white/8 bg-white/[0.035] px-4 py-3">
+                    <div className="player-control rounded-full border px-4 py-3">
                       {appearance.show_waveforms ? (
                         <Waveform
                           waveform={activeTrack.waveform ?? null}
@@ -1389,7 +1389,7 @@ export function GlobalPlayer() {
                           }
                           aria-label="Seek through the current track"
                         >
-                          <span className="block h-2 overflow-hidden rounded-full bg-white/[0.08]">
+                          <span className="block h-2 overflow-hidden rounded-full bg-foreground/[0.08]">
                             <span
                               className="block h-full rounded-full bg-gradient-to-r from-accent to-accent-secondary"
                               style={{ width: `${Math.max(progressPercent, 0)}%` }}
@@ -1409,7 +1409,7 @@ export function GlobalPlayer() {
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    "rounded-full border border-white/8 bg-white/[0.03]",
+                    "player-control rounded-full border",
                       isHearted && "border-accent/15 bg-accent/10 text-accent-secondary",
                       isOwnPost && "opacity-55",
                     )}
@@ -1436,8 +1436,8 @@ export function GlobalPlayer() {
                     variant="ghost"
                     size="sm"
                     className={cn(
-                      "rounded-full border border-white/8 bg-white/[0.03]",
-                      isQueueOpen && "border-white/12 bg-white/8 text-foreground",
+                      "player-control rounded-full border",
+                      isQueueOpen && "border-accent/20 bg-accent/10 text-foreground",
                     )}
                     onClick={toggleQueue}
                     aria-label={isQueueOpen ? "Hide queue" : "Show queue"}
@@ -1449,8 +1449,8 @@ export function GlobalPlayer() {
                     variant="ghost"
                     size="sm"
                     className={cn(
-                      "rounded-full border border-white/8 bg-white/[0.03]",
-                      repeatMode !== "off" && "border-white/12 bg-white/8 text-foreground",
+                      "player-control rounded-full border",
+                      repeatMode !== "off" && "border-accent/20 bg-accent/10 text-foreground",
                     )}
                     onClick={cycleRepeatMode}
                   aria-label={repeatLabel}
@@ -1461,7 +1461,7 @@ export function GlobalPlayer() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="rounded-full border border-white/8 bg-white/[0.03]"
+                  className="player-control rounded-full border"
                   onClick={() => void shareActivePost()}
                   disabled={!canShareActivePost}
                   aria-label={activeReleaseTrackId ? "Share current song" : "Share current release"}
@@ -1471,7 +1471,7 @@ export function GlobalPlayer() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="hidden rounded-full border border-white/8 bg-white/[0.03] xl:inline-flex"
+                  className="player-control hidden rounded-full border xl:inline-flex"
                   onClick={toggleCollapsed}
                   aria-label="Collapse player"
                   aria-pressed={!isCollapsed}
@@ -1494,7 +1494,7 @@ export function GlobalPlayer() {
                     Lyrics
                   </Button>
                 ) : null}
-                <div className="flex w-full items-center gap-3 rounded-full border border-white/8 bg-white/[0.03] px-4 py-3 xl:max-w-[260px]">
+                <div className="player-control flex w-full items-center gap-3 rounded-full border px-4 py-3 xl:max-w-[260px]">
                   <Volume2 className="size-4 text-muted-foreground" />
                   <input
                     className={cn("accent-accent w-full")}

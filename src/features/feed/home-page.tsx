@@ -191,7 +191,7 @@ export function HomePage() {
           {orderedItems.map((item, index) => (
             <div
               key={item.post.id}
-              className="[contain-intrinsic-size:auto_560px] [content-visibility:auto]"
+              className={index === 0 ? undefined : "[contain-intrinsic-size:auto_560px] [content-visibility:auto]"}
             >
               <FeedPostCard item={item} spotlight={index === 0} />
             </div>

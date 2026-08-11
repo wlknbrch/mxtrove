@@ -42,6 +42,7 @@ interface GoogleDriveState {
   accessToken: string | null;
   expiresAt: number | null;
   folders: CloudFolderStructure | null;
+  folderScope: string | null;
   email: string | null;
 }
 
@@ -204,6 +205,7 @@ export class GoogleDriveProvider implements CloudStorageProvider {
     accessToken: null,
     expiresAt: null,
     folders: null,
+    folderScope: null,
     email: null,
   };
 
@@ -262,6 +264,7 @@ export class GoogleDriveProvider implements CloudStorageProvider {
   hydrateConnection(input: {
     email?: string | null;
     folders?: CloudFolderStructure | null;
+    profileId?: string | null;
   }) {
     if (typeof input.email !== "undefined") {
       this.state.email = input.email;
@@ -269,11 +272,12 @@ export class GoogleDriveProvider implements CloudStorageProvider {
 
     if (input.folders) {
       this.state.folders = input.folders;
+      this.state.folderScope = input.profileId ?? null;
     }
   }
 
-  getCachedFolders() {
-    return this.state.folders;
+  getCachedFolders(profileId?: string | null) {
+    return this.state.folderScope === (profileId ?? null) ? this.state.folders : null;
   }
 
   private async fetchAbout(accessToken: string) {
@@ -386,10 +390,10 @@ export class GoogleDriveProvider implements CloudStorageProvider {
     return this.createFolder(name, parentId);
   }
 
-  async connect(): Promise<CloudConnectionResult> {
+  async connect(profileId?: string): Promise<CloudConnectionResult> {
     const accessToken = await this.ensureAuthenticated();
     const email = await this.fetchAbout(accessToken);
-    const folders = await this.ensureRootStructure();
+    const folders = await this.ensureRootStructure(profileId);
 
     return {
       provider: "google_drive",
@@ -406,6 +410,7 @@ export class GoogleDriveProvider implements CloudStorageProvider {
       accessToken: null,
       expiresAt: null,
       folders: null,
+      folderScope: null,
       email: null,
     };
   }
@@ -417,8 +422,9 @@ export class GoogleDriveProvider implements CloudStorageProvider {
     );
   }
 
-  async ensureRootStructure(): Promise<CloudFolderStructure> {
-    if (this.state.folders) {
+  async ensureRootStructure(profileId?: string): Promise<CloudFolderStructure> {
+    const scope = profileId ?? null;
+    if (this.state.folders && this.state.folderScope === scope) {
       await this.ensureAuthenticated();
       await this.migrateLegacyRootFolder(this.state.folders.rootFolderId);
       return this.state.folders;
@@ -432,15 +438,20 @@ export class GoogleDriveProvider implements CloudStorageProvider {
         ? await this.renameFolder(legacyRoot.id, ROOT_FOLDER_NAME)
         : await this.createFolder(ROOT_FOLDER_NAME);
     }
-    const audio = await this.findOrCreateFolder("Audio", root.id);
+    let profileRoot = root;
+    if (profileId) {
+      const profiles = await this.findOrCreateFolder("Profiles", root.id);
+      profileRoot = await this.findOrCreateFolder(profileId, profiles.id);
+    }
+    const audio = await this.findOrCreateFolder("Audio", profileRoot.id);
     const originals = await this.findOrCreateFolder("Originals", audio.id);
     const previews = await this.findOrCreateFolder("Previews", audio.id);
-    const artwork = await this.findOrCreateFolder("Artwork", root.id);
+    const artwork = await this.findOrCreateFolder("Artwork", profileRoot.id);
     const avatars = await this.findOrCreateFolder("Avatars", artwork.id);
-    const exportsFolder = await this.findOrCreateFolder("Exports", root.id);
+    const exportsFolder = await this.findOrCreateFolder("Exports", profileRoot.id);
 
     this.state.folders = {
-      rootFolderId: root.id,
+      rootFolderId: profileRoot.id,
       audioFolderId: audio.id,
       audioOriginalsFolderId: originals.id,
       audioPreviewsFolderId: previews.id,
@@ -448,6 +459,7 @@ export class GoogleDriveProvider implements CloudStorageProvider {
       avatarsFolderId: avatars.id,
       exportsFolderId: exportsFolder.id,
     };
+    this.state.folderScope = scope;
 
     return this.state.folders;
   }

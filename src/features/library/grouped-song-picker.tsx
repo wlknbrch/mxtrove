@@ -1,11 +1,14 @@
 import { Check, ChevronDown, Music2, Search } from "lucide-react";
-import { useDeferredValue, useMemo, useState, type ReactNode } from "react";
+import { useDeferredValue, useId, useMemo, useState, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { groupSongsByUploadMonth } from "@/features/library/song-upload-groups";
+import { readPersistentBoolean, writePersistentBoolean } from "@/lib/persistent-ui-state";
 import { cn } from "@/lib/utils";
 import type { Song } from "@/types/domain";
+
+const LIBRARY_SONGS_VISIBILITY_KEY = "mxtrove:release-editor:library-songs-expanded";
 
 export function GroupedSongPicker({
   songs,
@@ -25,8 +28,11 @@ export function GroupedSongPicker({
   onSelectNewSong?: () => void;
 }) {
   const [query, setQuery] = useState("");
-  const [libraryVisible, setLibraryVisible] = useState(true);
+  const [libraryVisible, setLibraryVisible] = useState(() =>
+    readPersistentBoolean(LIBRARY_SONGS_VISIBILITY_KEY, true),
+  );
   const [groupVisibility, setGroupVisibility] = useState<Record<string, boolean>>({});
+  const libraryContentId = useId();
   const deferredQuery = useDeferredValue(query.trim().toLocaleLowerCase());
   const selectedSet = useMemo(() => new Set(selectedSongIds), [selectedSongIds]);
   const groups = useMemo(() => {
@@ -37,12 +43,20 @@ export function GroupedSongPicker({
   }, [deferredQuery, songs]);
 
   return (
-    <details
-      className="group/library overflow-hidden rounded-[26px] border border-white/[0.07] bg-white/[0.018]"
-      open={libraryVisible}
-      onToggle={(event) => setLibraryVisible(event.currentTarget.open)}
-    >
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-4 marker:hidden">
+    <div className="overflow-hidden rounded-[26px] border border-white/[0.07] bg-white/[0.018]">
+      <button
+        type="button"
+        className="group/library flex w-full cursor-pointer items-center justify-between gap-4 p-4 text-left"
+        aria-expanded={libraryVisible}
+        aria-controls={libraryContentId}
+        onClick={() => {
+          setLibraryVisible((current) => {
+            const nextValue = !current;
+            writePersistentBoolean(LIBRARY_SONGS_VISIBILITY_KEY, nextValue);
+            return nextValue;
+          });
+        }}
+      >
         <div className="min-w-0">
           <p className="text-sm font-medium">Library songs</p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -54,12 +68,12 @@ export function GroupedSongPicker({
             {selectedSongIds.length} selected
           </Badge>
           <span className="flex size-9 items-center justify-center rounded-xl border border-white/[0.07] bg-white/[0.025] text-muted-foreground transition-colors group-hover/library:border-accent/25 group-hover/library:text-foreground">
-            <ChevronDown className="size-4 transition-transform duration-300 group-open/library:rotate-180" />
+            <ChevronDown className={cn("size-4 transition-transform duration-300", libraryVisible && "rotate-180")} />
           </span>
         </div>
-      </summary>
+      </button>
 
-      <div className="border-t border-white/[0.06]">
+      {libraryVisible ? <div id={libraryContentId} className="border-t border-white/[0.06]">
         <div className="p-4">
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -165,7 +179,7 @@ export function GroupedSongPicker({
             </div>
           )}
         </div>
-      </div>
-    </details>
+      </div> : null}
+    </div>
   );
 }
