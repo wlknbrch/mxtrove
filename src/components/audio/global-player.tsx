@@ -36,7 +36,7 @@ import { formatDuration } from "@/lib/utils";
 import { usePlayerStore } from "@/components/audio/player-store";
 import { useAppearance } from "@/features/appearance/appearance-provider";
 import { createProtectedMediaReadUrl } from "@/features/media-processing/api";
-import { getResolvedPostById, togglePostHeart, toggleVersionHeart } from "@/features/posts/api";
+import { getResolvedPostCardsByIds, togglePostHeart, toggleVersionHeart } from "@/features/posts/api";
 import { getReleaseTrackVersionId } from "@/features/posts/post-playback";
 import { buildPublicReleaseShareUrl, buildPublicTrackShareUrl } from "@/features/posts/share-urls";
 import { LyricsDialog } from "@/features/songs/lyrics-dialog";
@@ -172,7 +172,10 @@ export function GlobalPlayer() {
       : activeTrack?.durationSeconds ?? null;
   const playerPostQuery = useQuery({
     queryKey: ["player-post", activePostId],
-    queryFn: () => getResolvedPostById(activePostId!, viewer.userId),
+    queryFn: async () => {
+      const [post] = await getResolvedPostCardsByIds([activePostId!], viewer.userId);
+      return post ?? null;
+    },
     enabled: Boolean(activePostId),
   });
   const activeReleaseTrack = playerPostQuery.data?.releaseTracks.find(

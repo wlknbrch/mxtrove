@@ -25,27 +25,12 @@ function encodeFileId(fileId: string) {
   return encodeURIComponent(fileId);
 }
 
-function getSupabaseFunctionsBaseUrl() {
-  if (!env.supabaseUrl) {
-    return null;
-  }
-
-  try {
-    const url = new URL(env.supabaseUrl);
-    const projectRef = url.hostname.split(".")[0];
-    return `https://${projectRef}.functions.supabase.co`;
-  } catch {
-    return null;
-  }
-}
-
 function getDriveMediaProxyBaseUrl() {
   if (typeof window !== "undefined" && LOCAL_APP_HOSTS.has(window.location.hostname)) {
     return `${window.location.origin}/api/drive-media`;
   }
 
-  const functionsBaseUrl = getSupabaseFunctionsBaseUrl();
-  return functionsBaseUrl ? `${functionsBaseUrl}/drive-media` : null;
+  return env.mediaWorkerUrl ? `${env.mediaWorkerUrl.replace(/\/$/, "")}/v1/public-media` : null;
 }
 
 function buildDropboxMediaProxyUrl(

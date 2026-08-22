@@ -339,6 +339,40 @@ begin
 end;
 $$;
 
+-- The public dashboard is also protected by the server-managed app role.
+do $$
+begin
+  begin
+    perform public.get_admin_dashboard_v1(14);
+    raise exception 'Non-admin dashboard access should have failed.';
+  exception
+    when raise_exception then
+      if sqlerrm <> 'Administrator access required.' then
+        raise;
+      end if;
+  end;
+end;
+$$;
+
+-- Public content removal is protected by the same server-managed role.
+do $$
+begin
+  begin
+    perform public.remove_public_content_for_moderation(
+      'comment',
+      '88888888-8888-8888-8888-888888888881',
+      'hate'
+    );
+    raise exception 'Non-admin content removal should have failed.';
+  exception
+    when raise_exception then
+      if sqlerrm <> 'Administrator access required.' then
+        raise;
+      end if;
+  end;
+end;
+$$;
+
 -- Share links are hash-only, enforce max-use limits, and stay invalid after revocation.
 select set_config('request.jwt.claim.sub', '11111111-1111-1111-1111-111111111111', true);
 select set_config('mxshare.test_share_id', share_link_id::text, true),
@@ -659,6 +693,143 @@ begin
         raise;
       end if;
   end;
+end;
+$$;
+
+-- A real app-admin receives the public-only dashboard contract. Run this last
+-- so the temporary role cannot influence any of the preceding RLS assertions.
+reset role;
+insert into public.comments (id, post_id, author_id, body)
+values (
+  '88888888-8888-8888-8888-888888888882',
+  '77777777-7777-7777-7777-777777777771',
+  '22222222-2222-2222-2222-222222222222',
+  'Temporary foreign comment for the moderation boundary test.'
+);
+
+insert into public.posts (
+  id,
+  owner_id,
+  post_type,
+  title,
+  description,
+  visibility,
+  is_published,
+  published_at,
+  activity_at
+)
+values (
+  '77777777-7777-7777-7777-777777777772',
+  '11111111-1111-1111-1111-111111111111',
+  'single',
+  'Temporary admin-owned release',
+  'Used to verify that administrators cannot moderate themselves.',
+  'public',
+  true,
+  timezone('utc', now()),
+  timezone('utc', now())
+);
+
+insert into public.app_admin_roles (profile_id, role, granted_by)
+values (
+  '11111111-1111-1111-1111-111111111111',
+  'admin',
+  '11111111-1111-1111-1111-111111111111'
+)
+on conflict do nothing;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '11111111-1111-1111-1111-111111111111', true);
+
+do $$
+declare
+  dashboard jsonb;
+begin
+  dashboard := public.get_admin_dashboard_v1(14);
+  if dashboard -> 'privacy_boundary' ->> 'private_assets_excluded' <> 'true'
+    or dashboard -> 'privacy_boundary' ->> 'messages_excluded' <> 'true'
+  then
+    raise exception 'The admin dashboard privacy boundary is missing.';
+  end if;
+end;
+$$;
+
+-- Administrators must use normal owner controls for their own content rather
+-- than creating a moderation action and system notification against themselves.
+do $$
+begin
+  begin
+    perform public.remove_public_content_for_moderation(
+      'comment',
+      '88888888-8888-8888-8888-888888888881',
+      'hate'
+    );
+    raise exception 'Self-moderation should have failed.';
+  exception
+    when raise_exception then
+      if sqlerrm <> 'Administrators cannot moderate their own content. Use the normal owner controls instead.' then
+        raise;
+      end if;
+  end;
+end;
+$$;
+
+do $$
+begin
+  begin
+    perform public.remove_public_content_for_moderation(
+      'post',
+      '77777777-7777-7777-7777-777777777772',
+      'other'
+    );
+    raise exception 'Self-moderation of an owned release should have failed.';
+  exception
+    when raise_exception then
+      if sqlerrm <> 'Administrators cannot moderate their own content. Use the normal owner controls instead.' then
+        raise;
+      end if;
+  end;
+end;
+$$;
+
+-- Admin removal is audited and soft-deletes public comments. The surrounding
+-- transaction rolls the seed comment back after the suite.
+select public.remove_public_content_for_moderation(
+  'comment',
+  '88888888-8888-8888-8888-888888888882',
+  'hate'
+);
+
+do $$
+declare
+  removed_at timestamptz;
+  action_count integer;
+  notification_count integer;
+begin
+  select deleted_at into removed_at
+  from public.comments
+  where id = '88888888-8888-8888-8888-888888888882';
+
+  select count(*) into action_count
+  from public.admin_moderation_actions
+  where target_type = 'comment'
+    and target_id = '88888888-8888-8888-8888-888888888882'
+    and actor_id = auth.uid()
+    and reason = 'hate';
+
+  select count(*) into notification_count
+  from public.notifications
+  where recipient_id = '22222222-2222-2222-2222-222222222222'
+    and actor_id is null
+    and type = 'content_moderated'
+    and post_id = '77777777-7777-7777-7777-777777777771'
+    and comment_id = '88888888-8888-8888-8888-888888888882'
+    and context ->> 'reason' = 'hate'
+    and context ->> 'location' = 'Comment on “Eternal Light”'
+    and context ->> 'action' = 'The comment was removed from MxTrove.';
+
+  if removed_at is null or action_count <> 1 or notification_count <> 1 then
+    raise exception 'Admin content removal was not applied and audited atomically.';
+  end if;
 end;
 $$;
 

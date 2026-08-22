@@ -94,11 +94,7 @@ function buildGoogleDriveUserContentUrl(fileId: string) {
 }
 
 function buildPublicMediaProxyUrl(asset: PublicAssetRow) {
-  if (!config.supabaseUrl) {
-    return null;
-  }
-
-  const proxyUrl = new URL("/functions/v1/drive-media", config.supabaseUrl);
+  const proxyUrl = new URL(`${config.workerPublicUrl.replace(/\/$/, "")}/v1/public-media`);
   proxyUrl.searchParams.set("kind", "image");
 
   if (asset.provider === "google_drive" && looksLikeGoogleDriveFileId(asset.remote_file_id)) {

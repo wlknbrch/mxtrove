@@ -163,6 +163,10 @@ const SongDetailPage = lazy(async () => {
   const module = await import("@/features/songs/song-detail-page");
   return { default: module.SongDetailPage };
 });
+const AdminDashboardPage = lazy(async () => {
+  const module = await import("@/features/admin/dashboard-page");
+  return { default: module.AdminDashboardPage };
+});
 const AdminReportsPage = lazy(async () => {
   const module = await import("@/features/admin/reports-page");
   return { default: module.AdminReportsPage };
@@ -271,6 +275,7 @@ export const router = createBrowserRouter([
               { path: "/messages", element: routeElement(<MessagesPage />) },
               { path: "/messages/:conversationId", element: routeElement(<ConversationPage />) },
               { path: "/notifications", element: routeElement(<NotificationsPage />) },
+              { path: "/admin", element: routeElement(<AdminDashboardPage />) },
               { path: "/admin/reports", element: routeElement(<AdminReportsPage />) },
               { path: "/admin/reports/:reportId", element: routeElement(<AdminReportDetailPage />) },
               { path: "/settings", element: routeElement(<SettingsIndexPage />) },

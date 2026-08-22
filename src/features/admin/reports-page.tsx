@@ -8,13 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Tabs } from "@/components/ui/tabs";
+import { AdminNavigation } from "@/features/admin/admin-navigation";
+import { useAdminRole } from "@/features/admin/use-admin-role";
 import { formatRelativeTime } from "@/lib/utils";
 
-import { getCurrentAdminRole, listAdminReports, type ReportStatus } from "@/features/admin/api";
+import { listAdminReports, type ReportStatus } from "@/features/admin/api";
 
 export function AdminReportsPage() {
   const [status, setStatus] = useState<ReportStatus | "all">("open");
-  const roleQuery = useQuery({ queryKey: ["admin-role"], queryFn: getCurrentAdminRole });
+  const roleQuery = useAdminRole();
   const reportsQuery = useQuery({
     queryKey: ["admin-reports", status],
     queryFn: () => listAdminReports(status),
@@ -38,6 +40,7 @@ export function AdminReportsPage() {
         title="Reports and feedback"
         description="Review moderation reports and signed-in product feedback, document decisions, and apply narrowly scoped actions."
       />
+      <AdminNavigation />
       <Tabs
         value={status}
         onValueChange={(value) => setStatus(value as ReportStatus | "all")}

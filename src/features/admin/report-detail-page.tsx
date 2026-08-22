@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, EyeOff, ShieldCheck } from "lucide-react";
+import { ArrowLeft, EyeOff, ShieldAlert, ShieldCheck } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -15,16 +15,18 @@ import { formatRelativeTime } from "@/lib/utils";
 
 import {
   getAdminReport,
-  getCurrentAdminRole,
   moderateReport,
   type ReportStatus,
 } from "@/features/admin/api";
+import { useAdminRole } from "@/features/admin/use-admin-role";
+import { useAppViewer } from "@/hooks/use-app-viewer";
 
 export function AdminReportDetailPage() {
   const { reportId = "" } = useParams();
   const [status, setStatus] = useState<ReportStatus>("reviewing");
   const [note, setNote] = useState("");
-  const roleQuery = useQuery({ queryKey: ["admin-role"], queryFn: getCurrentAdminRole });
+  const viewer = useAppViewer();
+  const roleQuery = useAdminRole();
   const reportQuery = useQuery({
     queryKey: ["admin-report", reportId],
     queryFn: () => getAdminReport(reportId),
@@ -50,6 +52,11 @@ export function AdminReportDetailPage() {
     onError: (error) => toast.error(error instanceof Error ? error.message : "Could not save this decision."),
   });
   const report = reportQuery.data?.report;
+  const isOwnTarget = Boolean(
+    viewer.userId
+    && reportQuery.data?.targetProfileId
+    && viewer.userId === reportQuery.data.targetProfileId,
+  );
 
   if (!roleQuery.isPending && !roleQuery.data) {
     return <Card><CardTitle>Administrator access required</CardTitle></Card>;
@@ -144,14 +151,36 @@ export function AdminReportDetailPage() {
             </div>
           </CardHeader>
           <div className="space-y-4">
-            <Select value={status} onChange={(event) => setStatus(event.currentTarget.value as ReportStatus)}>
+            {isOwnTarget ? (
+              <div className="rounded-[20px] border border-warning/25 bg-warning/[0.07] p-4">
+                <div className="flex items-start gap-3">
+                  <ShieldAlert className="mt-0.5 size-5 shrink-0 text-warning" />
+                  <div>
+                    <p className="font-medium">Another moderator must review this case</p>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                      This report concerns your own account or content. Use the normal owner controls for your content instead of moderating yourself.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+            <Select
+              value={status}
+              onChange={(event) => setStatus(event.currentTarget.value as ReportStatus)}
+              disabled={isOwnTarget}
+            >
               <option value="open">Open</option>
               <option value="reviewing">Reviewing</option>
               <option value="action_taken">Action taken</option>
               <option value="dismissed">Dismissed</option>
             </Select>
-            <Textarea value={note} onChange={(event) => setNote(event.currentTarget.value)} placeholder="Internal moderation note" />
-            <Button fullWidth onClick={() => mutation.mutate({})} disabled={mutation.isPending}>
+            <Textarea
+              value={note}
+              onChange={(event) => setNote(event.currentTarget.value)}
+              placeholder="Internal moderation note"
+              disabled={isOwnTarget}
+            />
+            <Button fullWidth onClick={() => mutation.mutate({})} disabled={mutation.isPending || isOwnTarget}>
               <ShieldCheck className="size-4" /> Save decision
             </Button>
             {report.target_type !== "app_feedback" ? (
@@ -160,7 +189,7 @@ export function AdminReportDetailPage() {
                   fullWidth
                   variant="secondary"
                   onClick={() => mutation.mutate({ hideTarget: true })}
-                  disabled={mutation.isPending}
+                  disabled={mutation.isPending || isOwnTarget}
                 >
                   <EyeOff className="size-4" /> Hide or revoke target
                 </Button>
@@ -172,7 +201,7 @@ export function AdminReportDetailPage() {
                       mutation.mutate({ suspensionDays: 7 });
                     }
                   }}
-                  disabled={mutation.isPending}
+                  disabled={mutation.isPending || isOwnTarget}
                 >
                   Suspend account for 7 days
                 </Button>

@@ -24,6 +24,9 @@ export function selectRateLimitPolicy(method: string, pathname: string): RateLim
     return { bucket: "social", limit: 120, windowMs: 60_000 };
   }
   if (method === "GET" || method === "HEAD") {
+    if (pathname === "/v1/public-media") {
+      return { bucket: "public-media", limit: 1200, windowMs: 60_000 };
+    }
     if (pathname.startsWith("/v1/protected-media/")) {
       return { bucket: "media-read", limit: 600, windowMs: 60_000 };
     }

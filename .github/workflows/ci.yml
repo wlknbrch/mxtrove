@@ -7,12 +7,15 @@ on:
       - "codex/**"
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   web:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -25,8 +28,8 @@ jobs:
       run:
         working-directory: services/media-worker
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -38,21 +41,26 @@ jobs:
 
   database:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
+      - uses: actions/checkout@v6
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v2
         with:
           version: 2.109.1
-      - run: supabase start
-      - run: supabase db reset --local
-      - run: supabase test db
+          github-token: ${{ github.token }}
+      - name: Apply migrations and seed to a fresh database
+        run: supabase db start
+      - name: Run database tests
+        run: supabase test db
       - if: always()
+        name: Stop local Supabase database
         run: supabase stop --no-backup
 
   containers:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build web image
         run: |
           docker build \

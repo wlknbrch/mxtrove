@@ -88,7 +88,7 @@ export function ConversationPage() {
     queryKey: ["conversation", conversationId],
     queryFn: () => getConversation(conversationId),
     enabled: Boolean(conversationId),
-    refetchInterval: 5_000,
+    staleTime: 30_000,
   });
   const conversationsSnapshot = useOfflineSnapshot(
     `mxshare:offline:v2:conversations:${viewer.userId ?? "guest"}`,

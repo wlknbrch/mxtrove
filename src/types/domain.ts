@@ -27,7 +27,8 @@ export type NotificationType =
   | "project_version_uploaded"
   | "project_status_changed"
   | "message_attachment"
-  | "share_link_review";
+  | "share_link_review"
+  | "content_moderated";
 export type PreviewGeneration = "manual" | "automatic";
 export type MediaProcessingJobStatus =
   | "created"
@@ -266,6 +267,7 @@ export interface Notification {
   comment_id: string | null;
   conversation_id: string | null;
   project_id: string | null;
+  context?: Record<string, string | number | boolean | null>;
   is_read: boolean;
   created_at: string;
 }

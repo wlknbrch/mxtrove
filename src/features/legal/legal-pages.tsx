@@ -24,6 +24,7 @@ import { Card } from "@/components/ui/card";
 import { TermsOfServiceContent } from "@/features/legal/terms-content";
 import { CURRENT_TERMS_LAST_UPDATED } from "@/features/legal/terms";
 import { FeedbackPanel } from "@/features/legal/feedback-panel";
+import { ChangelogPanel } from "@/features/legal/changelog-panel";
 import { cn } from "@/lib/utils";
 
 const CONTACT_EMAIL = "mxtrove@wlknbrch.com";
@@ -205,6 +206,8 @@ export function AboutPage() {
           ))}
         </div>
       </section>
+
+      <ChangelogPanel />
 
       <details className="group rounded-[30px] border border-accent/18 bg-white/[0.018] p-3">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-[24px] px-4 py-4 transition-colors hover:bg-white/[0.035] marker:hidden sm:px-5">

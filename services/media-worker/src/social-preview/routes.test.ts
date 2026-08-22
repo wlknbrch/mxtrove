@@ -10,6 +10,7 @@ beforeAll(async () => {
   process.env.SUPABASE_URL ||= "https://example.supabase.co";
   process.env.SUPABASE_SECRET_KEY ||= "test-service-role-key";
   process.env.PROTECTED_MEDIA_SIGNING_SECRET ||= "test-signing-secret-with-enough-entropy";
+  process.env.WORKER_PUBLIC_URL ||= "https://mxtrove.example/worker";
   ({
     buildCardSvg,
     buildSocialHtml,
@@ -98,8 +99,8 @@ describe("social preview cards", () => {
     });
 
     const proxyUrl = new URL(urls[0]!);
-    expect(proxyUrl.origin).toBe("https://example.supabase.co");
-    expect(proxyUrl.pathname).toBe("/functions/v1/drive-media");
+    expect(proxyUrl.origin).toBe("https://mxtrove.example");
+    expect(proxyUrl.pathname).toBe("/worker/v1/public-media");
     expect(proxyUrl.searchParams.get("fileId")).toBe("1AbCdEfGhIjKlMnOpQrStUvwxYZ");
     expect(proxyUrl.searchParams.get("kind")).toBe("image");
     expect(proxyUrl.searchParams.get("size")).toBe("w1200");
@@ -126,8 +127,8 @@ describe("social preview cards", () => {
     });
 
     const proxyUrl = new URL(urls[0]!);
-    expect(proxyUrl.origin).toBe("https://example.supabase.co");
-    expect(proxyUrl.pathname).toBe("/functions/v1/drive-media");
+    expect(proxyUrl.origin).toBe("https://mxtrove.example");
+    expect(proxyUrl.pathname).toBe("/worker/v1/public-media");
     expect(proxyUrl.searchParams.get("provider")).toBe("dropbox");
     expect(proxyUrl.searchParams.get("kind")).toBe("image");
     expect(proxyUrl.searchParams.get("url")).toBe(sourceUrl);
@@ -169,7 +170,7 @@ describe("social preview cards", () => {
     expect(imageDataUrl).toMatch(/^data:image\/png;base64,/);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain(
-      "example.supabase.co/functions/v1/drive-media",
+      "mxtrove.example/worker/v1/public-media",
     );
     expect(String(fetchMock.mock.calls[1]?.[0])).toContain(
       "lh3.googleusercontent.com/stale-private-thumb",

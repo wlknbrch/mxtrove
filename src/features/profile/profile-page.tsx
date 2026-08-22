@@ -18,7 +18,6 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
-import { FullscreenArtwork } from "@/components/ui/fullscreen-artwork";
 import { PlaybackDuration } from "@/components/ui/playback-duration";
 import { ResolvedImage } from "@/components/ui/resolved-image";
 import { Tabs } from "@/components/ui/tabs";
@@ -107,18 +106,23 @@ function ProfileReleaseCard({
         spotlight && "space-y-5 lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-6 lg:space-y-0",
       )}
     >
-      <FullscreenArtwork
-        src={getArtworkAssetUrls(item.artwork)}
-        alt={item.post.title}
+      <Link
+        to={`/post/${item.post.id}`}
+        aria-label={`Open ${item.post.title}`}
         className={cn(
-          "relative w-full overflow-hidden rounded-[24px] border border-white/[0.08] bg-background-muted",
+          "group/artwork relative block w-full overflow-hidden rounded-[24px] border border-white/[0.08] bg-background-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/80",
           spotlight ? "aspect-square min-h-0 lg:aspect-auto lg:min-h-[280px]" : "aspect-square",
         )}
-        imageClassName="absolute inset-0 h-full w-full object-cover"
-        priority={spotlight}
       >
+        <ResolvedImage
+          src={getArtworkAssetUrls(item.artwork)}
+          alt={item.post.title}
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover/artwork:scale-[1.025]"
+          loading={spotlight ? "eager" : "lazy"}
+          fetchPriority={spotlight ? "high" : "auto"}
+        />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.16),transparent_42%),linear-gradient(180deg,rgba(7,5,17,0.06),rgba(7,5,17,0.6))]" />
-      </FullscreenArtwork>
+      </Link>
 
       <div className={cn("space-y-4", spotlight && "py-2")}>
         <div className="flex flex-wrap items-center gap-2">
@@ -127,7 +131,9 @@ function ProfileReleaseCard({
         </div>
 
         <div className="space-y-2">
-          <CardTitle className={spotlight ? "text-4xl md:text-[3rem]" : "text-2xl"}>{item.post.title}</CardTitle>
+          <Link to={`/post/${item.post.id}`} className="block hover:text-accent-secondary">
+            <CardTitle className={spotlight ? "text-4xl md:text-[3rem]" : "text-2xl"}>{item.post.title}</CardTitle>
+          </Link>
           <CardDescription className="text-sm leading-7">
             {item.post.description ?? "No release note has been written yet."}
           </CardDescription>
@@ -311,8 +317,7 @@ export function ProfilePage() {
       <Card className="relative overflow-hidden p-0">
         <div
           aria-hidden="true"
-          className="pointer-events-none inset-0 overflow-hidden"
-          style={{ position: "absolute", zIndex: 0 }}
+          className="pointer-events-none !absolute inset-0 !z-0 overflow-hidden"
         >
           <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(var(--accent-rgb),0.12),transparent_36%,rgba(255,255,255,0.02)_100%)]" />
           {hasFeaturedArtwork ? (
@@ -322,11 +327,23 @@ export function ProfilePage() {
                 alt=""
                 loading="eager"
                 fetchPriority="high"
-                className="absolute inset-0 h-full w-full scale-[1.04] object-cover object-[center_28%] opacity-35 blur-[0.5px] sm:scale-[1.06] sm:opacity-25 md:scale-[1.08] md:opacity-18 md:blur-[1px]"
+                className="absolute inset-0 h-full w-full scale-[1.04] object-cover object-[center_28%] opacity-38 blur-[0.5px] brightness-[0.92] saturate-[1.08] sm:scale-[1.06] sm:opacity-32 md:scale-[1.08] md:opacity-28 md:blur-[0.8px] lg:opacity-26"
               />
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,7,19,0.04)_0%,rgba(9,7,19,0.34)_48%,rgba(9,7,19,0.9)_100%)] md:bg-[linear-gradient(180deg,rgba(9,7,19,0.18)_0%,rgba(9,7,19,0.48)_48%,rgba(9,7,19,0.92)_100%)]" />
-              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,5,17,0.48)_10%,rgba(7,5,17,0.2)_44%,rgba(7,5,17,0.5)_100%)] md:bg-[linear-gradient(90deg,rgba(7,5,17,0.84)_10%,rgba(7,5,17,0.56)_44%,rgba(7,5,17,0.82)_100%)]" />
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(var(--accent-rgb),0.22),transparent_28%),radial-gradient(circle_at_top_right,rgba(var(--accent-rgb),0.08),transparent_24%),linear-gradient(180deg,rgba(9,7,19,0.04),rgba(9,7,19,0.82)_82%)] md:bg-[radial-gradient(circle_at_top_left,rgba(var(--accent-rgb),0.34),transparent_28%),radial-gradient(circle_at_top_right,rgba(var(--accent-rgb),0.12),transparent_24%),linear-gradient(180deg,rgba(9,7,19,0.18),rgba(9,7,19,0.94)_82%)]" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[min(42vw,34rem)] overflow-hidden lg:block">
+                <ResolvedImage
+                  src={featuredArtworkUrls}
+                  alt=""
+                  aria-hidden="true"
+                  loading="eager"
+                  fetchPriority="high"
+                  className="absolute inset-0 h-full w-full scale-[1.02] object-cover object-center opacity-48 saturate-[1.14]"
+                />
+                <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,7,19,0.88)_0%,rgba(9,7,19,0.46)_34%,rgba(9,7,19,0.14)_62%,rgba(9,7,19,0.68)_100%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_18%,rgba(var(--accent-rgb),0.18),transparent_24%),linear-gradient(180deg,rgba(9,7,19,0.08),rgba(9,7,19,0.54)_100%)]" />
+              </div>
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,7,19,0.04)_0%,rgba(9,7,19,0.34)_48%,rgba(9,7,19,0.9)_100%)] md:bg-[linear-gradient(180deg,rgba(9,7,19,0.08)_0%,rgba(9,7,19,0.26)_48%,rgba(9,7,19,0.78)_100%)]" />
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,5,17,0.48)_10%,rgba(7,5,17,0.2)_44%,rgba(7,5,17,0.5)_100%)] md:bg-[linear-gradient(90deg,rgba(7,5,17,0.62)_8%,rgba(7,5,17,0.24)_44%,rgba(7,5,17,0.62)_100%)]" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(var(--accent-rgb),0.22),transparent_28%),radial-gradient(circle_at_top_right,rgba(var(--accent-rgb),0.08),transparent_24%),linear-gradient(180deg,rgba(9,7,19,0.04),rgba(9,7,19,0.82)_82%)] md:bg-[radial-gradient(circle_at_top_left,rgba(var(--accent-rgb),0.24),transparent_28%),radial-gradient(circle_at_top_right,rgba(var(--accent-rgb),0.08),transparent_24%),linear-gradient(180deg,rgba(9,7,19,0.12),rgba(9,7,19,0.72)_82%)]" />
             </>
           ) : (
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(var(--accent-rgb),0.28),transparent_26%),radial-gradient(circle_at_top_right,rgba(var(--accent-rgb),0.14),transparent_22%),linear-gradient(180deg,rgba(9,7,19,0.82),rgba(9,7,19,0.96))]" />
@@ -451,7 +468,7 @@ export function ProfilePage() {
                 <p className="text-xs uppercase tracking-[0.22em] text-accent-secondary/75">Support surface</p>
                 <p className="mt-3 text-sm leading-7 text-muted-foreground">
                   {profile.support_url
-                    ? "A support link is already in place for fans who want to back the project."
+                    ? "A support link is in place for fans who want to back the project."
                     : "Add a support link in Settings if you want this profile to convert interest into support."}
                 </p>
               </div>
@@ -506,13 +523,6 @@ export function ProfilePage() {
             <div className="rounded-[22px] border border-white/[0.06] bg-white/[0.02] px-4 py-4">
               <p className="text-sm text-muted-foreground">Link presence</p>
               <p className="mt-2 font-display text-3xl tracking-[-0.03em]">{profileLinks.length}</p>
-            </div>
-            <div className="rounded-[22px] border border-white/[0.06] bg-white/[0.02] px-4 py-4">
-              <p className="text-sm leading-7 text-muted-foreground">
-                {profile.bio?.trim()
-                  ? "This profile already has enough context for visitors to understand the project quickly."
-                  : "A stronger bio will make this page feel much more alive and intentional."}
-              </p>
             </div>
           </div>
         </Card>

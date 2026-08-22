@@ -242,7 +242,7 @@ async function processExportRequest(request: ExportRequest) {
 let exportCycleRunning = false;
 
 export async function processDataExportBatch() {
-  if (exportCycleRunning) return;
+  if (exportCycleRunning) return 0;
   exportCycleRunning = true;
   try {
     const { data, error } = await supabaseAdmin
@@ -253,7 +253,8 @@ export async function processDataExportBatch() {
       .limit(config.dataExportBatchSize);
     if (error) throw error;
 
-    for (const candidate of (data ?? []) as ExportRequest[]) {
+    const candidates = (data ?? []) as ExportRequest[];
+    for (const candidate of candidates) {
       const { data: claimed, error: claimError } = await supabaseAdmin
         .from("data_export_requests")
         .update({
@@ -268,6 +269,7 @@ export async function processDataExportBatch() {
       if (claimError) throw claimError;
       if (claimed) await processExportRequest(candidate);
     }
+    return candidates.length;
   } finally {
     exportCycleRunning = false;
   }

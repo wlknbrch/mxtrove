@@ -11,6 +11,7 @@ import {
 import { getCurrentSession, getSupabaseBrowserClient, onAuthSessionChange } from "@/lib/supabase";
 import { unsubscribeCurrentDeviceFromPush } from "@/lib/pwa";
 import { setPushSubscriptionActive } from "@/features/notifications/api";
+import { clearPersistedQueryCache, queryClient } from "@/lib/query-client";
 
 interface AuthContextValue {
   loading: boolean;
@@ -89,6 +90,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
           if (error) {
             throw error;
           }
+          clearPersistedQueryCache();
+          queryClient.clear();
           setSession(null);
         }
       },

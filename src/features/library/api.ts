@@ -1,5 +1,6 @@
 import { demoAssets, demoSongVersions, demoSongs } from "@/lib/demo-data";
 import { createDemoDelay, isDemoModeEnabled, requireSupabase } from "@/lib/service-utils";
+import { ASSET_SELECT_WITHOUT_WAVEFORM, withNullAssetWaveform } from "@/lib/supabase-selects";
 import { getNextVersionNumber } from "@/lib/song-utils";
 import type { SongFormValues, VersionFormValues } from "@/lib/validators";
 import type { Asset, Song, SongVersion } from "@/types/domain";
@@ -30,7 +31,11 @@ export async function getLibraryDashboard(ownerId: string): Promise<LibraryDashb
       .select("*")
       .eq("owner_id", ownerId)
       .order("created_at", { ascending: false }),
-    client.from("assets").select("*").eq("owner_id", ownerId).order("created_at", { ascending: false }),
+    client
+      .from("assets")
+      .select(ASSET_SELECT_WITHOUT_WAVEFORM)
+      .eq("owner_id", ownerId)
+      .order("created_at", { ascending: false }),
   ]);
 
   if (songs.error) throw songs.error;
@@ -40,7 +45,7 @@ export async function getLibraryDashboard(ownerId: string): Promise<LibraryDashb
   return {
     songs: (songs.data ?? []) as Song[],
     versions: (versions.data ?? []) as SongVersion[],
-    assets: (assets.data ?? []) as Asset[],
+    assets: ((assets.data ?? []) as unknown as Array<Omit<Asset, "waveform_peaks">>).map(withNullAssetWaveform),
   };
 }
 

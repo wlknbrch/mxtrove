@@ -1,15 +1,15 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+  ArrowLeft,
   BookOpenText,
-  Code2,
-  Copy,
-  ExternalLink,
   FolderOpen,
   Heart,
-  Link2,
+  Info,
   MessageCircle,
+  MoreHorizontal,
   PencilLine,
+  Pause,
   Play,
   Reply,
   Share2,
@@ -19,13 +19,13 @@ import {
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
-import { PageHeader } from "@/components/layout/page-header";
 import { usePlayerStore } from "@/components/audio/player-store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FullscreenArtwork } from "@/components/ui/fullscreen-artwork";
 import { PlaybackDuration } from "@/components/ui/playback-duration";
+import { ResolvedImage } from "@/components/ui/resolved-image";
 import { Tabs } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppViewer } from "@/hooks/use-app-viewer";
@@ -34,6 +34,12 @@ import { getArtworkAssetUrls } from "@/lib/asset-urls";
 import { shareWithSystemDialog } from "@/lib/native-share";
 import { queryClient } from "@/lib/query-client";
 import { cn, formatDuration, formatRelativeTime } from "@/lib/utils";
+import {
+  ContentRemovalDialog,
+  type AdminRemovalTarget,
+} from "@/features/admin/content-removal-dialog";
+import { removePublicContent, type AdminRemovalReason } from "@/features/admin/api";
+import { useAdminRole } from "@/features/admin/use-admin-role";
 
 import {
   addCommentToPost,
@@ -56,7 +62,7 @@ import {
   getReleaseTrackVersionId,
 } from "@/features/posts/post-playback";
 import { sortCommentThreads, type CommentSortMode } from "@/features/posts/comment-sorting";
-import { ReleaseQrCode } from "@/features/posts/release-qr-code";
+import { ReleaseMoreInfoDialog } from "@/features/posts/release-more-info-dialog";
 import { buildPublicReleaseShareUrl, buildPublicTrackShareUrl } from "@/features/posts/share-urls";
 import { LyricsDialogTrigger } from "@/features/songs/lyrics-dialog";
 import { SongMetadataBadges } from "@/features/songs/song-metadata";
@@ -82,6 +88,41 @@ function buildCommentThreads(comments: ResolvedComment[]) {
       replies: repliesByParent.get(comment.id) ?? [],
     }))
     .filter((entry) => !entry.comment.deleted_at || entry.replies.some((reply) => !reply.deleted_at));
+}
+
+function CommentActionsMenu({ children, label }: { children: ReactNode; label: string }) {
+  return (
+    <details className="group/actions relative">
+      <summary className="flex size-8 cursor-pointer list-none items-center justify-center rounded-full text-muted-foreground transition hover:bg-white/[0.06] hover:text-foreground marker:hidden">
+        <MoreHorizontal className="size-4" />
+        <span className="sr-only">{label}</span>
+      </summary>
+      <div className="absolute right-0 top-9 z-30 flex min-w-36 flex-col gap-1 rounded-[14px] border border-border bg-surface-strong p-1.5 shadow-[0_18px_54px_rgba(0,0,0,0.48)]">
+        {children}
+      </div>
+    </details>
+  );
+}
+
+function getReleaseReturnDestination(currentPostId: string) {
+  if (typeof window === "undefined") {
+    return { path: "/", label: "Home" };
+  }
+
+  const path = window.sessionStorage.getItem("mxtrove:last-non-release-route");
+  if (!path || path.startsWith(`/post/${currentPostId}`)) {
+    return { path: "/", label: "Home" };
+  }
+
+  if (path === "/") return { path, label: "Home" };
+  if (path.startsWith("/explore")) return { path, label: "Explore" };
+  if (path.startsWith("/library")) return { path, label: "Library" };
+  if (path.startsWith("/projects")) return { path, label: "Projects" };
+  if (path.startsWith("/notifications")) return { path, label: "Notifications" };
+  if (path.startsWith("/search")) return { path, label: "Search" };
+  if (path.startsWith("/@")) return { path, label: "Profile" };
+
+  return { path, label: "previous screen" };
 }
 
 function VersionHeartButton({
@@ -158,8 +199,14 @@ export function PostDetailPage() {
   const { postId = "" } = useParams();
   const [searchParams] = useSearchParams();
   const viewer = useAppViewer();
+  const adminRoleQuery = useAdminRole();
+  const [adminRemovalTarget, setAdminRemovalTarget] = useState<AdminRemovalTarget | null>(null);
   const navigate = useNavigate();
   const enqueue = usePlayerStore((state) => state.enqueue);
+  const activeTrackId = usePlayerStore((state) => state.activeTrackId);
+  const playerQueue = usePlayerStore((state) => state.queue);
+  const playerIsPlaying = usePlayerStore((state) => state.isPlaying);
+  const setPlayerPlaying = usePlayerStore((state) => state.setPlaying);
   const draftOwner = viewer.userId ?? "guest";
   const [commentDraft, setCommentDraft, clearCommentDraft] = useLocalDraft(
     `mxshare:draft:post-comment:${draftOwner}:${postId}`,
@@ -174,6 +221,10 @@ export function PostDetailPage() {
   const [editingBody, setEditingBody] = useState("");
   const [commentSort, setCommentSort] = useState<CommentSortMode>("relevant");
   const [freshShareUrl, setFreshShareUrl] = useState<string | null>(null);
+  const [showAllReleaseTracks, setShowAllReleaseTracks] = useState(false);
+  const [isMoreInfoOpen, setIsMoreInfoOpen] = useState(false);
+  const [showAllComments, setShowAllComments] = useState(false);
+  const [returnDestination] = useState(() => getReleaseReturnDestination(postId));
 
   const postQuery = useQuery({
     queryKey: ["post", postId],
@@ -379,6 +430,24 @@ export function PostDetailPage() {
       toast.error(error instanceof Error ? error.message : "Could not delete this post.");
     },
   });
+  const adminRemovalMutation = useMutation({
+    mutationFn: ({ target, reason }: { target: AdminRemovalTarget; reason: AdminRemovalReason }) =>
+      removePublicContent({ targetType: target.type, targetId: target.id, reason }),
+    onSuccess: async (_, variables) => {
+      setAdminRemovalTarget(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["post", postId] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-reports"] }),
+        queryClient.invalidateQueries({ queryKey: ["home-feed"] }),
+        queryClient.invalidateQueries({ queryKey: ["explore-feed"] }),
+        queryClient.invalidateQueries({ queryKey: ["profile-posts"] }),
+      ]);
+      toast.success(`${variables.target.type === "post" ? "Release" : "Comment"} removed from MxTrove.`);
+      if (variables.target.type === "post") navigate("/admin");
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "The content could not be removed."),
+  });
   const singleLyricsVisibilityMutation = useMutation({
     mutationFn: async () => {
       if (!postQuery.data?.owner?.id || postQuery.data.owner.id !== viewer.userId) {
@@ -412,6 +481,11 @@ export function PostDetailPage() {
     sharedReleaseTrack?.track.id,
   );
   const playbackTracks = playbackSelection.tracks;
+  const activePlayerTrack = playerQueue.find((track) => track.id === activeTrackId) ?? null;
+  const isCurrentReleaseActive = Boolean(
+    activePlayerTrack?.postId && activePlayerTrack.postId === item?.post.id,
+  );
+  const isCurrentReleasePlaying = isCurrentReleaseActive && playerIsPlaying;
   const commentThreads = useMemo(
     () => sortCommentThreads(item ? buildCommentThreads(item.comments) : [], commentSort),
     [commentSort, item],
@@ -427,6 +501,11 @@ export function PostDetailPage() {
   const publicReleaseShareUrl = item
     ? buildPublicReleaseShareUrl(window.location.origin, item.post.id, item.post.updated_at)
     : "";
+  const artworkUrls = getArtworkAssetUrls(item?.artwork);
+  const visibleReleaseTracks = showAllReleaseTracks
+    ? item?.releaseTracks ?? []
+    : item?.releaseTracks.slice(0, 4) ?? [];
+  const visibleCommentThreads = showAllComments ? commentThreads : commentThreads.slice(0, 1);
 
   async function shareReleaseTrack(track: ResolvedReleaseTrack) {
     if (!item || item.post.visibility !== "public") {
@@ -472,144 +551,157 @@ export function PostDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        eyebrow={
-          item.owner?.username ? (
-            <Link
-              to={`/@${item.owner.username}`}
-              className="transition-colors hover:text-foreground"
-            >
-              @{item.owner.username}
-            </Link>
-          ) : (
-            "Post"
-          )
-        }
-        title={item.post.title}
-        description={item.post.description ?? "Release details, public comments, and version-aware playback."}
-        actions={
-          <div className="flex flex-wrap gap-3">
-            {isOwnPost && editPath ? (
-              <Link to={editPath}>
-                <Button variant="secondary">
-                  {item.post.post_type === "single" ? "Edit post" : "Edit release"}
-                </Button>
-              </Link>
-            ) : null}
-            {isOwnPost ? (
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  if (!window.confirm(`Delete the post "${item.post.title}"?`)) {
-                    return;
-                  }
+    <div className="release-detail-page relative min-h-screen">
+      <div className="absolute left-4 top-4 z-30 md:left-6 xl:left-8 xl:top-6">
+        <Button
+          variant="ghost"
+          className="h-auto rounded-none border-0 bg-transparent px-0 py-0.5 !text-[0.62rem] !font-light uppercase tracking-[0.28em] !text-[rgba(216,206,223,0.58)] shadow-none backdrop-blur-none hover:bg-transparent hover:!text-[rgba(255,255,255,0.88)]"
+          onClick={() => {
+            if (returnDestination.path) {
+              navigate(returnDestination.path);
+              return;
+            }
+            navigate(-1);
+          }}
+          aria-label={`Back to ${returnDestination.label}`}
+        >
+          <ArrowLeft className="size-3.5 stroke-[1.25]" />
+          Back to {returnDestination.label}
+        </Button>
+      </div>
 
-                  void deletePostMutation.mutateAsync();
-                }}
-                disabled={deletePostMutation.isPending}
+      <div className="release-detail-layout relative z-10 grid">
+          <section className="release-detail-hero relative isolate px-5 pb-10 pt-24 md:px-8 lg:px-12 xl:min-h-[552px] xl:px-[70px] xl:pb-10 xl:pt-[104px]">
+            <div
+              aria-hidden="true"
+              data-release-backdrop
+              className="pointer-events-none absolute -left-4 -right-4 -top-4 bottom-0 -z-20 overflow-hidden md:-left-6 md:-right-6 xl:-left-12 xl:-top-6 xl:right-[calc(-1*max(1.5rem,((100vw-1720px)/2+1.5rem)))]"
+            >
+              {artworkUrls.length > 0 ? (
+                <ResolvedImage
+                  src={artworkUrls}
+                  alt=""
+                  aria-hidden="true"
+                  loading="eager"
+                  fetchPriority="high"
+                  className="h-full w-full scale-[1.1] object-cover opacity-[0.7] blur-[30px] brightness-[1.16] saturate-[0.86]"
+                />
+              ) : (
+                <div className="h-full w-full bg-[radial-gradient(circle_at_32%_25%,rgba(var(--accent-rgb),0.44),transparent_32%),linear-gradient(145deg,rgba(var(--accent-rgb),0.2),rgba(7,5,17,0.98))]" />
+              )}
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_44%_24%,rgba(var(--accent-rgb),0.06),transparent_34%),linear-gradient(90deg,rgba(9,7,19,0.5),rgba(11,8,20,0.3)_44%,rgba(9,7,17,0.58)),linear-gradient(180deg,rgba(10,8,19,0.04),rgba(10,8,19,0.48))]" />
+            </div>
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(10,8,19,0.03),rgba(10,8,19,0.18))]" />
+
+            <div className="mx-auto grid w-full max-w-[1060px] gap-8 lg:grid-cols-[370px_minmax(0,1fr)] lg:items-center xl:gap-12">
+              <FullscreenArtwork
+                src={artworkUrls}
+                alt={item.post.title}
+                priority
+                className="relative mx-auto aspect-square w-full max-w-[370px] overflow-hidden rounded-[24px] border border-white/15 bg-white/4 shadow-[0_32px_100px_rgba(0,0,0,0.52)] [&>span]:opacity-100"
+                imageClassName="absolute inset-0 h-full w-full object-cover"
               >
-                <Trash2 className="size-4" />
-                Delete post
-              </Button>
-            ) : null}
-            <Button
-              variant="secondary"
-              onClick={async () => {
-                if (item.post.visibility === "unlisted" && isOwnPost) {
-                  createShareMutation.mutate();
-                  return;
-                }
-                const shareUrl = item.post.visibility === "public"
-                  ? publicReleaseShareUrl
-                  : window.location.href;
-                const shareResult = await shareWithSystemDialog({
-                  title: item.post.title,
-                  text: item.post.description ?? `Listen to ${item.post.title} on MxTrove.`,
-                  url: shareUrl,
-                });
-                if (shareResult === "copied") {
-                  toast.success("Native sharing is unavailable here, so the release link was copied.");
-                }
-              }}
-            >
-              <Share2 className="size-4" />
-              {item.post.visibility === "unlisted" && isOwnPost ? "Create share link" : "Share"}
-            </Button>
-            <Button
-              variant={item.viewerHasHearted ? "primary" : "secondary"}
-              onClick={() => void heartMutation.mutateAsync()}
-              disabled={heartMutation.isPending || isOwnPost}
-              aria-label={isOwnPost ? "You cannot heart your own post" : item.viewerHasHearted ? "Remove heart" : "Heart this post"}
-            >
-              <Heart className="size-4" />
-              {item.heartCount}
-            </Button>
-          </div>
-        }
-      />
-
-      <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
-        <Card className="overflow-hidden">
-          <div
-            className={cn(
-              "grid gap-5 p-5 md:p-6",
-              isMultiTrackRelease ? "lg:grid-cols-[240px_minmax(0,1fr)] lg:items-start" : "md:grid-cols-[220px_minmax(0,1fr)]",
-            )}
-          >
-            <FullscreenArtwork
-              src={getArtworkAssetUrls(item.artwork)}
-              alt={item.post.title}
-              className="relative aspect-square overflow-hidden rounded-[24px] border border-border bg-white/4"
-              imageClassName="absolute inset-0 h-full w-full object-cover"
-            >
-              {getArtworkAssetUrls(item.artwork).length === 0 ? (
-                <div className="absolute inset-0 bg-gradient-to-br from-accent/40 via-accent-secondary/20 to-background" />
-              ) : null}
-            </FullscreenArtwork>
-            <div className="space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="neutral">{item.post.post_type}</Badge>
-                {item.single?.featuredVersion ? <Badge variant="cyan">{item.single.featuredVersion.production_stage}</Badge> : null}
-              </div>
-              <div className="flex flex-wrap items-center gap-5 text-sm text-muted-foreground">
-                <span className="inline-flex items-center gap-2">
-                  <Heart className="size-4" />
-                  {item.heartCount}
-                </span>
-                <span className="inline-flex items-center gap-2">
-                  <MessageCircle className="size-4" />
-                  {item.commentCount}
-                </span>
-                {isMultiTrackRelease && releaseDurationSeconds ? (
-                  <span>{formatDuration(releaseDurationSeconds)} total</span>
+                {artworkUrls.length === 0 ? (
+                  <div className="absolute inset-0 bg-gradient-to-br from-accent/40 via-accent-secondary/20 to-background" />
                 ) : null}
+              </FullscreenArtwork>
+              <div className="min-w-0 space-y-5 lg:py-4">
+              {item.owner?.username ? (
+                <Link
+                  to={`/@${item.owner.username}`}
+                  className="inline-flex text-xs font-medium uppercase tracking-[0.28em] !text-[var(--accent)] transition-colors hover:!text-[var(--accent-secondary)]"
+                >
+                  @{item.owner.username}
+                </Link>
+              ) : null}
+              <div className="space-y-3">
+                <p className="text-xs uppercase tracking-[0.3em] text-[#c8bdd0]">
+                  {item.post.post_type} release
+                </p>
+                <h1 className="break-words font-display text-5xl font-semibold leading-[0.92] tracking-[-0.055em] text-[#fff8ff] md:text-6xl xl:text-[4.4rem]">
+                  {item.post.title}
+                </h1>
+                <p className="max-w-[610px] break-words text-base leading-7 text-[#c9bfd1]">
+                  {item.post.description ?? "Release details, public comments, and version-aware playback."}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs uppercase tracking-[0.14em] text-[#c2b6c9]">
+                <span>{isMultiTrackRelease ? `${releaseTrackCount} tracks` : "Single track"}</span>
+                {releaseDurationSeconds ? <span>•</span> : null}
+                {releaseDurationSeconds ? <span>{formatDuration(releaseDurationSeconds)} total</span> : null}
+                {item.single?.featuredVersion ? <Badge variant="cyan">{item.single.featuredVersion.production_stage}</Badge> : null}
               </div>
               <div className="flex flex-wrap gap-3">
                 <Button
+                  size="lg"
+                  className="rounded-full"
                   onClick={() => {
+                    if (isCurrentReleaseActive) {
+                      setPlayerPlaying(!playerIsPlaying);
+                      return;
+                    }
                     if (playbackSelection.initialTrackId) {
                       enqueue(playbackTracks, playbackSelection.initialTrackId);
                     }
                   }}
                   disabled={playbackTracks.length === 0}
+                  aria-label={isCurrentReleasePlaying ? "Pause release" : "Play release"}
                 >
-                  <Play className="size-4" />
-                  {item.post.post_type === "single"
-                    ? "Play"
-                    : isTrackShareView
-                      ? "Play from shared song"
-                      : "Play release"}
+                  {isCurrentReleasePlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
+                  {isCurrentReleasePlaying ? "Pause" : "Play"}
                 </Button>
                 {playbackTracks.length > 1 ? (
                   <Button
-                    variant="ghost"
+                    variant="secondary"
+                    size="lg"
+                    className="rounded-full"
                     onClick={() => enqueue(playbackTracks, playbackTracks[0].id)}
                   >
                     <SkipForward className="size-4" />
                     Queue all tracks
                   </Button>
                 ) : null}
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  className="rounded-full"
+                  onClick={async () => {
+                    if (item.post.visibility === "unlisted" && isOwnPost) {
+                      createShareMutation.mutate();
+                      return;
+                    }
+                    const shareUrl = item.post.visibility === "public" ? publicReleaseShareUrl : window.location.href;
+                    const shareResult = await shareWithSystemDialog({
+                      title: item.post.title,
+                      text: item.post.description ?? `Listen to ${item.post.title} on MxTrove.`,
+                      url: shareUrl,
+                    });
+                    if (shareResult === "copied") toast.success("Native sharing is unavailable here, so the release link was copied.");
+                  }}
+                >
+                  <Share2 className="size-4" />
+                  {item.post.visibility === "unlisted" && isOwnPost ? "Create share link" : "Share"}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  className="size-12 rounded-full p-0"
+                  onClick={() => setIsMoreInfoOpen(true)}
+                  aria-label="More information about this release"
+                >
+                  <Info className="size-4" />
+                </Button>
+                <Button
+                  variant={item.viewerHasHearted ? "primary" : "secondary"}
+                  size="lg"
+                  className="rounded-full"
+                  onClick={() => void heartMutation.mutateAsync()}
+                  disabled={heartMutation.isPending || isOwnPost}
+                  aria-label={isOwnPost ? "You cannot heart your own post" : item.viewerHasHearted ? "Remove heart" : "Heart this post"}
+                >
+                  <Heart className={cn("size-4", item.viewerHasHearted && "fill-current")} />
+                  {item.heartCount}
+                </Button>
                 {canOpenSongWorkspace ? (
                   <Link to={`/library/songs/${item.single!.song!.id}`}>
                     <Button variant="secondary">
@@ -619,13 +711,41 @@ export function PostDetailPage() {
                   </Link>
                 ) : null}
               </div>
+              <div className="flex flex-wrap gap-2">
+                {isOwnPost && editPath ? (
+                  <Link to={editPath}><Button variant="ghost" size="sm">{item.post.post_type === "single" ? "Edit post" : "Edit release"}</Button></Link>
+                ) : null}
+                {isOwnPost ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      if (window.confirm(`Delete the post "${item.post.title}"?`)) void deletePostMutation.mutateAsync();
+                    }}
+                    disabled={deletePostMutation.isPending}
+                  >
+                    <Trash2 className="size-4" />
+                    Delete post
+                  </Button>
+                ) : null}
+                {adminRoleQuery.data && item.post.visibility === "public" && !isOwnPost ? (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => setAdminRemovalTarget({ type: "post", id: item.post.id, label: item.post.title })}
+                  >
+                    <Trash2 className="size-4" />
+                    Remove from MxTrove
+                  </Button>
+                ) : null}
+              </div>
               {canOpenSongWorkspace ? (
                 <p className="text-sm text-muted-foreground">
                   Public posts use the shared playback file. Your full private source version remains in the song workspace.
                 </p>
               ) : null}
               {item.single ? (
-                <div className="rounded-[22px] border border-border bg-white/3 p-4">
+                <div className="rounded-[22px] border border-white/10 bg-black/15 p-4 backdrop-blur-sm">
                   <p className="font-medium">Single timeline</p>
                   <div className="mt-3 space-y-3">
                     <SongMetadataBadges song={item.single.song} />
@@ -695,132 +815,146 @@ export function PostDetailPage() {
                   </div>
                 </div>
               ) : null}
-            </div>
-          </div>
-          {!item.single ? (
-            <div className="border-t border-white/[0.08] bg-[linear-gradient(180deg,rgba(var(--accent-rgb),0.08),rgba(255,255,255,0.01))] px-5 py-5 md:px-6 md:py-6">
-              <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-                <div>
-                  <p className="font-medium">Tracklist</p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {isTrackShareView
-                      ? `Shared song: ${sharedReleaseTrack?.track.track_title}. Playback starts there, and the complete release remains available.`
-                      : "Ordered front to back with direct per-track playback and sharing."}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="neutral">{releaseTrackCount} total</Badge>
-                  <Badge variant={playableTrackCount > 0 ? "success" : "warning"}>
-                    {playableTrackCount > 0 ? `${playableTrackCount} ready to play` : "Playback unavailable"}
-                  </Badge>
-                  {releaseDurationSeconds ? (
-                    <Badge variant="accent">{formatDuration(releaseDurationSeconds)} total</Badge>
-                  ) : null}
-                </div>
               </div>
-              <div className="mt-5 space-y-3">
-                {item.releaseTracks.map((track) => {
+            </div>
+          </section>
+
+        {!item.single ? (
+          <section className="relative z-20 border-t border-white/[0.08] bg-background px-5 py-8 md:px-8 xl:px-[70px] xl:py-9">
+              <p className="text-xs font-medium uppercase tracking-[0.28em] text-[#d9ccdf]">Tracklist</p>
+              {isTrackShareView ? (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Shared song: {sharedReleaseTrack?.track.track_title}. Playback starts there, and the complete release remains available.
+                </p>
+              ) : null}
+              <div className="mt-7 hidden grid-cols-[40px_minmax(280px,1fr)_190px_104px_74px_44px_44px_36px] items-center gap-3 border-b border-white/[0.08] px-1 pb-4 text-[0.68rem] uppercase tracking-[0.2em] text-[#b9adbf] xl:grid">
+                <span>#</span>
+                <span>Title</span>
+                <span>Version</span>
+                <span>Status</span>
+                <span className="text-right">Time</span>
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="space-y-3 xl:space-y-0">
+                {visibleReleaseTracks.map((track) => {
                   const playbackTrack = allPlaybackTracks.find((entry) => entry.id === track.track.id) ?? null;
                   const isSharedTrack = sharedReleaseTrack?.track.id === track.track.id;
                   const canPlayFromThisView = Boolean(playbackTrack);
+                  const isActiveTrack = Boolean(
+                    playbackTrack
+                    && isCurrentReleaseActive
+                    && playbackTrack.id === activeTrackId,
+                  );
+                  const isActiveTrackPlaying = isActiveTrack && playerIsPlaying;
                   return (
                     <div
                       key={track.track.id}
                       aria-current={isSharedTrack ? "true" : undefined}
                       className={cn(
-                        "grid gap-4 rounded-[24px] border border-white/[0.08] bg-white/[0.035] px-4 py-4 transition-colors hover:border-accent/22 hover:bg-white/[0.05] md:px-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center",
+                        "grid grid-cols-[48px_minmax(0,1fr)_36px_36px] gap-x-3 gap-y-4 rounded-[24px] border border-white/[0.08] bg-white/[0.035] px-4 py-4 transition-colors hover:border-accent/22 hover:bg-white/[0.05] md:px-5 xl:grid-cols-[40px_minmax(280px,1fr)_190px_104px_74px_44px_44px_36px] xl:items-center xl:gap-3 xl:rounded-none xl:border-x-0 xl:border-t-0 xl:bg-transparent xl:px-1 xl:py-[18px] xl:hover:bg-white/[0.025]",
                         isSharedTrack && "border-accent/40 bg-accent/10 shadow-[0_18px_54px_rgba(var(--accent-rgb),0.14)]",
+                        isActiveTrack && "border-accent/35 bg-accent/[0.07] xl:bg-accent/[0.045]",
                       )}
                     >
-                      <div className="flex min-w-0 items-start gap-4">
-                        <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-accent/22 bg-accent/12 font-display text-lg tracking-[-0.04em] text-accent-secondary">
+                        <div className="row-span-2 flex size-12 shrink-0 items-center justify-center rounded-2xl border border-accent/22 bg-accent/12 font-display text-lg tracking-[-0.04em] text-accent-secondary xl:row-span-1 xl:size-auto xl:justify-start xl:rounded-none xl:border-0 xl:bg-transparent xl:font-sans xl:text-sm xl:text-foreground/78">
                           {track.track.track_number}
                         </div>
-                        <div className="min-w-0">
-                          <div className="flex min-w-0 flex-wrap items-center gap-2">
-                            <p className="break-words font-medium">{track.track.track_title}</p>
-                            <Badge variant="neutral">{track.versionLabel ?? "Unmapped"}</Badge>
-                            <Badge variant={playbackTrack ? "success" : "warning"}>
-                              {playbackTrack ? "Ready" : "Pending"}
-                            </Badge>
-                            {isSharedTrack ? <Badge variant="accent">Shared song</Badge> : null}
-                          </div>
-                          <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                            <span>{track.version?.production_stage ?? track.track.production_stage ?? "Playback"}</span>
-                            {playbackTrack ? (
-                              <span className="inline-flex items-center gap-2">
-                                <span className="size-1.5 rounded-full bg-accent-secondary/75" />
-                                <PlaybackDuration
-                                  src={playbackTrack.srcCandidates ?? playbackTrack.src}
-                                  fallbackDurationSeconds={playbackTrack.durationSeconds ?? null}
-                                />
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-2">
-                                <span className="size-1.5 rounded-full bg-warning/80" />
-                                No playback file
-                              </span>
-                            )}
-                          </div>
-                          <SongMetadataBadges song={track.song} className="mt-3" />
-                          {track.track.show_lyrics && track.song?.lyrics ? (
-                            <div className="mt-3">
+                        <div className="col-span-3 min-w-0 xl:col-span-1">
+                          <div className="flex min-w-0 items-center gap-1">
+                            <p className={cn("truncate font-medium text-[#f8f2fa]", isActiveTrack && "text-accent-secondary")}>{track.track.track_title}</p>
+                            {track.track.show_lyrics && track.song?.lyrics ? (
                               <LyricsDialogTrigger
                                 lyrics={track.song.lyrics}
-                                title={track.track.track_title}
+                                title={track.song.title || track.track.track_title}
                                 artistName={item.owner?.display_name}
+                                variant="ghost"
+                                label=""
+                                className="size-7 min-h-0 shrink-0 rounded-full p-0 text-muted-foreground"
                               />
-                            </div>
-                          ) : null}
+                            ) : null}
+                          </div>
+                          <div className="mt-2 flex flex-wrap items-center gap-2 xl:hidden">
+                            <Badge variant="neutral" className="max-w-[112px] truncate">{track.versionLabel ?? "Unmapped"}</Badge>
+                            <Badge variant={playbackTrack ? "success" : "warning"}>{playbackTrack ? "Ready" : "Pending"}</Badge>
+                          </div>
+                          <div className="mt-2 xl:hidden">
+                            <SongMetadataBadges song={track.song} />
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                        <VersionHeartButton
+                        <div className="hidden min-w-0 xl:block"><Badge variant="neutral" className="max-w-full whitespace-nowrap px-2.5 text-[0.6rem] tracking-[0.16em]">{track.versionLabel ?? "Unmapped"}</Badge></div>
+                        <div className="hidden xl:block"><Badge variant={playbackTrack ? "success" : "warning"}>{playbackTrack ? "Ready" : "Pending"}</Badge></div>
+                        <div className="hidden text-right text-sm text-[#c7bdcf] xl:block">
+                          {playbackTrack ? (
+                            <PlaybackDuration src={playbackTrack.srcCandidates ?? playbackTrack.src} fallbackDurationSeconds={playbackTrack.durationSeconds ?? null} />
+                          ) : "--:--"}
+                        </div>
+                        <div className="col-start-2 row-start-2 flex items-center justify-start xl:col-auto xl:row-auto xl:block">
+                          <VersionHeartButton
                           postId={item.post.id}
                           ownerId={item.owner?.id}
                           versionId={getReleaseTrackVersionId(track)}
                           count={track.versionHeartCount}
                           active={track.viewerHasHeartedVersion}
                         />
+                        </div>
                         {item.post.visibility === "public" ? (
                           <Button
                             variant="ghost"
                             size="sm"
+                            className="size-9 p-0"
                             onClick={() => void shareReleaseTrack(track)}
                             aria-label={`Share ${track.track.track_title}`}
                           >
                             <Share2 className="size-4" />
-                            Share
                           </Button>
-                        ) : null}
+                        ) : <span className="hidden xl:block" />}
                         <Button
                           variant="ghost"
                           size="sm"
+                          className={cn("size-9 p-0", isActiveTrack && "text-accent-secondary")}
                           disabled={!canPlayFromThisView}
                           onClick={() => {
-                            if (canPlayFromThisView && playbackTrack) {
-                              enqueue(allPlaybackTracks, playbackTrack.id);
+                            if (!canPlayFromThisView || !playbackTrack) {
+                              return;
                             }
+                            if (isActiveTrack) {
+                              setPlayerPlaying(!playerIsPlaying);
+                              return;
+                            }
+                            enqueue(allPlaybackTracks, playbackTrack.id);
                           }}
+                          aria-label={isActiveTrackPlaying ? `Pause ${track.track.track_title}` : `Play ${track.track.track_title}`}
                         >
-                          <Play className="size-4" />
-                          Play
+                          {isActiveTrackPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
                         </Button>
-                      </div>
                     </div>
                   );
                 })}
               </div>
-            </div>
-          ) : null}
-        </Card>
+              {item.releaseTracks.length > 4 ? (
+                <div className="mt-5 flex justify-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-full text-accent-secondary"
+                    onClick={() => setShowAllReleaseTracks((current) => !current)}
+                    aria-expanded={showAllReleaseTracks}
+                  >
+                    {showAllReleaseTracks ? "Show fewer tracks" : `View all ${item.releaseTracks.length} tracks`}
+                  </Button>
+                </div>
+              ) : null}
+          </section>
+        ) : null}
 
-        <Card>
-          <CardHeader>
-            <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <section className="relative z-20 border-t border-white/[0.08] bg-background px-5 py-8 md:px-8 xl:px-[70px] xl:py-10">
+          <CardHeader className="mb-4">
+            <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
-              <CardTitle>Comments</CardTitle>
-              <CardDescription className="mt-2">
+              <p className="text-xs font-medium uppercase tracking-[0.28em] text-[#d9ccdf]">Comments</p>
+              <CardDescription className="mt-3 max-w-xl text-sm leading-6 text-[#bcb1c4]">
                 Comments belong to the post, not to each individual single version. Replies stay one level deep.
               </CardDescription>
               </div>
@@ -831,18 +965,19 @@ export function PostDetailPage() {
                   { value: "relevant", label: "Relevant" },
                   { value: "chronological", label: "Chronological" },
                 ]}
-                className="shrink-0"
+                className="w-full rounded-[18px] p-1 lg:max-w-sm [&_button]:px-3 [&_button]:py-2 [&_button]:text-xs"
+                stretch
               />
             </div>
           </CardHeader>
           <div className="space-y-4">
-            {commentThreads.map(({ comment, replies }) => {
+            {visibleCommentThreads.map(({ comment, replies }) => {
               const isOwnComment = viewer.userId === comment.author_id;
               const isDeleted = Boolean(comment.deleted_at);
               const authorPath = comment.author?.username ? `/@${comment.author.username}` : null;
 
               return (
-                <div key={comment.id} className="space-y-3 rounded-[20px] border border-border bg-white/3 px-4 py-4">
+                <div key={comment.id} className="space-y-2 rounded-[16px] border border-border bg-white/3 px-3 py-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       {authorPath ? (
@@ -861,6 +996,7 @@ export function PostDetailPage() {
                         <Button
                           variant={comment.viewerHasHearted ? "secondary" : "ghost"}
                           size="sm"
+                          className="min-h-8 px-2 text-xs"
                           onClick={() => void commentHeartMutation.mutateAsync(comment)}
                           disabled={commentHeartMutation.isPending || isOwnComment}
                           aria-label={isOwnComment ? "You cannot heart your own comment" : comment.viewerHasHearted ? "Remove comment heart" : "Heart comment"}
@@ -871,6 +1007,7 @@ export function PostDetailPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="min-h-8 px-2 text-xs"
                           onClick={() => {
                             setReplyTargetId(replyTargetId === comment.id ? null : comment.id);
                           }}
@@ -878,11 +1015,14 @@ export function PostDetailPage() {
                           <Reply className="size-4" />
                           Reply
                         </Button>
-                        {isOwnComment ? (
-                          <>
+                        {isOwnComment || (adminRoleQuery.data && !isOwnComment) ? (
+                          <CommentActionsMenu label="More comment actions">
+                          {isOwnComment ? (
+                            <>
                             <Button
                               variant="ghost"
                               size="sm"
+                              className="justify-start"
                               onClick={() => {
                                 setEditingCommentId(editingCommentId === comment.id ? null : comment.id);
                                 setEditingBody(comment.body);
@@ -894,13 +1034,31 @@ export function PostDetailPage() {
                             <Button
                               variant="ghost"
                               size="sm"
+                              className="justify-start"
                               onClick={() => void deleteCommentMutation.mutateAsync(comment.id)}
                               disabled={deleteCommentMutation.isPending}
                             >
                               <Trash2 className="size-4" />
                               Delete
                             </Button>
-                          </>
+                            </>
+                          ) : null}
+                        {adminRoleQuery.data && !isOwnComment ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="justify-start text-muted-foreground hover:bg-danger/10 hover:text-danger"
+                            onClick={() => setAdminRemovalTarget({
+                              type: "comment",
+                              id: comment.id,
+                              label: comment.body,
+                            })}
+                          >
+                            <Trash2 className="size-4" />
+                            Moderate
+                          </Button>
+                        ) : null}
+                          </CommentActionsMenu>
                         ) : null}
                       </div>
                     ) : null}
@@ -1016,11 +1174,14 @@ export function PostDetailPage() {
                                     <Heart className={cn("size-4", reply.viewerHasHearted && "fill-current text-accent-secondary")} />
                                     {reply.heartCount}
                                   </Button>
-                                  {ownReply ? (
-                                    <>
+                                  {ownReply || (adminRoleQuery.data && !ownReply) ? (
+                                    <CommentActionsMenu label="More reply actions">
+                                    {ownReply ? (
+                                      <>
                                       <Button
                                         variant="ghost"
                                         size="sm"
+                                        className="justify-start"
                                         onClick={() => {
                                           setEditingCommentId(editingCommentId === reply.id ? null : reply.id);
                                           setEditingBody(reply.body);
@@ -1032,13 +1193,31 @@ export function PostDetailPage() {
                                       <Button
                                         variant="ghost"
                                         size="sm"
+                                        className="justify-start"
                                         onClick={() => void deleteCommentMutation.mutateAsync(reply.id)}
                                         disabled={deleteCommentMutation.isPending}
                                       >
                                         <Trash2 className="size-4" />
                                         Delete
                                       </Button>
-                                    </>
+                                      </>
+                                    ) : null}
+                                  {adminRoleQuery.data && !ownReply ? (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="justify-start text-muted-foreground hover:bg-danger/10 hover:text-danger"
+                                      onClick={() => setAdminRemovalTarget({
+                                        type: "comment",
+                                        id: reply.id,
+                                        label: reply.body,
+                                      })}
+                                    >
+                                      <Trash2 className="size-4" />
+                                      Moderate
+                                    </Button>
+                                  ) : null}
+                                    </CommentActionsMenu>
                                   ) : null}
                                 </div>
                               </div>
@@ -1084,6 +1263,20 @@ export function PostDetailPage() {
             })}
           </div>
 
+          {item.comments.length > 1 ? (
+            <div className="mt-4 flex justify-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-full text-xs text-accent-secondary"
+                onClick={() => setShowAllComments((current) => !current)}
+                aria-expanded={showAllComments}
+              >
+                {showAllComments ? "Show fewer comments" : "View all comments"}
+              </Button>
+            </div>
+          ) : null}
+
           <form
             className="mt-5 grid gap-3"
             onSubmit={async (event) => {
@@ -1108,144 +1301,33 @@ export function PostDetailPage() {
               )}
             </div>
           </form>
-        </Card>
+        </section>
       </div>
 
-      {item.post.release_notes || item.credits.length || item.externalLinks.length ? (
-        <div className="grid gap-5 lg:grid-cols-3">
-          {item.post.release_notes ? (
-            <Card>
-              <p className="text-xs uppercase tracking-[0.22em] text-accent-secondary">Release notes</p>
-              <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-muted-foreground">{item.post.release_notes}</p>
-            </Card>
-          ) : null}
-          {item.credits.length ? (
-            <Card>
-              <h2 className="font-display text-3xl">Credits</h2>
-              <div className="mt-5 space-y-3">
-                {item.credits.map((credit) => (
-                  <div key={credit.id} className="flex items-center justify-between gap-4">
-                    <span className="truncate">{credit.display_name}</span>
-                    <Badge variant="neutral">{credit.role.replace("_", " ")}</Badge>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          ) : null}
-          {item.externalLinks.length ? (
-            <Card>
-              <h2 className="font-display text-3xl">Release links</h2>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {item.externalLinks.map((link) => (
-                  <a key={link.id} href={link.url} target="_blank" rel="noreferrer">
-                    <Button size="sm" variant="secondary">
-                      {link.label}
-                      <ExternalLink className="size-3.5" />
-                    </Button>
-                  </a>
-                ))}
-              </div>
-            </Card>
-          ) : null}
-        </div>
-      ) : null}
-
-      {item.post.visibility === "public" ? (
-        <Card>
-          <div className="grid items-center gap-6 md:grid-cols-[minmax(0,1fr)_auto]">
-            <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-accent-secondary">
-                Take this release with you
-              </p>
-              <h2 className="mt-2 font-display text-3xl">Scan, share, or embed</h2>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
-                The QR code is generated in this browser. MxTrove does not send the release URL to an
-                external QR service.
-              </p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                <Button
-                  variant="secondary"
-                  onClick={async () => {
-                    await navigator.clipboard.writeText(publicReleaseShareUrl);
-                    toast.success("Release link copied.");
-                  }}
-                >
-                  <Copy className="size-4" />
-                  Copy release link
-                </Button>
-                {item.post.allow_embed ? (
-                  <Button
-                    variant="secondary"
-                    onClick={async () => {
-                      const code = `<iframe src="${window.location.origin}/embed/post/${item.post.id}" loading="lazy" allow="autoplay"></iframe>`;
-                      await navigator.clipboard.writeText(code);
-                      toast.success("Embed code copied.");
-                    }}
-                  >
-                    <Code2 className="size-4" />
-                    Copy embed
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-            <ReleaseQrCode
-              url={publicReleaseShareUrl}
-              title={item.post.title}
-            />
-          </div>
-        </Card>
-      ) : null}
-
-      {isOwnPost ? (
-        <Card>
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.22em] text-accent-secondary">Sharing</p>
-              <h2 className="mt-2 font-display text-3xl">Release access</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Private tokens are hash-only. Save a newly generated URL now because MxTrove cannot reveal it later.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={() => createShareMutation.mutate()} disabled={createShareMutation.isPending}>
-                <Link2 className="size-4" />
-                New private link
-              </Button>
-            </div>
-          </div>
-          {freshShareUrl ? (
-            <div className="mt-4 flex items-center gap-3 rounded-[18px] border border-success/20 bg-success/5 px-4 py-3">
-              <span className="min-w-0 flex-1 truncate text-sm">{freshShareUrl}</span>
-              <Button size="sm" variant="ghost" onClick={() => void navigator.clipboard.writeText(freshShareUrl)}>
-                <Copy className="size-4" />
-              </Button>
-            </div>
-          ) : null}
-          {(shareLinksQuery.data ?? []).length ? (
-            <div className="mt-5 space-y-2">
-              {shareLinksQuery.data!.map((link) => (
-                <div key={link.id} className="flex flex-wrap items-center gap-3 rounded-[18px] border border-border px-4 py-3">
-                  <Badge variant={link.is_active ? "success" : "neutral"}>{link.is_active ? "active" : "revoked"}</Badge>
-                  <span className="text-sm text-muted-foreground">{link.use_count} opens</span>
-                  <span className="text-sm text-muted-foreground">
-                    {link.expires_at ? `expires ${new Date(link.expires_at).toLocaleDateString()}` : "no expiry"}
-                  </span>
-                  {link.is_active ? (
-                    <Button
-                      className="ml-auto"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => revokeShareMutation.mutate(link.id)}
-                    >
-                      Revoke
-                    </Button>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </Card>
-      ) : null}
+      <ReleaseMoreInfoDialog
+        item={item}
+        open={isMoreInfoOpen}
+        shareUrl={publicReleaseShareUrl || window.location.href}
+        releaseAccess={isOwnPost ? {
+          freshUrl: freshShareUrl,
+          links: shareLinksQuery.data ?? [],
+          isCreating: createShareMutation.isPending,
+          revokingId: revokeShareMutation.isPending ? revokeShareMutation.variables ?? null : null,
+          onCreate: () => createShareMutation.mutate(),
+          onRevoke: (linkId) => revokeShareMutation.mutate(linkId),
+        } : undefined}
+        onOpenChange={setIsMoreInfoOpen}
+      />
+      <ContentRemovalDialog
+        target={adminRemovalTarget}
+        pending={adminRemovalMutation.isPending}
+        onClose={() => {
+          if (!adminRemovalMutation.isPending) setAdminRemovalTarget(null);
+        }}
+        onConfirm={(reason) => {
+          if (adminRemovalTarget) adminRemovalMutation.mutate({ target: adminRemovalTarget, reason });
+        }}
+      />
     </div>
   );
 }

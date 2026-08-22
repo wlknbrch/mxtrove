@@ -17,13 +17,21 @@ import {
   isDemoModeEnabled,
   requireSupabase,
 } from "@/lib/service-utils";
+import { ASSET_SELECT_WITHOUT_WAVEFORM, withNullAssetWaveform } from "@/lib/supabase-selects";
 import type { CommentFormValues, SinglePublishValues } from "@/lib/validators";
 import type {
+  Asset,
+  FeedEvent,
   Post,
   PostCredit,
   PostExternalLink,
   PostType,
+  Profile,
+  ReleaseTrack,
   ShareLink,
+  SinglePost,
+  Song,
+  SongVersion,
   Visibility,
 } from "@/types/domain";
 import { createProtectedMediaReadUrl } from "@/features/media-processing/api";
@@ -35,6 +43,25 @@ import type { ResolvedComment, ResolvedPostCard, ResolvedReleaseTrack, ResolvedS
 
 let hasWarnedAboutMissingCommentEngagement = false;
 let hasWarnedAboutMissingPostSongMetadata = false;
+let hasWarnedAboutMissingOptimizedPostCards = false;
+
+const PROTECTED_MEDIA_CARD_SELECT = [
+  "id",
+  "owner_id",
+  "purpose",
+  "status",
+  "filename",
+  "mime_type",
+  "bytes",
+  "duration_seconds",
+  "waveform_data",
+  "post_id",
+  "project_id",
+  "song_version_id",
+  "message_id",
+  "created_at",
+  "ready_at",
+].join(", ");
 
 function getApiErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message.trim()) {
@@ -64,7 +91,11 @@ function getApiErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
-function resolveDemoPost(postId: string, viewerId?: string | null) {
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))];
+}
+
+function resolveDemoPost(postId: string, viewerId?: string | null): ResolvedPostCard | null {
   const post = demoPosts.find((entry) => entry.id === postId);
 
   if (!post) {
@@ -481,6 +512,396 @@ async function resolveSupabasePost(postId: string, viewerId?: string | null): Pr
   };
 }
 
+type OptimizedPostCardPayload = Omit<ResolvedPostCard, "single" | "releaseTracks"> & {
+  single: (Omit<ResolvedSingleInfo, "protectedPreview"> & {
+    protectedPreview?: null;
+    protectedPreviewAsset?: ProtectedMediaAsset | null;
+  }) | null;
+  releaseTracks: Array<Omit<ResolvedReleaseTrack, "protectedPreview"> & {
+    protectedPreview?: null;
+    protectedPreviewAsset?: ProtectedMediaAsset | null;
+  }>;
+};
+
+async function attachProtectedCardReadUrls(card: OptimizedPostCardPayload): Promise<ResolvedPostCard> {
+  const protectedAssets = [
+    card.single?.protectedPreviewAsset ?? null,
+    ...card.releaseTracks.map((track) => track.protectedPreviewAsset ?? null),
+  ].filter((asset): asset is ProtectedMediaAsset => Boolean(asset));
+  const readUrls = await resolveAvailableProtectedReadUrls(protectedAssets, createProtectedMediaReadUrl);
+
+  return {
+    ...card,
+    single: card.single
+      ? {
+          ...card.single,
+          protectedPreview: card.single.protectedPreviewAsset && readUrls.has(card.single.protectedPreviewAsset.id)
+            ? {
+                asset: card.single.protectedPreviewAsset,
+                readUrl: readUrls.get(card.single.protectedPreviewAsset.id)!,
+              }
+            : null,
+        }
+      : null,
+    releaseTracks: card.releaseTracks.map((track) => ({
+      ...track,
+      protectedPreview: track.protectedPreviewAsset && readUrls.has(track.protectedPreviewAsset.id)
+        ? {
+            asset: track.protectedPreviewAsset,
+            readUrl: readUrls.get(track.protectedPreviewAsset.id)!,
+          }
+        : null,
+    })),
+  };
+}
+
+async function resolveSupabasePostCardsFallback(
+  postIds: string[],
+  viewerId?: string | null,
+): Promise<ResolvedPostCard[]> {
+  const client = requireSupabase();
+  const { data: postRows, error: postError } = await client
+    .from("posts")
+    .select("*")
+    .in("id", postIds);
+
+  if (postError) {
+    throw postError;
+  }
+
+  const posts = (postRows ?? []) as Post[];
+  if (!posts.length) {
+    return [];
+  }
+
+  const postIdsInResult = posts.map((post) => post.id);
+  const ownerIds = uniqueStrings(posts.map((post) => post.owner_id));
+  const artworkIds = uniqueStrings(posts.map((post) => post.artwork_asset_id));
+
+  const [
+    ownersResult,
+    artworksResult,
+    singleLinksResult,
+    releaseTracksResult,
+    metricsResult,
+    viewerHeartsResult,
+    feedEventsResult,
+  ] = await Promise.all([
+    ownerIds.length
+      ? client.from("profiles").select("*").in("id", ownerIds)
+      : Promise.resolve({ data: [], error: null }),
+    artworkIds.length
+      ? client.from("assets").select(ASSET_SELECT_WITHOUT_WAVEFORM).in("id", artworkIds)
+      : Promise.resolve({ data: [], error: null }),
+    client.from("single_posts").select("*").in("post_id", postIdsInResult),
+    client.from("release_tracks").select("*").in("post_id", postIdsInResult).order("track_number", { ascending: true }),
+    client
+      .from("post_public_metrics")
+      .select("post_id, heart_count, featured_version_heart_count, comment_count")
+      .in("post_id", postIdsInResult),
+    viewerId
+      ? client.from("post_hearts").select("post_id").in("post_id", postIdsInResult).eq("profile_id", viewerId)
+      : Promise.resolve({ data: [], error: null }),
+    client.from("feed_events").select("*").in("post_id", postIdsInResult).order("created_at", { ascending: false }),
+  ]);
+
+  if (ownersResult.error) throw ownersResult.error;
+  if (artworksResult.error) throw artworksResult.error;
+  if (singleLinksResult.error) throw singleLinksResult.error;
+  if (releaseTracksResult.error) throw releaseTracksResult.error;
+  if (metricsResult.error) throw metricsResult.error;
+  if (viewerHeartsResult.error) throw viewerHeartsResult.error;
+  if (feedEventsResult.error) throw feedEventsResult.error;
+
+  const singleLinks = (singleLinksResult.data ?? []) as SinglePost[];
+  const releaseTracks = (releaseTracksResult.data ?? []) as ReleaseTrack[];
+  const singleSongIds = uniqueStrings(singleLinks.map((link) => link.song_id));
+  const releaseSongIds = uniqueStrings(releaseTracks.map((track) => track.song_id));
+  const songIds = uniqueStrings([...singleSongIds, ...releaseSongIds]);
+  const referencedVersionIds = uniqueStrings([
+    ...singleLinks.map((link) => link.featured_version_id),
+    ...releaseTracks.map((track) => track.song_version_id),
+  ]);
+
+  const [songsResult, referencedVersionsResult, singleVersionHistoryResult] = await Promise.all([
+    songIds.length
+      ? client.from("songs").select("*").in("id", songIds)
+      : Promise.resolve({ data: [], error: null }),
+    referencedVersionIds.length
+      ? client.from("song_versions").select("*").in("id", referencedVersionIds)
+      : Promise.resolve({ data: [], error: null }),
+    singleSongIds.length
+      ? client.from("song_versions").select("*").in("song_id", singleSongIds).order("version_number", { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (songsResult.error) throw songsResult.error;
+  if (referencedVersionsResult.error) throw referencedVersionsResult.error;
+  if (singleVersionHistoryResult.error) throw singleVersionHistoryResult.error;
+
+  const referencedVersions = (referencedVersionsResult.data ?? []) as SongVersion[];
+  const singleVersionHistory = (singleVersionHistoryResult.data ?? []) as SongVersion[];
+  const previewAssetIds = uniqueStrings([
+    ...referencedVersions.map((version) => version.preview_asset_id),
+    ...releaseTracks.map((track) => track.preview_asset_id),
+  ]);
+
+  const [previewAssetsResult, protectedAssetsResult, versionHeartsResult] = await Promise.all([
+    previewAssetIds.length
+      ? client.from("assets").select("*").in("id", previewAssetIds)
+      : Promise.resolve({ data: [], error: null }),
+    referencedVersionIds.length
+      ? client
+          .from("protected_media_assets")
+          .select(PROTECTED_MEDIA_CARD_SELECT)
+          .in("song_version_id", referencedVersionIds)
+          .eq("status", "ready")
+          .is("deleted_at", null)
+          .order("ready_at", { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
+    referencedVersionIds.length
+      ? client
+          .from("version_hearts")
+          .select("song_version_id, profile_id")
+          .in("song_version_id", referencedVersionIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (previewAssetsResult.error) throw previewAssetsResult.error;
+  if (protectedAssetsResult.error) throw protectedAssetsResult.error;
+  if (versionHeartsResult.error) throw versionHeartsResult.error;
+
+  const ownersById = new Map(
+    ((ownersResult.data ?? []) as Profile[]).map((profile) => [profile.id, profile]),
+  );
+  const artworksById = new Map(
+    ((artworksResult.data ?? []) as Array<Omit<Asset, "waveform_peaks">>)
+      .map((asset) => {
+        const normalized = withNullAssetWaveform(asset);
+        return [normalized.id, normalized] as const;
+      }),
+  );
+  const singleLinksByPostId = new Map(singleLinks.map((link) => [link.post_id, link]));
+  const metricsByPostId = new Map(
+    ((metricsResult.data ?? []) as Array<{
+      post_id: string;
+      heart_count: number | null;
+      featured_version_heart_count: number | null;
+      comment_count: number | null;
+    }>).map((metric) => [metric.post_id, metric]),
+  );
+  const viewerHeartedPostIds = new Set(
+    ((viewerHeartsResult.data ?? []) as Array<{ post_id: string }>).map((row) => row.post_id),
+  );
+  const latestFeedEventByPostId = new Map<string, FeedEvent>();
+  ((feedEventsResult.data ?? []) as FeedEvent[]).forEach((event) => {
+    if (!latestFeedEventByPostId.has(event.post_id)) {
+      latestFeedEventByPostId.set(event.post_id, event);
+    }
+  });
+
+  const tracksByPostId = new Map<string, ReleaseTrack[]>();
+  releaseTracks.forEach((track) => {
+    const current = tracksByPostId.get(track.post_id) ?? [];
+    current.push(track);
+    tracksByPostId.set(track.post_id, current);
+  });
+
+  const songsById = new Map(
+    ((songsResult.data ?? []) as Song[]).map((song) => [song.id, song]),
+  );
+  const versionsById = new Map<string, SongVersion>();
+  [...referencedVersions, ...singleVersionHistory].forEach((version) => {
+    versionsById.set(version.id, version);
+  });
+  const singleVersionHistoryBySongId = new Map<string, SongVersion[]>();
+  singleVersionHistory.forEach((version) => {
+    const current = singleVersionHistoryBySongId.get(version.song_id) ?? [];
+    current.push(version);
+    singleVersionHistoryBySongId.set(version.song_id, current);
+  });
+  const previewAssetsById = new Map(
+    ((previewAssetsResult.data ?? []) as Asset[]).map((asset) => [asset.id, asset]),
+  );
+
+  const protectedAssets = (protectedAssetsResult.data ?? []) as ProtectedMediaAsset[];
+  const protectedAssetByVersionId = new Map<string, ProtectedMediaAsset>();
+  protectedAssets.forEach((asset) => {
+    if (asset.song_version_id && !protectedAssetByVersionId.has(asset.song_version_id)) {
+      protectedAssetByVersionId.set(asset.song_version_id, asset);
+    }
+  });
+  const protectedReadUrls = await resolveAvailableProtectedReadUrls(
+    [...protectedAssetByVersionId.values()],
+    createProtectedMediaReadUrl,
+  );
+
+  const versionHeartCounts = new Map<string, number>();
+  const viewerHeartedVersionIds = new Set<string>();
+  ((versionHeartsResult.data ?? []) as Array<{ song_version_id: string; profile_id: string }>).forEach((heart) => {
+    versionHeartCounts.set(heart.song_version_id, (versionHeartCounts.get(heart.song_version_id) ?? 0) + 1);
+    if (viewerId && heart.profile_id === viewerId) {
+      viewerHeartedVersionIds.add(heart.song_version_id);
+    }
+  });
+
+  const postsById = new Map(posts.map((post) => [post.id, post]));
+  return postIds.flatMap((postId) => {
+    const post = postsById.get(postId);
+    if (!post) {
+      return [];
+    }
+
+    const singleLink = singleLinksByPostId.get(post.id) ?? null;
+    const featuredVersion = singleLink ? versionsById.get(singleLink.featured_version_id) ?? null : null;
+    const previousVersion = singleLink
+      ? (singleVersionHistoryBySongId.get(singleLink.song_id) ?? []).find(
+          (version) => version.id !== singleLink.featured_version_id,
+        ) ?? null
+      : null;
+    const singlePreviewAsset = featuredVersion?.preview_asset_id
+      ? previewAssetsById.get(featuredVersion.preview_asset_id) ?? null
+      : null;
+    const singleProtectedAsset = singleLink
+      ? protectedAssetByVersionId.get(singleLink.featured_version_id) ?? null
+      : null;
+    const singleProtectedReadUrl = singleProtectedAsset
+      ? protectedReadUrls.get(singleProtectedAsset.id) ?? null
+      : null;
+    const metrics = metricsByPostId.get(post.id);
+
+    const card: ResolvedPostCard = {
+      post,
+      owner: ownersById.get(post.owner_id) ?? null,
+      artwork: post.artwork_asset_id ? artworksById.get(post.artwork_asset_id) ?? null : null,
+      single: singleLink
+        ? {
+            song: (() => {
+              const song = songsById.get(singleLink.song_id) ?? null;
+              return song
+                ? {
+                    ...song,
+                    lyrics: getVisiblePostLyrics({
+                      lyrics: song.lyrics,
+                      showLyrics: singleLink.show_lyrics,
+                      ownerId: post.owner_id,
+                      viewerId,
+                    }),
+                  }
+                : null;
+            })(),
+            showLyrics: Boolean(singleLink.show_lyrics),
+            featuredVersion,
+            previousVersion,
+            previewAsset: singlePreviewAsset,
+            protectedPreview: singleProtectedAsset && singleProtectedReadUrl
+              ? { asset: singleProtectedAsset, readUrl: singleProtectedReadUrl }
+              : null,
+            versionHeartCount: singleLink.featured_version_id
+              ? versionHeartCounts.get(singleLink.featured_version_id) ?? Number(metrics?.featured_version_heart_count ?? 0)
+              : 0,
+            viewerHasHeartedVersion: singleLink.featured_version_id
+              ? viewerHeartedVersionIds.has(singleLink.featured_version_id)
+              : false,
+          }
+        : null,
+      releaseTracks: (tracksByPostId.get(post.id) ?? []).map((track) => {
+        const version = track.song_version_id ? versionsById.get(track.song_version_id) ?? null : null;
+        const previewAssetId = track.preview_asset_id ?? version?.preview_asset_id ?? null;
+        const previewAsset = previewAssetId ? previewAssetsById.get(previewAssetId) ?? null : null;
+        const protectedAsset = track.song_version_id
+          ? protectedAssetByVersionId.get(track.song_version_id) ?? null
+          : null;
+        const protectedReadUrl = protectedAsset ? protectedReadUrls.get(protectedAsset.id) ?? null : null;
+        const song = songsById.get(track.song_id) ?? null;
+
+        return {
+          track,
+          song: song
+            ? {
+                ...song,
+                lyrics: getVisiblePostLyrics({
+                  lyrics: song.lyrics,
+                  showLyrics: track.show_lyrics,
+                  ownerId: post.owner_id,
+                  viewerId,
+                }),
+              }
+            : null,
+          version,
+          versionLabel: version?.version_label ?? null,
+          previewAsset,
+          protectedPreview: protectedAsset && protectedReadUrl
+            ? { asset: protectedAsset, readUrl: protectedReadUrl }
+            : null,
+          versionHeartCount: track.song_version_id ? versionHeartCounts.get(track.song_version_id) ?? 0 : 0,
+          viewerHasHeartedVersion: track.song_version_id ? viewerHeartedVersionIds.has(track.song_version_id) : false,
+        } satisfies ResolvedReleaseTrack;
+      }),
+      comments: [],
+      heartCount: Number(metrics?.heart_count ?? 0),
+      viewerHasHearted: viewerHeartedPostIds.has(post.id),
+      versionHeartCount: singleLink?.featured_version_id
+        ? versionHeartCounts.get(singleLink.featured_version_id) ?? Number(metrics?.featured_version_heart_count ?? 0)
+        : 0,
+      viewerHasHeartedVersion: singleLink?.featured_version_id
+        ? viewerHeartedVersionIds.has(singleLink.featured_version_id)
+        : false,
+      commentCount: Number(metrics?.comment_count ?? 0),
+      credits: [],
+      externalLinks: [],
+      feedEvent: latestFeedEventByPostId.get(post.id) ?? null,
+    };
+
+    return [card];
+  });
+}
+
+export async function getResolvedPostCardsByIds(
+  postIds: string[],
+  viewerId?: string | null,
+): Promise<ResolvedPostCard[]> {
+  const uniquePostIds = [...new Set(postIds.filter(Boolean))].slice(0, 50);
+  if (!uniquePostIds.length) return [];
+
+  const resolvedViewerId = getViewerId(viewerId);
+  if (isDemoModeEnabled()) {
+    await createDemoDelay();
+    return uniquePostIds
+      .map((postId) => resolveDemoPost(postId, resolvedViewerId))
+      .filter((post): post is ResolvedPostCard => Boolean(post));
+  }
+
+  const client = requireSupabase();
+  const { data, error } = await client.rpc("get_resolved_post_cards", {
+    target_post_ids: uniquePostIds,
+  });
+
+  if (error) {
+    if (!hasWarnedAboutMissingOptimizedPostCards) {
+      hasWarnedAboutMissingOptimizedPostCards = true;
+      console.warn(
+        "Optimized post-card loading is unavailable until the latest migration is applied; using the compatible fallback.",
+        error.message,
+      );
+    }
+    return resolveSupabasePostCardsFallback(uniquePostIds, resolvedViewerId);
+  }
+
+  const cardsById = new Map(
+    await Promise.all(
+      ((data ?? []) as Array<{ post_id: string; card: OptimizedPostCardPayload }>).map(async (row) => [
+        row.post_id,
+        await attachProtectedCardReadUrls(row.card),
+      ] as const),
+    ),
+  );
+  return uniquePostIds.flatMap((postId) => {
+    const card = cardsById.get(postId);
+    return card ? [card] : [];
+  });
+}
+
 export async function listResolvedPosts(params?: {
   visibility?: Visibility;
   postType?: PostType | "all";
@@ -489,7 +910,7 @@ export async function listResolvedPosts(params?: {
   viewerId?: string | null;
   limit?: number;
   offset?: number;
-}) {
+}): Promise<ResolvedPostCard[]> {
   const viewerId = getViewerId(params?.viewerId);
 
   if (isDemoModeEnabled()) {
@@ -546,11 +967,10 @@ export async function listResolvedPosts(params?: {
     throw error;
   }
 
-  const resolved = await Promise.all(
-    ((data ?? []) as Array<{ id: string }>).map((row) => resolveSupabasePost(row.id, viewerId)),
+  return getResolvedPostCardsByIds(
+    ((data ?? []) as Array<{ id: string }>).map((row) => row.id),
+    viewerId,
   );
-
-  return resolved.filter(Boolean) as ResolvedPostCard[];
 }
 
 export async function getResolvedPostById(postId: string, viewerId?: string | null) {
@@ -561,7 +981,55 @@ export async function getResolvedPostById(postId: string, viewerId?: string | nu
     return resolveDemoPost(postId, resolvedViewerId);
   }
 
-  return resolveSupabasePost(postId, resolvedViewerId);
+  const [baseCard] = await getResolvedPostCardsByIds([postId], resolvedViewerId);
+  if (!baseCard) return null;
+
+  const client = requireSupabase();
+  const [commentsResult, commentEngagementResult, creditsResult, externalLinksResult] = await Promise.all([
+    client
+      .from("comments")
+      .select("*, author:profiles!comments_author_id_fkey(*)")
+      .eq("post_id", postId)
+      .order("created_at", { ascending: true }),
+    client.rpc("get_comment_engagement", { target_post_id: postId }),
+    client.from("post_credits").select("*").eq("post_id", postId).order("position"),
+    client.from("post_external_links").select("*").eq("post_id", postId).order("position"),
+  ]);
+
+  if (commentsResult.error) throw commentsResult.error;
+  if (creditsResult.error) throw creditsResult.error;
+  if (externalLinksResult.error) throw externalLinksResult.error;
+  if (commentEngagementResult.error && !hasWarnedAboutMissingCommentEngagement) {
+    hasWarnedAboutMissingCommentEngagement = true;
+    console.warn(
+      "Comment engagement is unavailable until the latest migration is applied.",
+      commentEngagementResult.error.message,
+    );
+  }
+
+  const commentEngagement = new Map(
+    ((commentEngagementResult.data ?? []) as Array<{
+      comment_id: string;
+      heart_count: number | string;
+      reply_count: number | string;
+      viewer_has_hearted: boolean;
+    }>).map((entry) => [entry.comment_id, entry]),
+  );
+  const comments = ((commentsResult.data ?? []) as Array<ResolvedComment>).map((comment) => ({
+    ...comment,
+    author: (comment as { author: ResolvedComment["author"] }).author ?? null,
+    heartCount: Number(commentEngagement.get(comment.id)?.heart_count ?? 0),
+    replyCount: Number(commentEngagement.get(comment.id)?.reply_count ?? 0),
+    viewerHasHearted: Boolean(commentEngagement.get(comment.id)?.viewer_has_hearted),
+  }));
+
+  return {
+    ...baseCard,
+    comments,
+    commentCount: comments.filter((comment) => !comment.deleted_at).length,
+    credits: (creditsResult.data ?? []) as PostCredit[],
+    externalLinks: (externalLinksResult.data ?? []) as PostExternalLink[],
+  };
 }
 
 export async function findSinglePostBySongId(songId: string) {

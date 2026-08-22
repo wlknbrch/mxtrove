@@ -1,5 +1,14 @@
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, CheckCircle2, LoaderCircle, MailOpen, MessageCircleMore, UserRound } from "lucide-react";
+import {
+  ArrowUpRight,
+  CheckCircle2,
+  LoaderCircle,
+  MailOpen,
+  MapPin,
+  MessageCircleMore,
+  ShieldAlert,
+  UserRound,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -20,7 +29,36 @@ import { useAppViewer } from "@/hooks/use-app-viewer";
 import { queryClient } from "@/lib/query-client";
 import { cn, formatRelativeTime } from "@/lib/utils";
 
-function getNotificationHeading(entry: ResolvedNotification) {
+const moderationReasonLabels: Record<string, string> = {
+  copyright: "Copyright infringement",
+  hate: "Hateful content",
+  harassment: "Harassment or abuse",
+  sexual_content: "Sexual content",
+  illegal_content: "Illegal content",
+  spam: "Spam or manipulation",
+  other: "Other policy violation",
+};
+
+function getNotificationContextValue(entry: ResolvedNotification, key: string) {
+  const value = entry.notification.context?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+export function getModerationNotificationDetails(entry: ResolvedNotification) {
+  if (entry.notification.type !== "content_moderated") return null;
+
+  const location = getNotificationContextValue(entry, "location")
+    ?? getNotificationContextValue(entry, "target_label")
+    ?? "MxTrove";
+  const reason = getNotificationContextValue(entry, "reason");
+
+  return {
+    location,
+    reason: reason ? moderationReasonLabels[reason] ?? reason : "Policy enforcement",
+  };
+}
+
+export function getNotificationHeading(entry: ResolvedNotification) {
   switch (entry.notification.type) {
     case "follow":
       return "New follower";
@@ -62,12 +100,14 @@ function getNotificationHeading(entry: ResolvedNotification) {
       return "New attachment";
     case "share_link_review":
       return "Share-link review";
+    case "content_moderated":
+      return "Moderation decision";
     default:
       return "Notification";
   }
 }
 
-function getNotificationMessage(entry: ResolvedNotification) {
+export function getNotificationMessage(entry: ResolvedNotification) {
   const actorName = entry.actor?.display_name ?? "Someone";
 
   switch (entry.notification.type) {
@@ -111,12 +151,18 @@ function getNotificationMessage(entry: ResolvedNotification) {
       return `${actorName} sent a protected attachment.`;
     case "share_link_review":
       return "Someone reviewed content through a private share link.";
+    case "content_moderated":
+      return getNotificationContextValue(entry, "action")
+        ?? "A moderation action was taken on your content.";
     default:
       return `${actorName} triggered a notification.`;
   }
 }
 
 function getPrimaryNotificationTarget(entry: ResolvedNotification) {
+  // Removed content may no longer be readable, so its notification is the durable context surface.
+  if (entry.notification.type === "content_moderated") return null;
+
   if (entry.notification.type === "project_invite") {
     return {
       label: "Review invitation",
@@ -220,7 +266,7 @@ export function NotificationsPage() {
       <PageHeader
         eyebrow="Notifications"
         title="Everything that needs your attention"
-        description="Follows, hearts, comments, release updates, and new messages all collect here."
+        description="Follows, hearts, comments, release updates, moderation decisions, and new messages all collect here."
         actions={
           <Button
             variant="secondary"
@@ -244,6 +290,8 @@ export function NotificationsPage() {
           const primaryTarget = getPrimaryNotificationTarget(entry);
           const showPrimaryAction = primaryTarget && primaryTarget.to !== actorPath;
           const isMarkingRead = markingNotificationId === entry.notification.id;
+          const moderationDetails = getModerationNotificationDetails(entry);
+          const isModerationDecision = Boolean(moderationDetails);
 
           return (
             <Card
@@ -256,6 +304,11 @@ export function NotificationsPage() {
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center gap-3">
+                    {isModerationDecision ? (
+                      <span className="grid size-9 shrink-0 place-items-center rounded-[14px] border border-warning/30 bg-warning/10 text-warning">
+                        <ShieldAlert className="size-4" />
+                      </span>
+                    ) : null}
                     <CardTitle className="text-lg">{getNotificationHeading(entry)}</CardTitle>
                     <Badge variant={entry.notification.is_read ? "neutral" : "accent"}>
                       {entry.notification.is_read ? "Read" : "Unread"}
@@ -269,6 +322,23 @@ export function NotificationsPage() {
 
               <div className="rounded-[22px] border border-white/[0.06] bg-white/[0.02] px-4 py-4">
                 <p className="text-sm leading-7 text-muted-foreground">{getNotificationMessage(entry)}</p>
+                {isModerationDecision ? (
+                  <dl className="mt-4 grid gap-3 border-t border-border/70 pt-4 sm:grid-cols-2">
+                    <div className="min-w-0">
+                      <dt className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">Where</dt>
+                      <dd className="mt-1 flex min-w-0 items-start gap-2 text-sm text-foreground">
+                        <MapPin className="mt-0.5 size-4 shrink-0 text-warning" />
+                        <span className="min-w-0 break-words">{moderationDetails?.location}</span>
+                      </dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">Reason</dt>
+                      <dd className="mt-1 text-sm text-foreground">
+                        {moderationDetails?.reason}
+                      </dd>
+                    </div>
+                  </dl>
+                ) : null}
                 {actorPath ? (
                   <button
                     type="button"

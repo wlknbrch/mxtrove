@@ -17,17 +17,6 @@ function jsonResponse(status: number, body: Record<string, string>) {
   });
 }
 
-function buildDriveProxyUrl(fileId: string, kind: "audio" | "image", size: string | null) {
-  const encodedFileId = encodeURIComponent(fileId);
-
-  if (kind === "image") {
-    const requestedSize = size?.trim() || "w1200";
-    return `https://drive.google.com/thumbnail?id=${encodedFileId}&sz=${encodeURIComponent(requestedSize)}`;
-  }
-
-  return `https://drive.google.com/uc?export=download&id=${encodedFileId}`;
-}
-
 function getDropboxProxyUrl(value: string | null) {
   if (!value) {
     return null;
@@ -41,28 +30,6 @@ function getDropboxProxyUrl(value: string | null) {
     return null;
   }
   return url.toString();
-}
-
-function copyProxyHeaders(source: Headers) {
-  const headers = new Headers(corsHeaders);
-  const headerNames = [
-    "accept-ranges",
-    "cache-control",
-    "content-length",
-    "content-range",
-    "content-type",
-    "etag",
-    "last-modified",
-  ];
-
-  for (const headerName of headerNames) {
-    const headerValue = source.get(headerName);
-    if (headerValue) {
-      headers.set(headerName, headerValue);
-    }
-  }
-
-  return headers;
 }
 
 serve(async (request) => {
@@ -79,7 +46,6 @@ serve(async (request) => {
   const url = new URL(request.url);
   const fileId = url.searchParams.get("fileId")?.trim();
   const kind = url.searchParams.get("kind") === "audio" ? "audio" : "image";
-  const size = url.searchParams.get("size");
   const provider = url.searchParams.get("provider");
   const dropboxUrl = provider === "dropbox"
     ? getDropboxProxyUrl(url.searchParams.get("url"))
@@ -89,39 +55,20 @@ serve(async (request) => {
     return jsonResponse(400, { error: "Missing or unsupported media source." });
   }
 
-  const upstreamHeaders = new Headers();
-  const rangeHeader = request.headers.get("range");
-
-  if (rangeHeader) {
-    upstreamHeaders.set("Range", rangeHeader);
+  const proxyBaseUrl = Deno.env.get("PUBLIC_MEDIA_PROXY_URL")
+    || "https://mxtrove.wlknbrch.com/worker/v1/public-media";
+  const redirectUrl = new URL(proxyBaseUrl);
+  for (const [key, value] of url.searchParams.entries()) {
+    redirectUrl.searchParams.set(key, value);
   }
+  redirectUrl.searchParams.set("kind", kind);
 
-  const upstreamResponse = await fetch(
-    dropboxUrl ?? buildDriveProxyUrl(fileId!, kind, size),
-    {
-    method: request.method,
-    headers: upstreamHeaders,
-    redirect: "follow",
+  return new Response(null, {
+    status: 307,
+    headers: {
+      ...corsHeaders,
+      "Cache-Control": "public, max-age=3600",
+      Location: redirectUrl.toString(),
     },
-  );
-  const responseHeaders = copyProxyHeaders(upstreamResponse.headers);
-  if (dropboxUrl) {
-    responseHeaders.set(
-      "content-type",
-      kind === "audio" ? "audio/mpeg" : upstreamResponse.headers.get("content-type") ?? "image/jpeg",
-    );
-  }
-  if (upstreamResponse.ok && !rangeHeader) {
-    responseHeaders.set(
-      "cache-control",
-      kind === "image"
-        ? "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400"
-        : "public, max-age=3600, s-maxage=86400, stale-while-revalidate=3600",
-    );
-  }
-
-  return new Response(request.method === "HEAD" ? null : upstreamResponse.body, {
-    status: upstreamResponse.status,
-    headers: responseHeaders,
   });
 });

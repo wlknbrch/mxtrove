@@ -1,5 +1,6 @@
 import { demoAssets, demoCloudConnection } from "@/lib/demo-data";
 import { createDemoDelay, isDemoModeEnabled, requireSupabase } from "@/lib/service-utils";
+import { ASSET_SELECT_WITHOUT_WAVEFORM, withNullAssetWaveform } from "@/lib/supabase-selects";
 import type {
   Asset,
   AssetType,
@@ -104,11 +105,11 @@ export async function listOwnedAssets(ownerId: string) {
   const client = requireSupabase();
   const { data, error } = await client
     .from("assets")
-    .select("*")
+    .select(ASSET_SELECT_WITHOUT_WAVEFORM)
     .eq("owner_id", ownerId)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as Asset[];
+  return ((data ?? []) as unknown as Array<Omit<Asset, "waveform_peaks">>).map(withNullAssetWaveform);
 }
 
 export async function updateAssetProviderReference(input: {
@@ -317,7 +318,7 @@ export async function getAssetById(assetId: string) {
   const client = requireSupabase();
   const { data, error } = await client
     .from("assets")
-    .select("*")
+    .select(ASSET_SELECT_WITHOUT_WAVEFORM)
     .eq("id", assetId)
     .maybeSingle();
 
@@ -325,7 +326,7 @@ export async function getAssetById(assetId: string) {
     throw error;
   }
 
-  return data as Asset | null;
+  return data ? withNullAssetWaveform(data as unknown as Omit<Asset, "waveform_peaks">) : null;
 }
 
 export async function getAssetsByIds(assetIds: string[]) {
@@ -343,14 +344,14 @@ export async function getAssetsByIds(assetIds: string[]) {
   const client = requireSupabase();
   const { data, error } = await client
     .from("assets")
-    .select("*")
+    .select(ASSET_SELECT_WITHOUT_WAVEFORM)
     .in("id", uniqueAssetIds);
 
   if (error) {
     throw error;
   }
 
-  return (data ?? []) as Asset[];
+  return ((data ?? []) as unknown as Array<Omit<Asset, "waveform_peaks">>).map(withNullAssetWaveform);
 }
 
 export async function updateAssetPublicLinks(input: {

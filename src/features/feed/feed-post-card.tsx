@@ -7,8 +7,8 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { FullscreenArtwork } from "@/components/ui/fullscreen-artwork";
 import { PlaybackDuration } from "@/components/ui/playback-duration";
+import { ResolvedImage } from "@/components/ui/resolved-image";
 import { getAssetById } from "@/features/drive/api";
 import { useAppViewer } from "@/hooks/use-app-viewer";
 import { getArtworkAssetUrls, getAvatarAssetUrls } from "@/lib/asset-urls";
@@ -177,17 +177,21 @@ export function FeedPostCard({
                     : "xl:grid-cols-[240px_minmax(0,1fr)_190px]",
               )}
             >
-              <FullscreenArtwork
-                src={getArtworkAssetUrls(item.artwork)}
-                alt={item.post.title}
-                allowFullscreen={false}
-                priority={isSpotlight}
+              <Link
+                to={`/post/${item.post.id}`}
+                aria-label={`Open ${item.post.title}`}
                 className={cn(
-                  "relative overflow-hidden rounded-[26px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.32),rgba(255,255,255,0.03)_55%,rgba(10,8,24,0.92))]",
+                  "group/artwork relative block overflow-hidden rounded-[26px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.32),rgba(255,255,255,0.03)_55%,rgba(10,8,24,0.92))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/80",
                   isSpotlight ? "aspect-[0.96]" : "aspect-square",
                 )}
-                imageClassName="absolute inset-0 h-full w-full object-cover"
               >
+                <ResolvedImage
+                  src={getArtworkAssetUrls(item.artwork)}
+                  alt={item.post.title}
+                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover/artwork:scale-[1.025]"
+                  loading={isSpotlight ? "eager" : "lazy"}
+                  fetchPriority={isSpotlight ? "high" : "auto"}
+                />
                 <div className="absolute left-3 top-3 z-10">
                   <Badge variant={item.feedEvent?.event_type === "single_update" ? "accent" : "neutral"}>
                     {item.post.post_type}
@@ -203,7 +207,7 @@ export function FeedPostCard({
                       : "No audio"}
                   </span>
                 </div>
-              </FullscreenArtwork>
+              </Link>
               <div className="flex min-w-0 flex-col justify-between gap-4">
                 <div className="space-y-4">
                   <p className="text-xs uppercase tracking-[0.28em] text-accent-secondary/82">{eventLabel}</p>

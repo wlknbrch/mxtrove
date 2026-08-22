@@ -25,7 +25,7 @@ The production site is designed for:
 - Google Drive, Dropbox, and OneDrive providers with explicit browser-mediated migration
 - Credits, external links, QR codes, embeds, and dynamic public social cards
 - Search across permitted creators, releases, songs, projects, feedback, and messages
-- Moderation reports, admin-only actions, recoverable account deletion, and data export
+- Public-only admin activity dashboard, moderation reports, admin actions, recoverable account deletion, and data export
 - Realtime project, message, and notification refresh
 - PWA shell, read-only offline snapshots, and server-backed release drafts with autosave
 
@@ -67,6 +67,7 @@ Important directories:
 - `services/media-worker/src/social-preview`: dynamic HTML and OG images
 - `supabase/migrations`: additive V1, V1.5, and V2 schema history
 - `supabase/tests`: database and RLS regression tests
+- `docs/moderation-and-dsa-readiness.md`: admin privacy boundary and the planned EU notice-and-action follow-up
 
 ## Storage And Trust Model
 
@@ -216,11 +217,39 @@ supabase db push
 Deploy the public cloud-media proxy:
 
 ```bash
+supabase secrets set PUBLIC_MEDIA_PROXY_URL=https://mxtrove.wlknbrch.com/worker/v1/public-media
 supabase functions deploy drive-media --no-verify-jwt
 ```
 
-The function is at `supabase/functions/drive-media/index.ts`. It proxies only
-public asset records; private originals and protected derivatives do not use it.
+The function at `supabase/functions/drive-media/index.ts` is a compatibility
+redirect for old app bundles. It must not stream media bytes itself. Current
+clients stream public previews directly from the cloud provider through the VPS
+worker at `/worker/v1/public-media`; protected derivatives continue to use their
+signed worker URLs. This keeps Google Drive and Dropbox links out of the player
+UI without charging Supabase for the media response body.
+
+### Supabase egress safeguards
+
+Apply `20260817120000_mxtrove_egress_optimized_post_cards.sql` before deploying
+the matching frontend. It replaces the feed/profile N+1 resolver with one
+bounded card RPC per page. Until that migration exists, the frontend deliberately
+falls back to the older resolver for compatibility, but that fallback is much
+more expensive.
+
+MxTrove also persists only public feed/discovery metadata in a bounded browser
+cache. Messages, projects, protected signed URLs, and other private query data
+are never persisted by this cache. Mutations and Realtime events still invalidate
+changed content, and signing out clears the cache.
+
+After deployment, verify in browser DevTools that artwork/audio requests use:
+
+```text
+https://mxtrove.wlknbrch.com/worker/v1/public-media
+```
+
+They must not return media bodies from `*.functions.supabase.co/drive-media`.
+The legacy function may appear once as a small `307` response for an old cached
+PWA bundle; the redirected media response must come from the VPS worker.
 
 Production Auth settings:
 
@@ -467,6 +496,7 @@ Deploy later updates:
 ```bash
 git pull
 supabase db push
+supabase secrets set PUBLIC_MEDIA_PROXY_URL=https://mxtrove.wlknbrch.com/worker/v1/public-media
 supabase functions deploy drive-media --no-verify-jwt
 docker compose \
   --project-name mxshare \

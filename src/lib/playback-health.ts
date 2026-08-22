@@ -19,6 +19,14 @@ export function hasUsablePreviewAsset(asset: Asset | null | undefined) {
 }
 
 export function needsWaveformRepair(asset: Asset | null | undefined) {
+  if (!asset) {
+    return true;
+  }
+
+  if (typeof asset.waveform_bucket_count === "number") {
+    return asset.waveform_bucket_count <= 0;
+  }
+
   return !getAssetWaveform(asset);
 }
 

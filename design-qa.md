@@ -1,46 +1,37 @@
-reference visual sources:
-- /Users/wlknbrch/.codex/generated_images/019f3d4e-3d88-7fc2-9208-e603ab6ec279/ig_0f28705f8cf465d8016a4ed5c2b6248191b094343498c63349.png
-- /Users/wlknbrch/.codex/generated_images/019f3d4e-3d88-7fc2-9208-e603ab6ec279/ig_0f28705f8cf465d8016a4ed74837b481918d1f9dae8711e724.png
-- /Users/wlknbrch/.codex/generated_images/019f3d4e-3d88-7fc2-9208-e603ab6ec279/ig_0f28705f8cf465d8016a4ed6c7a9208191901721f276bb0423.png
-- /Users/wlknbrch/.codex/generated_images/019f3d4e-3d88-7fc2-9208-e603ab6ec279/ig_0f28705f8cf465d8016a4ed7d34f9481919db7467c901e0cf1.png
-- /Users/wlknbrch/.codex/generated_images/019f3d4e-3d88-7fc2-9208-e603ab6ec279/ig_0f28705f8cf465d8016a4ed78f8f048191ac6b55b6e649cf6a.png
+# Release Detail Design QA
 
-third-pass screenshot evidence:
-- /tmp/mxshare-third-pass-entry.png
-- /tmp/mxshare-third-pass-home-auth-check.png
-- /tmp/mxshare-third-pass-home-player.png
-- /tmp/mxshare-third-pass-explore.png
-- /tmp/mxshare-third-pass-messages.png
+Final result: passed
 
-viewport:
-- desktop Playwright viewport at 1600x1200
+## Comparison
 
-validated state:
-- unauthenticated auth shell
-- authenticated home feed
-- authenticated home feed with fixed player visible
-- authenticated explore route
-- authenticated messages inbox
+- Reference: `/Users/wlknbrch/.codex/generated_images/019f3d4e-3d88-7fc2-9208-e603ab6ec279/exec-3f83e362-a1b5-4b48-8681-f7182bb30bff.png`
+- Prototype: `/private/tmp/mxtrove-release-fidelity-latest.png`
+- Side-by-side comparison: `/private/tmp/mxtrove-release-reference-comparison.png`
+- Viewport: 1487 x 1058
+- State: authenticated public album release, first four tracks visible, comments sorted by relevance
 
-third-pass emphasis:
-- tighten fidelity to Velvet Signal through atmosphere, light beams, shell richness, stronger editorial hero cards, and a more integrated fixed player
+## Results
 
-comparison notes:
-- The shared shell now lands much closer to the mockups through the Velvet Signal badge, deeper beam lighting, stronger glass depth, and a richer sidebar rhythm.
-- Home now reads as an editorial surface rather than a plain feed: the hero statement, metrics strip, spotlight sidebar, and more cinematic first card move it meaningfully toward the approved direction.
-- Explore now shares the same design language as Home and Settings instead of feeling like a utilitarian filter page.
-- Messages benefits from the stronger global shell and header system and now feels coherent beside the other redesigned routes.
-- The fixed player is back to a native MxTrove surface and visually aligns far better with the mockups than the earlier utilitarian pass.
+- P0: none
+- P1: none
+- P2: none
+- Hero composition, cover scale, title hierarchy, action styling, and tracklist columns match the selected reference visual language.
+- Per the final product direction, the tracklist and comments now stack as separate full-width sections instead of sharing a desktop row.
+- The release artwork is loaded twice: as the crisp hero cover and as a brighter, blurred backdrop behind the hero content.
+- The return control names its destination, while More info is an icon-only action beside Share and Heart.
+- The return control is a borderless typographic link rather than a chip, and creator handles use the active theme accent token.
+- Desktop verification at 2048 x 1152 confirms the release sidebar and Library sidebar both remain 292px wide; the cloud-storage card remains visible in the initial viewport.
+- The return label renders as a 9.92px, weight-300 engraving with a transparent background, while the creator handle resolves directly to the active `--accent` color.
+- The release artwork atmosphere is confined to the hero: it extends beneath the translucent sidebar and to the top/right screen edges, then ends exactly where the tracklist begins.
+- Desktop geometry verification at 1487 x 1058 measured the hero, backdrop, and tracklist boundary at `614.27px`. Tracklist and comments use the opaque `--background` surface (`#05040d` in the verified theme), so artwork color does not bleed below the header and no horizontal overflow is introduced.
+- The More Info dialog visibly includes the release QR code for every accessible release URL. The QR is a keyboard-focusable download link, identifies its save action, and exports a title-based PNG filename when clicked.
+- Release playback feedback is synchronized with the persistent player: while a release track is playing, the hero action reads `Pause`, the active track uses an icon-only pause control and accent highlight, and pause/resume preserves the current playback position.
+- Owner-only private release-link management lives inside More info; it is no longer rendered beneath the release page.
+- The version column is widened and uses compact badges so complete labels remain legible.
+- Release notes, credits, external links, QR sharing, and embed controls are consolidated into the working More info dialog.
+- Mobile verification passed at 390 x 844 with no horizontal overflow. Track actions, lyrics access, and the More info dialog remain usable.
 
-functional QA performed:
-- `npm run typecheck`
-- `npm run build`
-- local authenticated Playwright flow against `http://127.0.0.1:4174`
+## P3 Notes
 
-residual notes:
-- The screenshot run surfaced `This preview could not be played in the browser.` when triggering playback in Playwright. The player layout itself rendered correctly, but the underlying preview source still depends on the current media/browser compatibility of the test content.
-- Some artwork surfaces in authenticated content still show fallback blocks when the underlying asset does not resolve into a renderable image during QA. That is a data/media pipeline issue, not a layout regression introduced by this design pass.
-
-final result:
-- third pass completed
-- visual fidelity improved most on shell, home, explore, and player
+- Exact text wrapping varies with real release metadata and the existing MxTrove font files.
+- The production comments rail preserves moderation and ownership actions in a compact overflow menu, which is intentionally more functional than the static mockup.

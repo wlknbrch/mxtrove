@@ -12,6 +12,7 @@ interface ClaimedPushRow {
   p256dh: string;
   auth: string;
   notification_type: string;
+  notification_context: Record<string, unknown> | null;
   post_id: string | null;
   project_id: string | null;
   song_version_id: string | null;
@@ -30,6 +31,15 @@ if (config.webPushPublicKey && config.webPushPrivateKey) {
 function buildPushPayload(row: ClaimedPushRow) {
   const actorName = row.actor_display_name ?? row.actor_username ?? "Someone";
   const postTitle = row.post_title ?? "your post";
+  const moderationAction = typeof row.notification_context?.action === "string"
+    ? row.notification_context.action
+    : "A moderation action was taken on your content.";
+  const moderationLocation = typeof row.notification_context?.location === "string"
+    ? row.notification_context.location
+    : "MxTrove";
+  const moderationReason = typeof row.notification_context?.reason === "string"
+    ? row.notification_context.reason.replaceAll("_", " ")
+    : "policy enforcement";
 
   const detailedBody =
     row.notification_type === "follow"
@@ -70,14 +80,18 @@ function buildPushPayload(row: ClaimedPushRow) {
                                     ? `${actorName} sent you an attachment.`
                                     : row.notification_type === "share_link_review"
                                       ? "A private review link received activity."
-                                      : "You have a new message on MxTrove.";
+                                      : row.notification_type === "content_moderated"
+                                        ? `${moderationAction} Location: ${moderationLocation}. Reason: ${moderationReason}.`
+                                        : "You have a new message on MxTrove.";
 
   const body = row.privacy_safe_push
     ? "You have a new private activity update on MxTrove."
     : detailedBody;
 
   const url =
-    row.notification_type === "follow"
+    row.notification_type === "content_moderated"
+      ? "/notifications"
+      : row.notification_type === "follow"
       ? row.actor_username
         ? `/@${row.actor_username}`
         : "/explore"
@@ -92,7 +106,7 @@ function buildPushPayload(row: ClaimedPushRow) {
           : "/notifications";
 
   return {
-    title: "MxTrove",
+    title: row.notification_type === "content_moderated" ? "MxTrove moderation" : "MxTrove",
     body,
     url,
     tag: `${row.notification_type}:${row.notification_id}`,
@@ -130,7 +144,7 @@ async function markQueueResult(input: {
 
 export async function dispatchPushBatch() {
   if (!config.webPushPublicKey || !config.webPushPrivateKey) {
-    return;
+    return 0;
   }
 
   const { data, error } = await supabaseAdmin.rpc("claim_push_delivery_batch", {
@@ -243,6 +257,8 @@ export async function dispatchPushBatch() {
       });
     }
   }
+
+  return claimedRows.length;
 }
 
 export async function sendImmediateTestPush(recipientId: string) {

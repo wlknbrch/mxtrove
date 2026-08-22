@@ -25,6 +25,7 @@ import {
   ensureProtectedMediaStorage,
 } from "./protected-media/index.js";
 import { registerProtectedMediaRoutes } from "./protected-media/routes.js";
+import { registerPublicMediaRoutes } from "./public-media/routes.js";
 import { dispatchPushBatch, sendImmediateTestPush } from "./push/dispatcher.js";
 import { registerSocialPreviewRoutes } from "./social-preview/routes.js";
 import { processDataExportBatch } from "./exports/processor.js";
@@ -271,6 +272,7 @@ app.post("/v1/push/test", async (request, reply) => {
 });
 
 await registerProtectedMediaRoutes(app);
+await registerPublicMediaRoutes(app);
 await registerAttachmentRoutes(app);
 await registerSocialPreviewRoutes(app);
 
@@ -298,28 +300,50 @@ await Promise.all([
 ]);
 await recoverStaleMediaJobs();
 
-setInterval(() => {
-  void runCleanupCycle().catch((error) => {
-    app.log.error(error);
-  });
-  rateLimiter.prune();
-}, 60000).unref();
+function scheduleCleanupCycle() {
+  setTimeout(async () => {
+    try {
+      await runCleanupCycle();
+      rateLimiter.prune();
+    } catch (error) {
+      app.log.error(error);
+    } finally {
+      scheduleCleanupCycle();
+    }
+  }, config.cleanupIntervalMs).unref();
+}
 
-setInterval(() => {
-  void dispatchPushBatch().catch((error) => {
-    app.log.error(error);
-  });
-}, config.pushPollIntervalMs).unref();
+function schedulePushCycle(delayMs = 0) {
+  setTimeout(async () => {
+    let processed = 0;
+    try {
+      processed = await dispatchPushBatch();
+    } catch (error) {
+      app.log.error(error);
+    } finally {
+      schedulePushCycle(processed > 0 ? config.pushPollIntervalMs : config.pushIdlePollIntervalMs);
+    }
+  }, delayMs).unref();
+}
 
-setInterval(() => {
-  void processDataExportBatch().catch((error) => {
-    app.log.error(error);
-  });
-}, config.dataExportPollIntervalMs).unref();
+function scheduleDataExportCycle(delayMs = 0) {
+  setTimeout(async () => {
+    let processed = 0;
+    try {
+      processed = await processDataExportBatch();
+    } catch (error) {
+      app.log.error(error);
+    } finally {
+      scheduleDataExportCycle(
+        processed > 0 ? config.dataExportPollIntervalMs : config.dataExportIdlePollIntervalMs,
+      );
+    }
+  }, delayMs).unref();
+}
 
-void processDataExportBatch().catch((error) => {
-  app.log.error(error);
-});
+scheduleCleanupCycle();
+schedulePushCycle();
+scheduleDataExportCycle();
 
 app.listen({ port: config.port, host: "0.0.0.0" }).catch((error) => {
   app.log.error(error);

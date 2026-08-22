@@ -8,11 +8,16 @@ export function useFeedRealtime() {
     const client = getSupabaseBrowserClient();
     if (!client) return;
 
+    let refreshTimer: number | null = null;
     const refreshFeeds = () => {
-      void queryClient.invalidateQueries({ queryKey: ["home-feed"] });
-      void queryClient.invalidateQueries({ queryKey: ["explore-feed"] });
-      void queryClient.invalidateQueries({ queryKey: ["library-posts"] });
-      void queryClient.invalidateQueries({ queryKey: ["profile-posts"] });
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => {
+        refreshTimer = null;
+        void queryClient.invalidateQueries({ queryKey: ["home-feed"], refetchType: "active" });
+        void queryClient.invalidateQueries({ queryKey: ["explore-feed"], refetchType: "active" });
+        void queryClient.invalidateQueries({ queryKey: ["library-posts"], refetchType: "active" });
+        void queryClient.invalidateQueries({ queryKey: ["profile-posts"], refetchType: "active" });
+      }, 1_500);
     };
     const channel = client
       .channel("public-feed-cache-invalidation")
@@ -29,6 +34,7 @@ export function useFeedRealtime() {
 
     channel.subscribe();
     return () => {
+      if (refreshTimer !== null) window.clearTimeout(refreshTimer);
       void client.removeChannel(channel);
     };
   }, []);

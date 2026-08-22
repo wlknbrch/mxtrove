@@ -2,7 +2,7 @@ import { demoFeedEvents } from "@/lib/demo-data";
 import { createDemoDelay, isDemoModeEnabled, requireSupabase } from "@/lib/service-utils";
 import type { FeedEvent } from "@/types/domain";
 
-import { getResolvedPostById, listResolvedPosts } from "@/features/posts/api";
+import { getResolvedPostCardsByIds, listResolvedPosts } from "@/features/posts/api";
 import type { ResolvedPostCard } from "@/features/posts/types";
 
 export const HOME_FEED_PAGE_SIZE = 6;
@@ -60,13 +60,7 @@ export interface HomeFeedPage {
 }
 
 async function resolveFeedPosts(postIds: string[], viewerId?: string | null) {
-  const results = await Promise.allSettled(
-    postIds.map((postId) => getResolvedPostById(postId, viewerId)),
-  );
-
-  return results.flatMap((result) => (
-    result.status === "fulfilled" && result.value ? [result.value] : []
-  ));
+  return getResolvedPostCardsByIds(postIds, viewerId);
 }
 
 export async function listHomeFeedPage(
@@ -165,19 +159,6 @@ export async function listHomeFeedPage(
       .filter((post): post is ResolvedPostCard => Boolean(post))
       .map((post) => [post.post.id, post]),
   );
-  const feedEventsResult = orderedPostIds.length
-    ? await client
-        .from("feed_events")
-        .select("*")
-        .in("post_id", orderedPostIds)
-        .order("created_at", { ascending: false })
-    : { data: [], error: null };
-
-  if (feedEventsResult.error) {
-    throw feedEventsResult.error;
-  }
-
-  const latestFeedEventByPostId = getLatestFeedEventByPostId((feedEventsResult.data ?? []) as FeedEvent[]);
 
   const items = orderedPostIds
     .map((postId) => {
@@ -188,7 +169,7 @@ export async function listHomeFeedPage(
 
       return {
         ...post,
-        feedEvent: latestFeedEventByPostId.get(postId) ?? post.feedEvent ?? null,
+        feedEvent: post.feedEvent ?? null,
       };
     })
     .filter((post): post is NonNullable<typeof post> => Boolean(post));

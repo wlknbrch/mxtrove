@@ -6,6 +6,7 @@ import {
   ArrowRight,
   Ban,
   Bell,
+  CircleHelp,
   CircleDot,
   Cloud,
   Compass,
@@ -13,6 +14,7 @@ import {
   FolderKanban,
   House,
   KeyRound,
+  LayoutDashboard,
   LogOut,
   Menu,
   MessageCircleMore,
@@ -30,7 +32,9 @@ import { usePlayerStore } from "@/components/audio/player-store";
 import { LegalFooter } from "@/components/layout/legal-footer";
 import { MxShareMark } from "@/components/layout/mxshare-mark";
 import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAdminRole } from "@/features/admin/use-admin-role";
 import { getAssetById, getCloudConnections } from "@/features/drive/api";
 import { useFeedRealtime } from "@/features/feed/use-feed-realtime";
 import { getUnreadConversationSummary } from "@/features/messages/api";
@@ -96,6 +100,15 @@ export function AppShell() {
   }, [location.pathname]);
 
   useEffect(() => {
+    if (!/^\/post\/[^/]+$/.test(location.pathname)) {
+      window.sessionStorage.setItem(
+        "mxtrove:last-non-release-route",
+        `${location.pathname}${location.search}`,
+      );
+    }
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
     if (!isMobileMenuOpen) {
       return;
     }
@@ -121,6 +134,7 @@ export function AppShell() {
     queryFn: () => getCurrentProfile(viewer.userId),
     enabled: Boolean(viewer.userId),
   });
+  const adminRoleQuery = useAdminRole();
 
   const avatarAssetQuery = useQuery({
     queryKey: ["asset", profileQuery.data?.avatar_asset_id],
@@ -172,6 +186,7 @@ export function AppShell() {
     || location.pathname.startsWith("/projects")
     || location.pathname.startsWith("/create");
   const mobileMoreBadgeCount = unreadNotificationsQuery.data ?? 0;
+  const isReleaseDetailPage = /^\/post\/[^/]+$/.test(location.pathname);
 
   async function handleSignOut() {
     setIsMobileMenuOpen(false);
@@ -199,8 +214,10 @@ export function AppShell() {
           Offline. Saved pages remain available; sends and uploads wait for a connection.
         </div>
       ) : null}
-      <div className="mx-auto grid min-h-screen max-w-[1720px] gap-8 px-4 py-4 md:px-6 xl:grid-cols-[292px_minmax(0,1fr)] xl:py-6">
-        <aside className="glass-panel hidden min-h-[calc(100vh-3rem)] rounded-[34px] border border-border px-5 py-6 xl:flex xl:flex-col">
+      <div
+        className="mx-auto grid min-h-screen max-w-[1720px] gap-8 px-4 py-4 md:px-6 xl:grid-cols-[292px_minmax(0,1fr)] xl:py-6"
+      >
+        <aside className="glass-panel relative z-20 hidden min-h-[calc(100vh-3rem)] rounded-[34px] border border-border px-5 py-6 xl:flex xl:flex-col">
           <div className="flex items-start gap-4 pb-7">
             <MxShareMark className="size-15 shadow-[0_18px_46px_rgba(var(--accent-rgb),0.34)]" />
             <div className="space-y-2">
@@ -216,7 +233,7 @@ export function AppShell() {
           </div>
 
           <nav className="space-y-1.5">
-            {navigation.map((item) => {
+            {[...navigation, ...(adminRoleQuery.data ? [{ to: "/admin", label: "Admin", icon: LayoutDashboard }] : [])].map((item) => {
               const Icon = item.icon;
               const badgeCount = unreadNavigationCounts.get(item.to) ?? 0;
               return (
@@ -349,9 +366,9 @@ export function AppShell() {
           </div>
         </aside>
 
-        <main className="flex min-w-0 flex-col">
+        <main className="relative z-10 flex min-w-0 flex-col">
           <Outlet />
-          <LegalFooter className="mt-auto px-1 pb-4 pt-10" />
+          {!isReleaseDetailPage ? <LegalFooter className="mt-auto px-1 pb-4 pt-10" /> : null}
         </main>
       </div>
 
@@ -445,6 +462,23 @@ export function AppShell() {
                   </span>
                 ) : null}
               </NavLink>
+              {adminRoleQuery.data ? (
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) =>
+                    cn(
+                      "col-span-2 flex items-center gap-3 rounded-[18px] border px-3 py-3 text-sm",
+                      isActive
+                        ? "border-accent/30 bg-accent/12 text-foreground"
+                        : "border-border bg-surface-soft text-muted-foreground",
+                    )
+                  }
+                >
+                  <LayoutDashboard className="size-4 text-accent-secondary" />
+                  Administration
+                  <Badge variant="accent" className="ml-auto">{adminRoleQuery.data}</Badge>
+                </NavLink>
+              ) : null}
             </div>
 
             <div className="mt-6">
@@ -483,6 +517,13 @@ export function AppShell() {
             </div>
 
             <div className="mt-6 grid gap-2 sm:grid-cols-2">
+              <Link
+                to="/about"
+                className="flex min-h-11 items-center justify-center gap-2 rounded-[17px] border border-border bg-surface-soft px-4 py-2.5 text-sm text-muted-foreground"
+              >
+                <CircleHelp className="size-4" />
+                About · v{env.appVersion}
+              </Link>
               {publicProfilePath ? (
                 <Link
                   to={publicProfilePath}
