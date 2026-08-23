@@ -186,7 +186,6 @@ export function AppShell() {
     || location.pathname.startsWith("/projects")
     || location.pathname.startsWith("/create");
   const mobileMoreBadgeCount = unreadNotificationsQuery.data ?? 0;
-  const isReleaseDetailPage = /^\/post\/[^/]+$/.test(location.pathname);
 
   async function handleSignOut() {
     setIsMobileMenuOpen(false);
@@ -368,7 +367,7 @@ export function AppShell() {
 
         <main className="relative z-10 flex min-w-0 flex-col">
           <Outlet />
-          {!isReleaseDetailPage ? <LegalFooter className="mt-auto px-1 pb-4 pt-10" /> : null}
+          <LegalFooter className="mt-auto px-1 pb-4 pt-10" />
         </main>
       </div>
 

@@ -8,6 +8,15 @@ export interface AppRelease {
 // Keep the current package version first. Older entries automatically move into the archive UI.
 export const appReleases: AppRelease[] = [
   {
+    version: "1.0.2",
+    date: "August 2026",
+    title: "Artwork takes the stage",
+    changes: [
+      "Fixed a layout issue with the release page backdrop.",
+      "Footer added to release pages. Navigation is consistent across the site.",
+    ],
+  },
+  {
     version: "1.0.1",
     date: "August 2026",
     title: "Artwork takes the stage",

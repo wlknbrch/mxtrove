@@ -552,30 +552,32 @@ export function PostDetailPage() {
 
   return (
     <div className="release-detail-page relative min-h-screen">
-      <div className="absolute left-4 top-4 z-30 md:left-6 xl:left-8 xl:top-6">
-        <Button
-          variant="ghost"
-          className="h-auto rounded-none border-0 bg-transparent px-0 py-0.5 !text-[0.62rem] !font-light uppercase tracking-[0.28em] !text-[rgba(216,206,223,0.58)] shadow-none backdrop-blur-none hover:bg-transparent hover:!text-[rgba(255,255,255,0.88)]"
-          onClick={() => {
-            if (returnDestination.path) {
-              navigate(returnDestination.path);
-              return;
-            }
-            navigate(-1);
-          }}
-          aria-label={`Back to ${returnDestination.label}`}
-        >
-          <ArrowLeft className="size-3.5 stroke-[1.25]" />
-          Back to {returnDestination.label}
-        </Button>
-      </div>
+      {viewer.userId && !viewer.isDemoViewer ? (
+        <div className="absolute left-4 top-4 z-30 md:left-6 xl:left-8 xl:top-6">
+          <Button
+            variant="ghost"
+            className="h-auto rounded-none border-0 bg-transparent px-0 py-0.5 !text-[0.62rem] !font-light uppercase tracking-[0.28em] !text-[rgba(216,206,223,0.58)] shadow-none backdrop-blur-none hover:bg-transparent hover:!text-[rgba(255,255,255,0.88)]"
+            onClick={() => {
+              if (returnDestination.path) {
+                navigate(returnDestination.path);
+                return;
+              }
+              navigate(-1);
+            }}
+            aria-label={`Back to ${returnDestination.label}`}
+          >
+            <ArrowLeft className="size-3.5 stroke-[1.25]" />
+            Back to {returnDestination.label}
+          </Button>
+        </div>
+      ) : null}
 
       <div className="release-detail-layout relative z-10 grid">
           <section className="release-detail-hero relative isolate px-5 pb-10 pt-24 md:px-8 lg:px-12 xl:min-h-[552px] xl:px-[70px] xl:pb-10 xl:pt-[104px]">
             <div
               aria-hidden="true"
               data-release-backdrop
-              className="pointer-events-none absolute -left-4 -right-4 -top-4 bottom-0 -z-20 overflow-hidden md:-left-6 md:-right-6 xl:-left-12 xl:-top-6 xl:right-[calc(-1*max(1.5rem,((100vw-1720px)/2+1.5rem)))]"
+              className="release-detail-backdrop pointer-events-none absolute inset-0 -z-20 overflow-hidden xl:rounded-t-[34px]"
             >
               {artworkUrls.length > 0 ? (
                 <ResolvedImage
@@ -591,7 +593,7 @@ export function PostDetailPage() {
               )}
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_44%_24%,rgba(var(--accent-rgb),0.06),transparent_34%),linear-gradient(90deg,rgba(9,7,19,0.5),rgba(11,8,20,0.3)_44%,rgba(9,7,17,0.58)),linear-gradient(180deg,rgba(10,8,19,0.04),rgba(10,8,19,0.48))]" />
             </div>
-            <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(10,8,19,0.03),rgba(10,8,19,0.18))]" />
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 rounded-t-[34px] bg-[linear-gradient(180deg,rgba(10,8,19,0.03),rgba(10,8,19,0.18))]" />
 
             <div className="mx-auto grid w-full max-w-[1060px] gap-8 lg:grid-cols-[370px_minmax(0,1fr)] lg:items-center xl:gap-12">
               <FullscreenArtwork
