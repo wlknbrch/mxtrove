@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
 import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 
 function buildDriveProxyUrl(fileId: string, kind: "audio" | "image", size: string | null) {
   const encodedFileId = encodeURIComponent(fileId);
@@ -54,6 +55,10 @@ function driveMediaProxyPlugin() {
     name: "mxshare-drive-media-proxy",
     configureServer(server: import("vite").ViteDevServer) {
       server.middlewares.use("/api/drive-media", async (request, response, next) => {
+        const abortController = new AbortController();
+        const abortUpstream = () => abortController.abort();
+        request.once("aborted", abortUpstream);
+        response.once("close", abortUpstream);
         try {
           if (!request.url) {
             next();
@@ -86,8 +91,9 @@ function driveMediaProxyPlugin() {
           const upstreamResponse = await fetch(
             dropboxUrl ?? buildDriveProxyUrl(fileId!, kind, size),
             {
-            headers,
-            redirect: "follow",
+              headers,
+              redirect: "follow",
+              signal: abortController.signal,
             },
           );
 
@@ -105,11 +111,23 @@ function driveMediaProxyPlugin() {
             return;
           }
 
-          Readable.fromWeb(
-            upstreamResponse.body as import("node:stream/web").ReadableStream,
-          ).pipe(response);
+          await pipeline(
+            Readable.fromWeb(upstreamResponse.body as import("node:stream/web").ReadableStream),
+            response,
+          );
         } catch (error) {
-          next(error);
+          const disconnected = request.destroyed || response.destroyed || abortController.signal.aborted;
+          if (disconnected) return;
+          if (!response.headersSent) {
+            response.statusCode = 502;
+            response.setHeader("content-type", "application/json; charset=utf-8");
+            response.end(JSON.stringify({ error: "The connected cloud provider interrupted the media transfer." }));
+            return;
+          }
+          response.destroy(error instanceof Error ? error : undefined);
+        } finally {
+          request.removeListener("aborted", abortUpstream);
+          response.removeListener("close", abortUpstream);
         }
       });
     },

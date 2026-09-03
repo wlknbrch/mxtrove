@@ -14,6 +14,7 @@ import {
   SkipBack,
   SkipForward,
   Volume2,
+  WandSparkles,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -21,6 +22,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PlaybackDuration } from "@/components/ui/playback-duration";
 import { ResolvedImage } from "@/components/ui/resolved-image";
+import { CinematicPlayerVisualizer } from "@/components/audio/cinematic-player-visualizer";
+import { OverflowMarqueeText } from "@/components/audio/overflow-marquee-text";
 import { shouldReportPlaybackError } from "@/components/audio/playback-error";
 import { Waveform } from "@/components/audio/waveform";
 import { useAppViewer } from "@/hooks/use-app-viewer";
@@ -92,6 +95,7 @@ export function GlobalPlayer() {
   );
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLyricsOpen, setIsLyricsOpen] = useState(false);
+  const [isCinematicEffectsEnabled, setIsCinematicEffectsEnabled] = useState(false);
   const [sourceSelection, setSourceSelection] = useState<{
     trackId: string | null;
     candidateIndex: number;
@@ -786,6 +790,7 @@ export function GlobalPlayer() {
       : repeatMode === "all"
         ? "Repeat queue"
         : "Repeat current track";
+  const cinematicEffectsActive = isCinematicEffectsEnabled;
 
   function handleSeek(nextTime: number) {
     const audio = audioRef.current;
@@ -1216,7 +1221,10 @@ export function GlobalPlayer() {
               )}
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-foreground">{activeTrack.title}</p>
+                <OverflowMarqueeText
+                  text={activeTrack.title}
+                  className="text-sm font-medium text-foreground"
+                />
                 <p className="mt-1 truncate text-xs text-muted-foreground">
                   {activeTrack.artistName}
                   {activeTrack.versionLabel ? ` • ${activeTrack.versionLabel}` : ""}
@@ -1286,7 +1294,23 @@ export function GlobalPlayer() {
             </div>
           </div>
         ) : (
-          <div className="player-card velvet-hero overflow-hidden rounded-[30px] border border-border px-4 py-4 shadow-[0_-10px_40px_rgba(0,0,0,0.12)] md:px-6 md:py-5">
+          <div
+            className="player-cinematic-shell"
+            data-cinematic-effects={cinematicEffectsActive ? "true" : "false"}
+            data-cinematic-playing={cinematicEffectsActive && isPlaying ? "true" : "false"}
+          >
+            <div
+              className="player-card velvet-hero isolate overflow-hidden rounded-[30px] border border-border px-4 py-4 shadow-[0_-10px_40px_rgba(0,0,0,0.12)] md:px-6 md:py-5"
+              data-cinematic-effects={cinematicEffectsActive ? "true" : "false"}
+            >
+              <CinematicPlayerVisualizer
+                active={cinematicEffectsActive}
+                isPlaying={isPlaying}
+                currentTime={currentTime}
+                durationSeconds={displayDuration}
+                waveform={activeTrack.waveform ?? null}
+                trackId={activeTrack.id}
+              />
             <div className="mb-4 flex items-center justify-end xl:hidden">
               <Button
                 variant="ghost"
@@ -1300,41 +1324,60 @@ export function GlobalPlayer() {
               </Button>
             </div>
             <div className="grid gap-5 xl:grid-cols-[1.05fr_minmax(520px,1.5fr)_0.95fr] xl:items-center">
-              <div className="flex min-w-0 items-center gap-4">
-                {canOpenActivePost ? (
-                  <button
-                    type="button"
-                    className="size-18 overflow-hidden rounded-[24px] border border-border bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_16px_42px_rgba(7,3,20,0.32)] transition-[transform,border-color] hover:scale-[1.01] hover:border-accent/25"
-                    onClick={openActivePost}
-                    aria-label="Open current release"
-                  >
-                    {activeTrack.artworkUrl ? (
-                      <ResolvedImage
-                        className="size-full object-cover"
-                        src={activeTrack.artworkUrl}
-                        alt={activeTrack.title}
-                      />
-                    ) : null}
-                  </button>
-                ) : (
-                  <div className="size-18 overflow-hidden rounded-[24px] border border-border bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_16px_42px_rgba(7,3,20,0.32)]">
-                    {activeTrack.artworkUrl ? (
-                      <ResolvedImage
-                        className="size-full object-cover"
-                        src={activeTrack.artworkUrl}
-                        alt={activeTrack.title}
-                      />
-                    ) : null}
+              <div className="flex w-full min-w-0 flex-col items-start gap-3">
+                <div className="flex w-full min-w-0 items-center gap-4">
+                  {canOpenActivePost ? (
+                    <button
+                      type="button"
+                      className="size-18 shrink-0 overflow-hidden rounded-[24px] border border-border bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_16px_42px_rgba(7,3,20,0.32)] transition-[transform,border-color] hover:scale-[1.01] hover:border-accent/25"
+                      onClick={openActivePost}
+                      aria-label="Open current release"
+                    >
+                      {activeTrack.artworkUrl ? (
+                        <ResolvedImage
+                          className="size-full object-cover"
+                          src={activeTrack.artworkUrl}
+                          alt={activeTrack.title}
+                        />
+                      ) : null}
+                    </button>
+                  ) : (
+                    <div className="size-18 shrink-0 overflow-hidden rounded-[24px] border border-border bg-[radial-gradient(circle_at_top,rgba(var(--accent-rgb),0.3),rgba(255,255,255,0.04)_55%,rgba(10,8,24,0.94))] shadow-[0_16px_42px_rgba(7,3,20,0.32)]">
+                      {activeTrack.artworkUrl ? (
+                        <ResolvedImage
+                          className="size-full object-cover"
+                          src={activeTrack.artworkUrl}
+                          alt={activeTrack.title}
+                        />
+                      ) : null}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs uppercase tracking-[0.28em] text-accent-secondary/78">Now playing</p>
+                    <OverflowMarqueeText
+                      text={activeTrack.title}
+                      className="mt-2 text-xl font-medium text-foreground"
+                    />
+                    <p className="mt-1 truncate text-sm text-muted-foreground">
+                      {activeTrack.artistName}
+                      {activeTrack.versionLabel ? ` • ${activeTrack.versionLabel}` : ""}
+                    </p>
                   </div>
-                )}
-                <div className="min-w-0">
-                  <p className="text-xs uppercase tracking-[0.28em] text-accent-secondary/78">Now playing</p>
-                  <p className="mt-2 truncate text-xl font-medium text-foreground">{activeTrack.title}</p>
-                  <p className="mt-1 truncate text-sm text-muted-foreground">
-                    {activeTrack.artistName}
-                    {activeTrack.versionLabel ? ` • ${activeTrack.versionLabel}` : ""}
-                  </p>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    "player-cinematic-toggle hidden rounded-full border xl:inline-flex",
+                    cinematicEffectsActive && "is-active",
+                  )}
+                  onClick={() => setIsCinematicEffectsEnabled((enabled) => !enabled)}
+                  aria-label={cinematicEffectsActive ? "Disable cinematic visual effects" : "Enable cinematic visual effects"}
+                  aria-pressed={cinematicEffectsActive}
+                  title="Cinematic visual effects"
+                >
+                  <WandSparkles className="size-4" />
+                </Button>
               </div>
 
               <div className="flex flex-col gap-4">
@@ -1518,6 +1561,7 @@ export function GlobalPlayer() {
                 </p>
               </div>
             </div>
+          </div>
           </div>
         )}
       </div>

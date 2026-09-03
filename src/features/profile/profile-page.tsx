@@ -327,23 +327,11 @@ export function ProfilePage() {
                 alt=""
                 loading="eager"
                 fetchPriority="high"
-                className="absolute inset-0 h-full w-full scale-[1.04] object-cover object-[center_28%] opacity-38 blur-[0.5px] brightness-[0.92] saturate-[1.08] sm:scale-[1.06] sm:opacity-32 md:scale-[1.08] md:opacity-28 md:blur-[0.8px] lg:opacity-26"
+                className="profile-featured-artwork-backdrop"
               />
-              <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[min(42vw,34rem)] overflow-hidden lg:block">
-                <ResolvedImage
-                  src={featuredArtworkUrls}
-                  alt=""
-                  aria-hidden="true"
-                  loading="eager"
-                  fetchPriority="high"
-                  className="absolute inset-0 h-full w-full scale-[1.02] object-cover object-center opacity-48 saturate-[1.14]"
-                />
-                <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(9,7,19,0.88)_0%,rgba(9,7,19,0.46)_34%,rgba(9,7,19,0.14)_62%,rgba(9,7,19,0.68)_100%)]" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_18%,rgba(var(--accent-rgb),0.18),transparent_24%),linear-gradient(180deg,rgba(9,7,19,0.08),rgba(9,7,19,0.54)_100%)]" />
-              </div>
-              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,7,19,0.04)_0%,rgba(9,7,19,0.34)_48%,rgba(9,7,19,0.9)_100%)] md:bg-[linear-gradient(180deg,rgba(9,7,19,0.08)_0%,rgba(9,7,19,0.26)_48%,rgba(9,7,19,0.78)_100%)]" />
-              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,5,17,0.48)_10%,rgba(7,5,17,0.2)_44%,rgba(7,5,17,0.5)_100%)] md:bg-[linear-gradient(90deg,rgba(7,5,17,0.62)_8%,rgba(7,5,17,0.24)_44%,rgba(7,5,17,0.62)_100%)]" />
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(var(--accent-rgb),0.22),transparent_28%),radial-gradient(circle_at_top_right,rgba(var(--accent-rgb),0.08),transparent_24%),linear-gradient(180deg,rgba(9,7,19,0.04),rgba(9,7,19,0.82)_82%)] md:bg-[radial-gradient(circle_at_top_left,rgba(var(--accent-rgb),0.24),transparent_28%),radial-gradient(circle_at_top_right,rgba(var(--accent-rgb),0.08),transparent_24%),linear-gradient(180deg,rgba(9,7,19,0.12),rgba(9,7,19,0.72)_82%)]" />
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(9,7,19,0.03)_0%,rgba(9,7,19,0.28)_50%,rgba(9,7,19,0.84)_100%)] md:bg-[linear-gradient(180deg,rgba(9,7,19,0.04)_0%,rgba(9,7,19,0.2)_50%,rgba(9,7,19,0.72)_100%)]" />
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,5,17,0.58)_2%,rgba(7,5,17,0.26)_42%,rgba(7,5,17,0.2)_72%,rgba(7,5,17,0.42)_100%)] md:bg-[linear-gradient(90deg,rgba(7,5,17,0.68)_2%,rgba(7,5,17,0.24)_44%,rgba(7,5,17,0.12)_72%,rgba(7,5,17,0.34)_100%)]" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(var(--accent-rgb),0.22),transparent_28%),radial-gradient(circle_at_top_right,rgba(var(--accent-rgb),0.08),transparent_24%),linear-gradient(180deg,rgba(9,7,19,0.02),rgba(9,7,19,0.74)_84%)] md:bg-[radial-gradient(circle_at_top_left,rgba(var(--accent-rgb),0.24),transparent_28%),radial-gradient(circle_at_top_right,rgba(var(--accent-rgb),0.08),transparent_24%),linear-gradient(180deg,rgba(9,7,19,0.06),rgba(9,7,19,0.64)_84%)]" />
             </>
           ) : (
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(var(--accent-rgb),0.28),transparent_26%),radial-gradient(circle_at_top_right,rgba(var(--accent-rgb),0.14),transparent_22%),linear-gradient(180deg,rgba(9,7,19,0.82),rgba(9,7,19,0.96))]" />

@@ -8,9 +8,21 @@ export interface AppRelease {
 // Keep the current package version first. Older entries automatically move into the archive UI.
 export const appReleases: AppRelease[] = [
   {
+    version: "1.2.1",
+    date: "August 2026",
+    title: "Cinematic playback and smoother continuity",
+    changes: [
+      "Added optional desktop-only Cinematic FX with audio-reactive color flow, particles, neon ambient lighting, and beat-driven ripples.",
+      "Long player titles now pan smoothly within their existing space on desktop and mobile, while visual effects remain disabled on mobile.",
+      "Reduced repeated Supabase feed payloads with persistent query caching, targeted realtime invalidation, and more compact waveform data.",
+      "Improved cloud-media proxy resilience so interrupted provider streams no longer terminate the local development server.",
+      "Refined release and profile artwork backdrops with softer edges, cleaner transitions, and no visibly repeated artwork panels.",
+    ],
+  },
+  {
     version: "1.0.2",
     date: "August 2026",
-    title: "Artwork takes the stage",
+    title: "Small adjustments and fixes",
     changes: [
       "Fixed a layout issue with the release page backdrop.",
       "Footer added to release pages. Navigation is consistent across the site.",

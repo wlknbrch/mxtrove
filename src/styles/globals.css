@@ -417,6 +417,187 @@ img {
   background: var(--player-card-background);
 }
 
+.player-cinematic-shell {
+  --cinematic-ambient-primary: hsl(282 94% 60%);
+  --cinematic-ambient-secondary: hsl(34 90% 58%);
+  --cinematic-ambient-tertiary: hsl(146 88% 62%);
+  --cinematic-ambient-opacity: 0.32;
+  --cinematic-ambient-scale: 1;
+  --cinematic-ripple-opacity: 0;
+  --cinematic-ripple-scale: 1.004;
+  --cinematic-kick: 0px;
+  position: relative;
+  isolation: isolate;
+  border-radius: 30px;
+}
+
+.player-cinematic-shell::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  z-index: -1;
+  border-radius: 42px;
+  background:
+    radial-gradient(65% 120% at 0% 12%, var(--cinematic-ambient-primary) 0%, transparent 75%),
+    radial-gradient(72% 130% at 50% 104%, var(--cinematic-ambient-secondary) 0%, transparent 76%),
+    radial-gradient(65% 120% at 100% 12%, var(--cinematic-ambient-tertiary) 0%, transparent 75%);
+  opacity: 0;
+  filter: blur(26px) saturate(1.18);
+  transform: scale(var(--cinematic-ambient-scale));
+  pointer-events: none;
+  transition: opacity 180ms ease, transform 160ms ease-out;
+}
+
+.player-cinematic-shell[data-cinematic-effects="true"]::before {
+  opacity: var(--cinematic-ambient-opacity);
+}
+
+.player-cinematic-shell::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  z-index: 2;
+  border: 1px solid var(--cinematic-ambient-primary);
+  border-radius: 34px;
+  opacity: 0;
+  transform: scale(1.004);
+  pointer-events: none;
+  box-shadow:
+    0 0 12px var(--cinematic-ambient-primary),
+    0 0 24px var(--cinematic-ambient-secondary),
+    inset 0 0 14px var(--cinematic-ambient-tertiary);
+}
+
+.player-cinematic-shell[data-cinematic-effects="true"]::after {
+  opacity: var(--cinematic-ripple-opacity);
+  transform: scale(var(--cinematic-ripple-scale));
+  transition: opacity 90ms linear, transform 90ms linear;
+}
+
+.player-cinematic-shell[data-cinematic-effects="true"] > .player-card {
+  transform: translate3d(0, var(--cinematic-kick), 0);
+  transition: transform 80ms linear;
+}
+
+.player-cinematic-visualizer {
+  position: absolute !important;
+  inset: 0;
+  z-index: 0 !important;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.82;
+  background: rgba(4, 2, 12, 0.38);
+}
+
+.player-cinematic-fluid-canvas,
+.player-cinematic-overlay-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.player-cinematic-fluid-canvas {
+  opacity: 0.6;
+  filter: saturate(1.12) contrast(1.04);
+}
+
+.player-cinematic-overlay-canvas {
+  opacity: 0.68;
+  mix-blend-mode: screen;
+}
+
+.player-cinematic-visualizer__veil {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(5, 3, 13, 0.04) 12%, rgba(5, 3, 13, 0.16) 68%, rgba(5, 3, 13, 0.42) 100%),
+    linear-gradient(90deg, rgba(5, 3, 13, 0.28), transparent 20%, transparent 80%, rgba(5, 3, 13, 0.28));
+}
+
+:root[data-theme="light"] .player-cinematic-visualizer__veil {
+  background:
+    radial-gradient(circle at 50% 50%, transparent 18%, rgba(222, 210, 231, 0.08) 72%, rgba(206, 191, 218, 0.3) 100%),
+    linear-gradient(90deg, rgba(217, 207, 223, 0.2), transparent 24%, transparent 74%, rgba(217, 207, 223, 0.18));
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"] .player-cinematic-visualizer__veil {
+    background:
+      radial-gradient(circle at 50% 50%, transparent 18%, rgba(222, 210, 231, 0.08) 72%, rgba(206, 191, 218, 0.3) 100%),
+      linear-gradient(90deg, rgba(217, 207, 223, 0.2), transparent 24%, transparent 74%, rgba(217, 207, 223, 0.18));
+  }
+}
+
+.player-card[data-cinematic-effects="true"] {
+  border-color: rgba(var(--accent-rgb), 0.32);
+}
+
+.player-cinematic-toggle {
+  border-color: rgba(var(--accent-rgb), 0.2);
+  background: rgba(var(--accent-rgb), 0.07);
+  color: var(--accent-secondary);
+  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms ease;
+}
+
+.player-cinematic-toggle:hover {
+  transform: scale(1.06);
+}
+
+.player-cinematic-toggle.is-active {
+  border-color: rgba(var(--accent-rgb), 0.48);
+  background: rgba(var(--accent-rgb), 0.18);
+  color: var(--foreground);
+  box-shadow:
+    0 0 30px rgba(var(--accent-rgb), 0.38),
+    inset 0 0 18px rgba(var(--accent-rgb), 0.16);
+}
+
+.player-title-marquee {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  scroll-behavior: auto;
+  white-space: nowrap;
+}
+
+.player-title-marquee__content {
+  display: inline-block;
+  min-width: max-content;
+  transform: translate3d(0, 0, 0);
+}
+
+.profile-featured-artwork-backdrop {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  opacity: 0.4;
+  filter: blur(9px) brightness(0.86) saturate(1.2);
+  transform: scale(1.12);
+}
+
+@media (max-width: 767px) {
+  .profile-featured-artwork-backdrop {
+    object-position: center;
+    opacity: 0.36;
+    filter: blur(7px) brightness(0.88) saturate(1.16);
+    transform: scale(1.16);
+  }
+}
+
+@media (max-width: 1279px) {
+  .player-cinematic-shell::before,
+  .player-cinematic-shell::after {
+    display: none;
+    animation: none;
+  }
+
+  .player-cinematic-shell > .player-card {
+    transform: none !important;
+  }
+}
+
 .player-queue-panel {
   background: var(--player-queue-background);
 }
