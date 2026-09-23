@@ -890,12 +890,24 @@ export async function getResolvedPostCardsByIds(
 
   const cardsById = new Map(
     await Promise.all(
-      ((data ?? []) as Array<{ post_id: string; card: OptimizedPostCardPayload }>).map(async (row) => [
-        row.post_id,
-        await attachProtectedCardReadUrls(row.card),
-      ] as const),
+      ((data ?? []) as Array<{ post_id: string; card: OptimizedPostCardPayload | null }>)
+        .filter((row) => Boolean(row.post_id && row.card))
+        .map(async (row) => [
+          row.post_id,
+          await attachProtectedCardReadUrls(row.card!),
+        ] as const),
     ),
   );
+
+  // A successful RPC can still omit an individual card while its visibility is changing.
+  // Never convert that incomplete response into a false "Post unavailable" state.
+  const missingPostIds = uniquePostIds.filter((postId) => !cardsById.has(postId));
+  if (missingPostIds.length) {
+    const fallbackCards = await resolveSupabasePostCardsFallback(missingPostIds, resolvedViewerId);
+    fallbackCards.forEach((card) => {
+      cardsById.set(card.post.id, card);
+    });
+  }
   return uniquePostIds.flatMap((postId) => {
     const card = cardsById.get(postId);
     return card ? [card] : [];
@@ -1270,7 +1282,7 @@ export async function updatePostVisibility(postId: string, visibility: Visibilit
   }
   const client = requireSupabase();
   const published = visibility !== "private";
-  const { error } = await client
+  const { data, error } = await client
     .from("posts")
     .update({
       visibility,
@@ -1278,8 +1290,15 @@ export async function updatePostVisibility(postId: string, visibility: Visibilit
       published_at: published ? new Date().toISOString() : null,
       activity_at: new Date().toISOString(),
     })
-    .eq("id", postId);
+    .eq("id", postId)
+    .select("id, visibility, is_published")
+    .maybeSingle();
   if (error) throw error;
+  if (!data || data.visibility !== visibility || data.is_published !== published) {
+    throw new Error("The release visibility could not be confirmed. Nothing was changed.");
+  }
+
+  return data;
 }
 
 export async function makeVersionsPubliclyReadable(versionIds: string[]) {

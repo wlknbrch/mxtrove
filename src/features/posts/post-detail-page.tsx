@@ -29,6 +29,7 @@ import { ResolvedImage } from "@/components/ui/resolved-image";
 import { Tabs } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAppViewer } from "@/hooks/use-app-viewer";
+import { useAuth } from "@/hooks/use-auth";
 import { useLocalDraft } from "@/hooks/use-local-draft";
 import { getArtworkAssetUrls } from "@/lib/asset-urls";
 import { shareWithSystemDialog } from "@/lib/native-share";
@@ -199,6 +200,7 @@ export function PostDetailPage() {
   const { postId = "" } = useParams();
   const [searchParams] = useSearchParams();
   const viewer = useAppViewer();
+  const { loading: isAuthLoading } = useAuth();
   const adminRoleQuery = useAdminRole();
   const [adminRemovalTarget, setAdminRemovalTarget] = useState<AdminRemovalTarget | null>(null);
   const navigate = useNavigate();
@@ -227,9 +229,9 @@ export function PostDetailPage() {
   const [returnDestination] = useState(() => getReleaseReturnDestination(postId));
 
   const postQuery = useQuery({
-    queryKey: ["post", postId],
+    queryKey: ["post", postId, viewer.userId ?? "public"],
     queryFn: () => getResolvedPostById(postId, viewer.userId),
-    enabled: Boolean(postId),
+    enabled: Boolean(postId) && !isAuthLoading,
   });
   const shareLinksQuery = useQuery({
     queryKey: ["post-share-links", postId],

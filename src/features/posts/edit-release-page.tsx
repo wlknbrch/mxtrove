@@ -53,6 +53,7 @@ import { ReleaseCreditsInput } from "@/features/posts/release-credits-input";
 import { ReleaseEditLeaveDialog } from "@/features/posts/release-edit-leave-dialog";
 import { useReleaseEditDraft } from "@/features/posts/use-release-edit-draft";
 import { useAppViewer } from "@/hooks/use-app-viewer";
+import { useAuth } from "@/hooks/use-auth";
 import { getArtworkAssetUrls } from "@/lib/asset-urls";
 import { queryClient } from "@/lib/query-client";
 import { requireSupabase } from "@/lib/service-utils";
@@ -138,6 +139,7 @@ function SortableTrackEditor({
 export function EditReleasePage() {
   const { postId = "" } = useParams();
   const viewer = useAppViewer();
+  const { loading: isAuthLoading } = useAuth();
   const sensors = useSensors(useSensor(PointerSensor));
   const artworkInputId = useId();
   const artworkInputRef = useRef<HTMLInputElement | null>(null);
@@ -171,9 +173,9 @@ export function EditReleasePage() {
   const [leaveAction, setLeaveAction] = useState<"publish" | "draft" | "discard" | null>(null);
 
   const postQuery = useQuery({
-    queryKey: ["post", postId],
+    queryKey: ["post", postId, viewer.userId ?? "public"],
     queryFn: () => getResolvedPostById(postId, viewer.userId),
-    enabled: Boolean(postId),
+    enabled: Boolean(postId) && !isAuthLoading,
   });
 
   const libraryQuery = useQuery({

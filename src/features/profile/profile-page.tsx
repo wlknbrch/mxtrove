@@ -31,6 +31,7 @@ import { queryClient } from "@/lib/query-client";
 import { shareWithSystemDialog } from "@/lib/native-share";
 import { cn } from "@/lib/utils";
 import { useAppViewer } from "@/hooks/use-app-viewer";
+import { useAuth } from "@/hooks/use-auth";
 
 import { listResolvedPosts } from "@/features/posts/api";
 import type { ResolvedPostCard } from "@/features/posts/types";
@@ -181,12 +182,13 @@ export function ProfilePage() {
   const { username = "" } = useParams();
   const navigate = useNavigate();
   const viewer = useAppViewer();
+  const { loading: isAuthLoading } = useAuth();
   const [postFilter, setPostFilter] = useState<"all" | "single" | "ep" | "album">("all");
 
   const profileQuery = useQuery({
-    queryKey: ["profile-by-username", username],
+    queryKey: ["profile-by-username", username, viewer.userId ?? "public"],
     queryFn: () => getProfileByUsername(username),
-    enabled: Boolean(username),
+    enabled: Boolean(username) && !isAuthLoading,
   });
 
   const postsQuery = useQuery({
@@ -312,6 +314,9 @@ export function ProfilePage() {
     );
   }
 
+  const profileDisplayName = profile.display_name?.trim() || profile.username || "MxTrove artist";
+  const profileInitials = profileDisplayName.slice(0, 2).toUpperCase();
+
   return (
     <div className="space-y-8">
       <Card className="relative overflow-hidden p-0">
@@ -346,7 +351,7 @@ export function ProfilePage() {
                 variant="secondary"
                 onClick={async () => {
                   const result = await shareWithSystemDialog({
-                    title: `${profile.display_name} on MxTrove`,
+                    title: `${profileDisplayName} on MxTrove`,
                     text: profile.bio ?? `Discover @${profile.username} on MxTrove.`,
                     url: `${window.location.origin}/social/profile/${encodeURIComponent(profile.username)}`,
                   });
@@ -387,9 +392,9 @@ export function ProfilePage() {
               <div className="flex flex-col gap-5 md:flex-row md:items-end">
                 <div className="relative">
                   <Avatar
-                    alt={profile.display_name}
+                    alt={profileDisplayName}
                     src={getAvatarAssetUrls(avatarAssetQuery.data)}
-                    initials={profile.display_name.slice(0, 2).toUpperCase()}
+                    initials={profileInitials}
                     className="size-28 border-accent/35 text-lg shadow-[0_24px_54px_rgba(var(--accent-rgb),0.26)] md:size-32"
                   />
                   <div className="absolute inset-[-10px] -z-10 rounded-full bg-accent/18 blur-2xl" />
@@ -398,7 +403,7 @@ export function ProfilePage() {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-3">
-                      <h1 className="font-display text-5xl tracking-[-0.05em] md:text-7xl">{profile.display_name}</h1>
+                      <h1 className="font-display text-5xl tracking-[-0.05em] md:text-7xl">{profileDisplayName}</h1>
                       <Badge variant="accent">Artist</Badge>
                       {isOwnProfile ? <Badge variant="neutral">You</Badge> : null}
                       {!isOwnProfile && followState.profileFollowsViewer ? <Badge variant="accent">Follows you</Badge> : null}
