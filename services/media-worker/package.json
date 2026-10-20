@@ -14,7 +14,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@fastify/cors": "^11.3.0",
+    "@fastify/cors": "^11.3.1",
     "@fastify/multipart": "^10.1.0",
     "@supabase/supabase-js": "^2.110.2",
     "@types/node": "^26.1.1",
