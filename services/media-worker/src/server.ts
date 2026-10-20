@@ -108,6 +108,8 @@ app.addHook("onRequest", async (request, reply) => {
 
 app.get("/healthz", async () => ({ ok: true, worker: config.workerInstanceId }));
 
+app.get("/source", async (_request, reply) => reply.redirect(config.sourceUrl));
+
 app.get("/readyz", async () => {
   await Promise.all([
     ensureMediaTempDir(),

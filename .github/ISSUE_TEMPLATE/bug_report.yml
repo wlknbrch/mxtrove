@@ -1,0 +1,31 @@
+name: Bug report
+description: Report a reproducible problem in MxTrove.
+body:
+  - type: markdown
+    attributes:
+      value: Report vulnerabilities privately using SECURITY.md. Remove secrets and personal data.
+  - type: input
+    id: version
+    attributes:
+      label: Version and environment
+      description: App version/commit, browser, OS, and official or self-hosted instance.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Use synthetic accounts and files where possible.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted logs or screenshots
+      description: Do not include tokens, signed URLs, private artwork, or user information.

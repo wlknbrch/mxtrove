@@ -1,0 +1,83 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:?Set VITE_SUPABASE_URL}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY:?Set VITE_SUPABASE_PUBLISHABLE_KEY}
+        VITE_GOOGLE_DRIVE_CLIENT_ID: ${VITE_GOOGLE_DRIVE_CLIENT_ID:-}
+        VITE_DROPBOX_CLIENT_ID: ${VITE_DROPBOX_CLIENT_ID:-}
+        VITE_ONEDRIVE_CLIENT_ID: ${VITE_ONEDRIVE_CLIENT_ID:-}
+        VITE_WEB_PUSH_PUBLIC_KEY: ${VITE_WEB_PUSH_PUBLIC_KEY:-}
+        VITE_PWA_ENABLED: ${VITE_PWA_ENABLED:-true}
+        VITE_ENABLE_DEMO_MODE: "false"
+        VITE_APP_URL: https://${MXTROVE_HOST:?Set MXTROVE_HOST}
+        VITE_MEDIA_WORKER_URL: https://${MXTROVE_HOST}/worker
+        VITE_SOURCE_URL: ${VITE_SOURCE_URL:?Set VITE_SOURCE_URL to your deployed source}
+        VITE_OPERATOR_NAME: ${VITE_OPERATOR_NAME:?Set VITE_OPERATOR_NAME}
+        VITE_CONTACT_EMAIL: ${VITE_CONTACT_EMAIL:?Set VITE_CONTACT_EMAIL}
+    restart: unless-stopped
+    networks: [traefik-public]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${TRAEFIK_NETWORK:-traefik-public}
+      - traefik.http.services.${TRAEFIK_ROUTER_PREFIX:-mxtrove}.loadbalancer.server.port=80
+      - traefik.http.routers.${TRAEFIK_ROUTER_PREFIX:-mxtrove}.rule=Host(`${MXTROVE_HOST}`)
+      - traefik.http.routers.${TRAEFIK_ROUTER_PREFIX:-mxtrove}.service=${TRAEFIK_ROUTER_PREFIX:-mxtrove}
+      - traefik.http.routers.${TRAEFIK_ROUTER_PREFIX:-mxtrove}.entrypoints=websecure
+      - traefik.http.routers.${TRAEFIK_ROUTER_PREFIX:-mxtrove}.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}
+
+  media-worker:
+    build:
+      context: .
+      dockerfile: services/media-worker/Dockerfile
+    env_file:
+      - ${WORKER_ENV_FILE:?Set WORKER_ENV_FILE}
+    environment:
+      NODE_ENV: production
+      PORT: "8080"
+      TRUST_PROXY: "true"
+      APP_ORIGIN: https://${MXTROVE_HOST}
+      PUBLIC_APP_URL: https://${MXTROVE_HOST}
+      WORKER_PUBLIC_URL: https://${MXTROVE_HOST}/worker
+      PUBLIC_SOURCE_URL: ${PUBLIC_SOURCE_URL:?Set PUBLIC_SOURCE_URL to your deployed worker source}
+      MEDIA_TEMP_DIR: /tmp/mxshare
+      PROTECTED_MEDIA_DIR: /data/mxshare-protected-media
+      SOCIAL_PREVIEW_CACHE_DIR: /data/mxshare-protected-media/social-previews
+    restart: unless-stopped
+    volumes:
+      - media-tmp:/tmp/mxshare
+      - protected-media:/data/mxshare-protected-media
+    networks: [traefik-public]
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:8080/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${TRAEFIK_NETWORK:-traefik-public}
+      - traefik.http.services.${TRAEFIK_ROUTER_PREFIX:-mxtrove}-worker.loadbalancer.server.port=8080
+      - traefik.http.routers.${TRAEFIK_ROUTER_PREFIX:-mxtrove}-worker.rule=Host(`${MXTROVE_HOST}`) && PathPrefix(`/worker`)
+      - traefik.http.routers.${TRAEFIK_ROUTER_PREFIX:-mxtrove}-worker.service=${TRAEFIK_ROUTER_PREFIX:-mxtrove}-worker
+      - traefik.http.routers.${TRAEFIK_ROUTER_PREFIX:-mxtrove}-worker.priority=100
+      - traefik.http.routers.${TRAEFIK_ROUTER_PREFIX:-mxtrove}-worker.entrypoints=websecure
+      - traefik.http.routers.${TRAEFIK_ROUTER_PREFIX:-mxtrove}-worker.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}
+      - traefik.http.routers.${TRAEFIK_ROUTER_PREFIX:-mxtrove}-worker.middlewares=${TRAEFIK_ROUTER_PREFIX:-mxtrove}-strip
+      - traefik.http.middlewares.${TRAEFIK_ROUTER_PREFIX:-mxtrove}-strip.stripprefix.prefixes=/worker
+      - traefik.http.routers.${TRAEFIK_ROUTER_PREFIX:-mxtrove}-social.rule=Host(`${MXTROVE_HOST}`) && (PathPrefix(`/social`) || PathPrefix(`/og`))
+      - traefik.http.routers.${TRAEFIK_ROUTER_PREFIX:-mxtrove}-social.service=${TRAEFIK_ROUTER_PREFIX:-mxtrove}-worker
+      - traefik.http.routers.${TRAEFIK_ROUTER_PREFIX:-mxtrove}-social.priority=110
+      - traefik.http.routers.${TRAEFIK_ROUTER_PREFIX:-mxtrove}-social.entrypoints=websecure
+      - traefik.http.routers.${TRAEFIK_ROUTER_PREFIX:-mxtrove}-social.tls.certresolver=${TRAEFIK_CERTRESOLVER:-letsencrypt}
+
+networks:
+  traefik-public:
+    external: true
+    name: ${TRAEFIK_NETWORK:-traefik-public}
+
+volumes:
+  media-tmp:
+  protected-media:

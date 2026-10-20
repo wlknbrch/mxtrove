@@ -8,10 +8,20 @@ const dropboxClientId = import.meta.env.VITE_DROPBOX_CLIENT_ID;
 const oneDriveClientId = import.meta.env.VITE_ONEDRIVE_CLIENT_ID;
 const mediaWorkerUrl = import.meta.env.VITE_MEDIA_WORKER_URL;
 const webPushPublicKey = import.meta.env.VITE_WEB_PUSH_PUBLIC_KEY;
+const appHostname = (() => {
+  try { return new URL(requiredAppUrl || "http://localhost:5173").hostname; }
+  catch { return "localhost"; }
+})();
+const isOfficialInstance = ["mxtrove.wlknbrch.com", "www.mxtrove.wlknbrch.com"].includes(appHostname);
 
 export const env = {
   appVersion: packageJson.version || "0.0.0",
   appUrl: requiredAppUrl || "http://localhost:5173",
+  appHostname,
+  isOfficialInstance,
+  operatorName: import.meta.env.VITE_OPERATOR_NAME || (isOfficialInstance ? "Tom Maucksch" : "Independent operator"),
+  contactEmail: import.meta.env.VITE_CONTACT_EMAIL || (isOfficialInstance ? "mxtrove@wlknbrch.com" : ""),
+  sourceUrl: import.meta.env.VITE_SOURCE_URL || "https://github.com/wlknbrch/mxtrove",
   supabaseUrl: supabaseUrl || "",
   supabasePublishableKey: supabasePublishableKey || "",
   googleDriveClientId: googleDriveClientId || "",

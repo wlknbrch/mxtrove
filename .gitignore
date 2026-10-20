@@ -6,12 +6,19 @@ services/media-worker/dist/
 services/media-worker/.data/
 
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
 deploy/mxshare.vps.env
+deploy/*.env
 services/media-worker/.env
+**/.data/
+*.pem
+*.key
+*.p12
+*.pfx
+*.dump
+*.sql.gz
+*gitleaks-report*
 
 .DS_Store
 Thumbs.db

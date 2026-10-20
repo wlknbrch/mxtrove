@@ -1,7 +1,7 @@
 import type { PropsWithChildren } from "react";
 import { Link } from "react-router-dom";
-
-const CONTACT_EMAIL = "mxtrove@wlknbrch.com";
+import { OperatorContact } from "@/components/layout/operator-contact";
+import { env } from "@/lib/env";
 
 function TermsSection({ title, children }: PropsWithChildren<{ title: string }>) {
   return (
@@ -17,10 +17,10 @@ export function TermsOfServiceContent() {
     <>
       <TermsSection title="1. Acceptance and operator">
         <p>
-          These Terms govern use of the hosted MxTrove service operated by WLKNBRCH at
-          mxtrove.wlknbrch.com. By creating an account or using the service, you agree to these Terms
+          These Terms govern use of the hosted MxTrove service operated by {env.operatorName} at{" "}
+          {env.appHostname}. By creating an account or using the service, you agree to these Terms
           and the <Link className="text-accent-secondary hover:text-foreground" to="/privacy">Privacy Policy</Link>.
-          Contact: <a className="text-accent-secondary hover:text-foreground" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+          Contact: <OperatorContact className="text-accent-secondary hover:text-foreground" />
         </p>
       </TermsSection>
 
@@ -28,7 +28,7 @@ export function TermsOfServiceContent() {
         <p>
           You must be at least 16, or older if your local law requires it, and able to enter a binding
           agreement. Keep your credentials secure, provide accurate account information, and notify
-          WLKNBRCH promptly if you believe your account has been compromised. You are responsible for
+          {env.operatorName} promptly if you believe your account has been compromised. You are responsible for
           activity performed through your account unless applicable law provides otherwise.
         </p>
       </TermsSection>
@@ -53,7 +53,7 @@ export function TermsOfServiceContent() {
       <TermsSection title="5. Your content and permissions">
         <p>
           You retain ownership of music, artwork, lyrics, messages, and other content you submit.
-          You grant WLKNBRCH a non-exclusive, worldwide, royalty-free license limited to hosting,
+          You grant {env.operatorName} a non-exclusive, worldwide, royalty-free license limited to hosting,
           processing, reproducing, transmitting, and displaying that content as necessary to operate
           MxTrove and honor the visibility, collaboration, and sharing choices you make. This license
           ends when the content is deleted, subject to technical backups, legal retention, and copies
@@ -87,7 +87,7 @@ export function TermsOfServiceContent() {
       <TermsSection title="9. Third-party services">
         <p>
           Supabase, Google, Dropbox, Microsoft, PayPal, browser push providers, and linked websites are
-          independent services with their own terms and privacy practices. WLKNBRCH is not responsible
+          independent services with their own terms and privacy practices. {env.operatorName} is not responsible
           for their availability, policy changes, account decisions, or data handling beyond what the
           law requires of MxTrove as the service operator.
         </p>
@@ -95,7 +95,7 @@ export function TermsOfServiceContent() {
 
       <TermsSection title="10. Suspension and termination">
         <p>
-          You may stop using MxTrove and request account deletion at any time. WLKNBRCH may restrict or
+          You may stop using MxTrove and request account deletion at any time. {env.operatorName} may restrict or
           suspend access where reasonably necessary for security, serious or repeated rule violations,
           legal compliance, or protection of the service and its users. Where appropriate, notice and
           an opportunity to clarify will be provided.
@@ -122,6 +122,17 @@ export function TermsOfServiceContent() {
           will be communicated where reasonably possible. Continuing to use the service after changes
           take effect constitutes acceptance where permitted by law; otherwise the existing statutory
           rules apply.
+        </p>
+      </TermsSection>
+      <TermsSection title="13. Open-source software">
+        <p>
+          These Terms govern access to this hosted service. The MxTrove software is
+          separately licensed under the GNU Affero General Public License, version 3.
+          These service Terms do not limit rights granted by that software license.
+          User content remains subject to its owners&apos; rights.
+        </p>
+        <p>
+          <a className="text-accent-secondary hover:text-foreground" href={env.sourceUrl} target="_blank" rel="noreferrer">Get the source code and license.</a>
         </p>
       </TermsSection>
     </>

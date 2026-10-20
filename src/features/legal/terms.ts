@@ -1,5 +1,5 @@
 export const CURRENT_TERMS_VERSION = "2026-08-05";
-export const CURRENT_TERMS_LAST_UPDATED = "August 5, 2026";
+export const CURRENT_TERMS_LAST_UPDATED = "October 20, 2026";
 export const PENDING_TERMS_ACCEPTANCE_KEY = "mxtrove:pending-terms-acceptance";
 const PENDING_ACCEPTANCE_MAX_AGE_MS = 15 * 60 * 1_000;
 

@@ -18,6 +18,7 @@ import {
 import { Link } from "react-router-dom";
 
 import { PageHeader } from "@/components/layout/page-header";
+import { OperatorContact } from "@/components/layout/operator-contact";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -26,9 +27,9 @@ import { CURRENT_TERMS_LAST_UPDATED } from "@/features/legal/terms";
 import { FeedbackPanel } from "@/features/legal/feedback-panel";
 import { ChangelogPanel } from "@/features/legal/changelog-panel";
 import { cn } from "@/lib/utils";
+import { env } from "@/lib/env";
 
-const CONTACT_EMAIL = "mxtrove@wlknbrch.com";
-const LAST_UPDATED = "August 6, 2026";
+const LAST_UPDATED = "October 20, 2026";
 
 function DocumentSection({ title, children }: PropsWithChildren<{ title: string }>) {
   return (
@@ -62,18 +63,15 @@ function LegalDocument({
             <Badge variant="neutral">Last updated</Badge>
             <p className="mt-3 text-sm font-medium">{lastUpdated}</p>
             <p className="mt-2 text-xs leading-6 text-muted-foreground">
-              These documents apply to the hosted MxTrove service at mxtrove.wlknbrch.com.
-              Independent deployments need their own operator information and policies.
+              These documents apply to the service at {env.appHostname}, operated by {env.operatorName}.
+              Independent operators must adapt these policies to their actual practices.
             </p>
           </Card>
           <Card className="rounded-[26px]">
             <p className="text-sm font-medium">Questions or requests</p>
-            <a
-              href={`mailto:${CONTACT_EMAIL}`}
+            <OperatorContact
               className="mt-3 block break-all text-sm text-accent-secondary transition-colors hover:text-foreground"
-            >
-              {CONTACT_EMAIL}
-            </a>
+            />
           </Card>
         </aside>
       </div>
@@ -102,6 +100,10 @@ export function AboutPage() {
             original files to a new paid storage silo.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
+            <a href={env.sourceUrl} target="_blank" rel="noreferrer" className={buttonVariants({ variant: "secondary", size: "lg" })}>
+              Source code (AGPL-3.0)
+              <ExternalLink className="size-4" />
+            </a>
             <a
               href="https://paypal.me/WLKNBRCH"
               target="_blank"
@@ -257,9 +259,9 @@ export function PrivacyPolicyPage() {
     >
       <DocumentSection title="1. Controller and scope">
         <p>
-          WLKNBRCH operates the hosted MxTrove service available at mxtrove.wlknbrch.com and
+          {env.operatorName} operates the hosted MxTrove service available at {env.appHostname} and
           is responsible for the processing described in this policy. Contact: {" "}
-          <a className="text-accent-secondary hover:text-foreground" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+          <OperatorContact className="text-accent-secondary hover:text-foreground" />
         </p>
         <p>
           This policy covers the hosted service only. If somebody operates an independent copy
@@ -344,7 +346,7 @@ export function PrivacyPolicyPage() {
           data export, and account deletion inside the app.
         </p>
         <p>
-          Send requests to <a className="text-accent-secondary hover:text-foreground" href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>.
+          Send requests to your operator: <OperatorContact className="text-accent-secondary hover:text-foreground" />
           You may also complain to the competent data-protection supervisory authority. Identity
           verification may be required before fulfilling a request.
         </p>
@@ -377,7 +379,7 @@ export function TermsOfServicePage() {
     <LegalDocument
       eyebrow="Legal / Service"
       title="Terms of Service"
-      description="The terms for using the WLKNBRCH-hosted MxTrove service."
+      description={`The terms for using this MxTrove service, operated by ${env.operatorName}.`}
       lastUpdated={CURRENT_TERMS_LAST_UPDATED}
     >
       <TermsOfServiceContent />

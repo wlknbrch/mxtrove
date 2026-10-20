@@ -80,6 +80,7 @@ function readOrigins(name: string, fallback: string[]) {
 }
 
 export const config = {
+  sourceUrl: process.env.PUBLIC_SOURCE_URL || "https://github.com/wlknbrch/mxtrove",
   nodeEnv: process.env.NODE_ENV || "development",
   port: readNumber("PORT", 8080),
   trustProxy: readBoolean("TRUST_PROXY", process.env.NODE_ENV === "production"),

@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { usePlayerStore } from "@/components/audio/player-store";
 import { MxShareMark } from "@/components/layout/mxshare-mark";
+import { LegalFooter } from "@/components/layout/legal-footer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -174,6 +175,7 @@ function SharedShell({ children }: { children: React.ReactNode }) {
         <Badge variant="success"><ShieldCheck className="mr-1 size-3.5" />Protected</Badge>
       </header>
       <main className="mx-auto max-w-7xl space-y-7">{children}</main>
+      <LegalFooter className="mx-auto mt-10 max-w-7xl" />
     </div>
   );
 }

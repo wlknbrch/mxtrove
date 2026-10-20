@@ -9,6 +9,7 @@ import { FullscreenArtwork } from "@/components/ui/fullscreen-artwork";
 import { getResolvedPostById } from "@/features/posts/api";
 import { buildPostPlaybackTracks } from "@/features/posts/post-playback";
 import { getArtworkAssetUrls } from "@/lib/asset-urls";
+import { env } from "@/lib/env";
 
 export function EmbedPostPage() {
   const { postId = "" } = useParams();
@@ -52,6 +53,7 @@ export function EmbedPostPage() {
           </div>
         </div>
       </div>
+      <a href={env.sourceUrl} target="_blank" rel="noreferrer" className="mx-auto mt-3 block max-w-3xl text-xs text-muted-foreground hover:text-foreground">Source (AGPL-3.0)</a>
     </div>
   );
 }
