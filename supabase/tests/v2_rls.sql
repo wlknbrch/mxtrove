@@ -703,6 +703,12 @@ $$;
 -- A real app-admin receives the public-only dashboard contract. Run this last
 -- so the temporary role cannot influence any of the preceding RLS assertions.
 reset role;
+-- The visibility tests above made this release followers-only. Moderation
+-- deliberately handles public content, so restore the public fixture first.
+update public.posts
+set visibility = 'public'
+where id = '77777777-7777-7777-7777-777777777771';
+
 insert into public.comments (id, post_id, author_id, body)
 values (
   '88888888-8888-8888-8888-888888888882',
@@ -803,6 +809,22 @@ select public.remove_public_content_for_moderation(
   'hate'
 );
 
+-- The app administrator still cannot read another user's private notifications.
+do $$
+begin
+  if exists (
+    select 1 from public.notifications
+    where recipient_id = '22222222-2222-2222-2222-222222222222'
+      and comment_id = '88888888-8888-8888-8888-888888888882'
+      and type = 'content_moderated'
+  ) then
+    raise exception 'Administrators must not read another user''s private notifications.';
+  end if;
+end;
+$$;
+
+-- Verify delivery as the database test runner, not by widening app-admin RLS.
+reset role;
 do $$
 declare
   removed_at timestamptz;
