@@ -61,6 +61,7 @@ jobs:
           version: 2.109.1
           github-token: ${{ github.token }}
       - name: Apply migrations and seed to a fresh database
+        shell: bash
         run: |
           for attempt in 1 2 3; do
             if supabase db start 2>&1 | tee "$RUNNER_TEMP/supabase-start.log"; then
