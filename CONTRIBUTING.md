@@ -23,6 +23,8 @@ links, user information, and private screenshots from reports.
 Discuss substantial changes in an issue first. Keep pull requests focused,
 explain the behavior changed, and include the checks you ran. New schema changes
 must be additive migrations; do not rewrite existing migration history.
+New API tables need explicit operation grants as well as RLS policies; do not
+depend on a hosted project's default privileges or grant unrestricted access.
 Preserve RLS, private-media authorization, bounded queries, and cache
 invalidation. Document any change that affects compatibility or egress.
 
