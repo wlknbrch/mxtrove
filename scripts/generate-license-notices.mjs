@@ -16,7 +16,7 @@ for (const root of roots) {
         if (!/^(licen[sc]e|copying|notice)(\..*)?$/i.test(file)) continue;
         const filename = path.join(directory, file);
         if (!fs.statSync(filename).isFile()) continue;
-        record.texts.add(fs.readFileSync(filename, "utf8").trim());
+        record.texts.add(fs.readFileSync(filename, "utf8").replace(/\r\n?/g, "\n").replace(/[ \t]+$/gm, "").trim());
       }
     }
     inventory.set(key, record);
@@ -47,7 +47,8 @@ for (const record of records) {
   }
 }
 for (const [value, packages] of texts) {
-  lines.push(`## ${packages.join(", ")}`, "", "```text", value.replaceAll("```", "'''"), "```", "");
+  const fence = "`".repeat(Math.max(3, ...[...value.matchAll(/`+/g)].map(([match]) => match.length + 1)));
+  lines.push(`## ${packages.join(", ")}`, "", `${fence}text`, value, fence, "");
 }
-fs.writeFileSync("THIRD_PARTY_NOTICES.md", `${lines.join("\n")}\n`);
+fs.writeFileSync("THIRD_PARTY_NOTICES.md", `${lines.join("\n").trimEnd()}\n`);
 console.log(`Wrote notices for ${records.length} dependency versions; ${texts.size} distinct installed license/notice texts.`);
