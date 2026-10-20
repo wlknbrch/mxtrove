@@ -371,6 +371,7 @@ export function buildSocialHtml(input: SocialHtmlInput) {
       <meta name="twitter:description" content="${description}"><meta name="twitter:image" content="${imageUrl}">
       </head><body style="background:#090615;color:#fff;font-family:sans-serif;padding:3rem">
       <p>Opening <a style="color:#cda7ef" href="${canonicalUrl}">${title}</a> on MxTrove.</p>
+      <p><a style="color:#cda7ef" href="${escapeMarkup(config.sourceUrl)}">Source (AGPL-3.0)</a></p>
       </body></html>`;
 }
 

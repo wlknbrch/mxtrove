@@ -8,6 +8,8 @@ RUN npm ci
 COPY index.html tsconfig.json vite.config.ts ./
 COPY public ./public
 COPY src ./src
+COPY scripts/copy-license-notices.mjs ./scripts/copy-license-notices.mjs
+COPY LICENSE NOTICE THIRD_PARTY_NOTICES.md ./
 
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_PUBLISHABLE_KEY
@@ -19,6 +21,9 @@ ARG VITE_WEB_PUSH_PUBLIC_KEY
 ARG VITE_PWA_ENABLED=true
 ARG VITE_ENABLE_DEMO_MODE=false
 ARG VITE_APP_URL
+ARG VITE_SOURCE_URL=https://github.com/wlknbrch/mxtrove
+ARG VITE_OPERATOR_NAME
+ARG VITE_CONTACT_EMAIL
 
 ENV VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
 ENV VITE_SUPABASE_PUBLISHABLE_KEY=${VITE_SUPABASE_PUBLISHABLE_KEY}
@@ -30,17 +35,24 @@ ENV VITE_WEB_PUSH_PUBLIC_KEY=${VITE_WEB_PUSH_PUBLIC_KEY}
 ENV VITE_PWA_ENABLED=${VITE_PWA_ENABLED}
 ENV VITE_ENABLE_DEMO_MODE=${VITE_ENABLE_DEMO_MODE}
 ENV VITE_APP_URL=${VITE_APP_URL}
+ENV VITE_SOURCE_URL=${VITE_SOURCE_URL}
+ENV VITE_OPERATOR_NAME=${VITE_OPERATOR_NAME}
+ENV VITE_CONTACT_EMAIL=${VITE_CONTACT_EMAIL}
 
 RUN test -n "${VITE_SUPABASE_URL}" \
   && test -n "${VITE_SUPABASE_PUBLISHABLE_KEY}" \
-  && test -n "${VITE_GOOGLE_DRIVE_CLIENT_ID}" \
   && test -n "${VITE_MEDIA_WORKER_URL}" \
-  && test -n "${VITE_WEB_PUSH_PUBLIC_KEY}" \
   && test -n "${VITE_APP_URL}"
 
 RUN npm run build
 
 FROM nginx:1.27-alpine AS runtime
+
+LABEL org.opencontainers.image.title="MxTrove" \
+  org.opencontainers.image.licenses="AGPL-3.0-only" \
+  org.opencontainers.image.source="https://github.com/wlknbrch/mxtrove"
+
+COPY LICENSE NOTICE THIRD_PARTY_NOTICES.md /usr/share/nginx/html/licenses/
 
 COPY deploy/nginx/mxshare.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html

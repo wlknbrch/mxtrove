@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { OperatorContact } from "@/components/layout/operator-contact";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -258,11 +259,8 @@ export function FeedbackPanel() {
 
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs leading-6 text-muted-foreground">
-          Browser, viewport, and app-mode details are included automatically. For urgent matters, email{" "}
-          <a className="text-accent-secondary underline-offset-4 hover:underline" href="mailto:mxtrove@wlknbrch.com">
-            mxtrove@wlknbrch.com
-          </a>
-          .
+          Browser, viewport, and app-mode details are included automatically. For urgent matters: {" "}
+          <OperatorContact className="text-accent-secondary underline-offset-4 hover:underline" />
         </p>
         <Button
           className="shrink-0"

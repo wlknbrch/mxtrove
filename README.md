@@ -1,14 +1,38 @@
-# MxTrove V2
+# MxTrove
+
+**Open-source music collaboration and versioned releases.**
+
+Copyright (C) 2026 Tom Maucksch. Licensed under **AGPL-3.0-only**;
+see [LICENSE](LICENSE), [NOTICE](NOTICE), and [third-party notices](THIRD_PARTY_NOTICES.md).
+Forks and independent hosting are welcome; identify your service clearly under
+[the branding policy](TRADEMARKS.md). Future standalone SDKs may receive their
+own Apache-2.0 license; the current platform has no such exception.
+
+[Self-hosting and quickstart](docs/self-hosting.md) |
+[Contributing](CONTRIBUTING.md) | [Security](SECURITY.md) |
+[Support](SUPPORT.md) | [Roadmap](docs/roadmap.md)
+
+![MxTrove project concept](src/assets/docs/mxshare-concept-triptych.png)
+
+Design concept illustration; the current interface and supported workflows
+are described below. See [licensing and distribution](docs/licensing.md)
+and the [publication checks](docs/security-audit.md) for release scope.
 
 MxTrove is a collaborative working archive for musicians. Artists keep private
 originals in their own cloud account, while MxTrove provides versioned releases,
 collaboration rooms, protected previews, timestamped feedback, messaging, social
 discovery, and public release pages.
 
-The production site is designed for:
+The official hosted service is available at:
 
 - `https://mxtrove.wlknbrch.com`
 - `https://www.mxtrove.wlknbrch.com` (redirects to the apex domain)
+
+For your own deployment, use [the independent installation guide](docs/self-hosting.md)
+and `docker-compose.selfhost.yml`. The production-domain examples further below
+describe the official service and must be adapted for your own infrastructure.
+Use your own Supabase/OAuth applications; no official-service credentials are needed.
+Open source does not include user uploads or access to the official service's data.
 
 ## What V2 Includes
 
@@ -106,6 +130,11 @@ configured production backend yet.
 - Docker Engine and Docker Compose for local Supabase and production containers
 - A Supabase project
 - At least one configured personal cloud OAuth application
+
+Cloud providers are required for real uploads, not for compiling the app or
+running its synthetic UI demo. Web push is optional. Use `nvm use` to select
+the supported Node version; the package `private` flags prevent accidental npm
+publication and do not restrict the source-code license.
 
 Install the Supabase CLI on macOS:
 

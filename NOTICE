@@ -1,0 +1,20 @@
+MxTrove
+Copyright (C) 2026 Tom Maucksch
+
+MxTrove's original platform code and first-party project assets are licensed
+under the GNU Affero General Public License, version 3 only (AGPL-3.0-only).
+See LICENSE for the complete terms. Contributors retain copyright in their
+contributions. Third-party components retain their own licenses and notices;
+see THIRD_PARTY_NOTICES.md.
+
+The software license does not grant trademark rights. See TRADEMARKS.md for
+permitted references to MxTrove and the identification of independent forks.
+This policy does not add restrictions to the rights granted by the AGPL.
+
+Songs, recordings, lyrics, artwork, personal data, and other content uploaded
+by users are not covered by the software license. Their respective owners
+retain their rights.
+
+No part of the current platform is Apache-2.0 licensed by this notice.
+Standalone SDKs and integration libraries may receive a separate license in
+the future only when their own explicit license files say so.

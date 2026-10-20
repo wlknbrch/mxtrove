@@ -42,15 +42,37 @@ jobs:
   database:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Authenticate container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v2
         with:
           version: 2.109.1
           github-token: ${{ github.token }}
       - name: Apply migrations and seed to a fresh database
-        run: supabase db start
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            if supabase db start 2>&1 | tee "$RUNNER_TEMP/supabase-start.log"; then
+              exit 0
+            fi
+            if ! grep -qiE 'toomanyrequests|too many requests|429|failed to pull docker image' "$RUNNER_TEMP/supabase-start.log"; then
+              exit 1
+            fi
+            if [ "$attempt" -lt 3 ]; then sleep 15; fi
+          done
+          exit 1
       - name: Run database tests
         run: supabase test db
       - if: always()

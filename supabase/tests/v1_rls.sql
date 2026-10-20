@@ -1,5 +1,9 @@
 begin;
 
+create extension if not exists pgtap with schema extensions;
+set local search_path = public, extensions;
+select plan(1);
+
 -- This file is intended for local Supabase DB verification after migrations + seed.sql.
 -- It exercises key V1 security guarantees by simulating authenticated users.
 
@@ -97,4 +101,7 @@ begin
 end;
 $$;
 
+reset role;
+select pass('V1 access-control assertions completed without an exception');
+select * from finish();
 rollback;

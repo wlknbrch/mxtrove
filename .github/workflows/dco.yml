@@ -1,0 +1,26 @@
+name: contribution sign-off
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  dco:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const commits = await github.paginate(github.rest.pulls.listCommits, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              per_page: 100,
+            });
+            const unsigned = commits.filter(({ commit, author }) =>
+              author?.type !== 'Bot' && !/^Signed-off-by: .+ <[^<>\s]+@[^<>\s]+>\s*$/im.test(commit.message)
+            );
+            if (unsigned.length) core.setFailed(`Add DCO sign-offs (git commit -s) to: ${unsigned.map(c => c.sha.slice(0, 7)).join(', ')}`);
