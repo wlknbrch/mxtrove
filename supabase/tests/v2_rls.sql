@@ -1,5 +1,9 @@
 begin;
 
+create extension if not exists pgtap with schema extensions;
+set local search_path = public, extensions;
+select plan(1);
+
 -- V2 collaboration, sharing, and admin boundary checks.
 -- These tests run against the local seed and roll back all generated data.
 
@@ -833,4 +837,7 @@ begin
 end;
 $$;
 
+reset role;
+select pass('V2 collaboration, sharing, and admin assertions completed without an exception');
+select * from finish();
 rollback;

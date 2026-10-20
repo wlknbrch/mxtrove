@@ -286,6 +286,7 @@ set
 
 insert into public.song_versions (
   id,
+  owner_id,
   song_id,
   source_asset_id,
   preview_asset_id,
@@ -299,6 +300,7 @@ insert into public.song_versions (
 values
   (
     '66666666-6666-6666-6666-666666666661',
+    '11111111-1111-1111-1111-111111111111',
     '55555555-5555-5555-5555-555555555551',
     '44444444-4444-4444-4444-444444444441',
     '44444444-4444-4444-4444-444444444442',
@@ -311,6 +313,7 @@ values
   ),
   (
     '66666666-6666-6666-6666-666666666662',
+    '11111111-1111-1111-1111-111111111111',
     '55555555-5555-5555-5555-555555555551',
     '44444444-4444-4444-4444-444444444441',
     '44444444-4444-4444-4444-444444444442',
@@ -324,6 +327,7 @@ values
 on conflict (id) do update
 set
   song_id = excluded.song_id,
+  owner_id = excluded.owner_id,
   source_asset_id = excluded.source_asset_id,
   preview_asset_id = excluded.preview_asset_id,
   version_number = excluded.version_number,

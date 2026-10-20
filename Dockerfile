@@ -8,6 +8,8 @@ RUN npm ci
 COPY index.html tsconfig.json vite.config.ts ./
 COPY public ./public
 COPY src ./src
+COPY scripts/copy-license-notices.mjs ./scripts/copy-license-notices.mjs
+COPY LICENSE NOTICE THIRD_PARTY_NOTICES.md ./
 
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_PUBLISHABLE_KEY
