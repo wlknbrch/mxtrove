@@ -1,32 +1,54 @@
 # MxTrove
 
-**Open-source music collaboration and versioned releases.**
+**A home for music before it is ready.**
+
+MxTrove is an open-source, private-first music workspace: keep sketches and
+originals to yourself, share songs as posts, build Singles, EPs and Albums,
+or invite collaborators into a project for version review and feedback.
+Private master files stay in your own Google Drive, Dropbox, or OneDrive.
+
+[Open MxTrove](https://mxtrove.wlknbrch.com) |
+[Product overview and full gallery](https://wlknbrch.com/software/mxtrove) |
+[Self-hosting and quickstart](docs/self-hosting.md) |
+[Contributing](CONTRIBUTING.md) |
+[Roadmap](docs/roadmap.md)
+
+## Actual interface screenshots
+
+These are screenshots of the MxTrove application shown on the
+[official product page](https://wlknbrch.com/software/mxtrove), **not design mockups**.
+Some views contain example content. The image files are included in this
+repository so the README does not depend on external image hosting.
+
+![MxTrove Home screen with posts and releases](docs/screenshots/mx-home.webp)
+
+| Collaboration project and version review | Music library |
+| :---: | :---: |
+| ![MxTrove collaboration project with version review](docs/screenshots/mx-project.webp) | ![MxTrove music library](docs/screenshots/mx-library.webp) |
+| **Cloud storage connections** | **Artist profile** |
+| ![MxTrove cloud storage connections](docs/screenshots/mx-storage.webp) | ![MxTrove artist profile](docs/screenshots/mx-profile.webp) |
+| **Creating Singles, EPs and Albums** | **Adding songs to a post or release** |
+| ![MxTrove release creation workflow](docs/screenshots/mx-publish.webp) | ![MxTrove add-songs workflow](docs/screenshots/mx-add-songs.webp) |
+
+Also available: [sign-in and account flow](docs/screenshots/mx-login.webp).
+
+## Project and licensing
 
 Copyright (C) 2026 Tom Maucksch. Licensed under **AGPL-3.0-only**;
-see [LICENSE](LICENSE), [NOTICE](NOTICE), and [third-party notices](THIRD_PARTY_NOTICES.md).
+see [LICENSE](LICENSE), [NOTICE](NOTICE), and
+[third-party notices](THIRD_PARTY_NOTICES.md).
 Forks and independent hosting are welcome; identify your service clearly under
 [the branding policy](TRADEMARKS.md). Future standalone SDKs may receive their
 own Apache-2.0 license; the current platform has no such exception.
 
-[Self-hosting and quickstart](docs/self-hosting.md) |
-[Contributing](CONTRIBUTING.md) | [Security](SECURITY.md) |
-[Support](SUPPORT.md) | [Roadmap](docs/roadmap.md)
-
-![MxTrove project concept](src/assets/docs/mxshare-concept-triptych.png)
-
-Design concept illustration; the current interface and supported workflows
-are described below. See [licensing and distribution](docs/licensing.md)
-and the [publication checks](docs/security-audit.md) for release scope.
-
-MxTrove is a collaborative working archive for musicians. Artists keep private
-originals in their own cloud account, while MxTrove provides versioned releases,
-collaboration rooms, protected previews, timestamped feedback, messaging, social
-discovery, and public release pages.
+[Security](SECURITY.md) | [Support](SUPPORT.md) |
+[Licensing and distribution](docs/licensing.md) |
+[Publication checks](docs/security-audit.md)
 
 The official hosted service is available at:
 
-- `https://mxtrove.wlknbrch.com`
-- `https://www.mxtrove.wlknbrch.com` (redirects to the apex domain)
+- https://mxtrove.wlknbrch.com
+- https://www.mxtrove.wlknbrch.com (redirects to the apex domain)
 
 For your own deployment, use [the independent installation guide](docs/self-hosting.md)
 and `docker-compose.selfhost.yml`. The production-domain examples further below
