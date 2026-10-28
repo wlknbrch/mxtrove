@@ -47,6 +47,11 @@ DCT/FFT dependencies instead of bundling them. Audio-analysis regressions must
 pass before publication. This removes the vulnerable dependency rather than
 dismissing the alert or hiding it from audits.
 
+Gitleaks also matched the literal documentation phrase `inaccessible entities,
+signature/MIME ` as a generic key. An anchored full-match exception permits
+only that exact text, including historical copies; credential patterns and
+CodeQL rules remain enabled.
+
 ## Historical publication baseline — 2026-10-20
 
 Checked on 2026-10-20. This records the scope of checks, not a penetration-test

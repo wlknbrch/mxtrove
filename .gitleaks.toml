@@ -7,3 +7,8 @@ useDefault = true
 description = "Dropbox rule matches this identifier-to-identifier assignment; no literal credential is present."
 regexTarget = "match"
 regexes = ['''^\s*dropboxClientId:\s*dropboxClientId\s*$''']
+
+[[allowlists]]
+description = "The verification checklist phrase signature/MIME is documentation, not a credential."
+regexTarget = "match"
+regexes = ['''^inaccessible entities, signature/MIME $''']
