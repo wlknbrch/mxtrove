@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   profileSchema,
+  type ProfileFormInput,
   type ProfileFormValues,
 } from "@/lib/validators";
 
@@ -44,7 +45,7 @@ export function ProfileFormPanel({
   onSubmit: (values: ProfileFormValues) => Promise<void>;
   isPending?: boolean;
 }) {
-  const form = useForm<ProfileFormValues>({
+  const form = useForm<ProfileFormInput, unknown, ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       display_name: initialValues?.display_name ?? "",

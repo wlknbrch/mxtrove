@@ -1,0 +1,158 @@
+{
+  "contractVersion": "0.1.1",
+  "scope": "UI capability projections of accepted membership helpers; not a substitute for RLS or operation-specific resource checks",
+  "roles": [
+    "owner",
+    "admin",
+    "editor",
+    "contributor",
+    "reviewer",
+    "viewer"
+  ],
+  "helperCapabilities": {
+    "can_view_collaboration_project": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ],
+    "can_edit_collaboration_project": [
+      true,
+      true,
+      true,
+      false,
+      false,
+      false
+    ],
+    "can_upload_project_version": [
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ],
+    "can_review_project": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+    ],
+    "can_manage_collaboration_members": [
+      true,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "operationCases": [
+    {
+      "actorRole": "owner",
+      "operation": "transfer_ownership",
+      "targetRole": "viewer",
+      "allowed": true
+    },
+    {
+      "actorRole": "admin",
+      "operation": "transfer_ownership",
+      "targetRole": "viewer",
+      "allowed": false
+    },
+    {
+      "actorRole": "admin",
+      "operation": "change_role",
+      "targetRole": "admin",
+      "allowed": false
+    },
+    {
+      "actorRole": "admin",
+      "operation": "change_role",
+      "targetRole": "viewer",
+      "nextRole": "admin",
+      "allowed": false
+    },
+    {
+      "actorRole": "admin",
+      "operation": "remove_member",
+      "targetRole": "owner",
+      "allowed": false
+    },
+    {
+      "actorRole": "admin",
+      "operation": "remove_member",
+      "targetRole": "admin",
+      "allowed": false
+    },
+    {
+      "actorRole": "admin",
+      "operation": "remove_member",
+      "targetRole": "reviewer",
+      "allowed": true
+    },
+    {
+      "actorRole": "unknown_future_role",
+      "operation": "edit_project",
+      "targetRole": "viewer",
+      "allowed": false
+    },
+    {
+      "actorRole": "removed",
+      "operation": "view_project",
+      "allowed": false
+    }
+  ],
+  "visibilityCases": [
+    {
+      "viewer": "anonymous",
+      "visibility": "public",
+      "allowedWithoutShare": true
+    },
+    {
+      "viewer": "anonymous",
+      "visibility": "followers",
+      "allowedWithoutShare": false
+    },
+    {
+      "viewer": "anonymous",
+      "visibility": "unlisted",
+      "allowedWithoutShare": false
+    },
+    {
+      "viewer": "anonymous",
+      "visibility": "private",
+      "allowedWithoutShare": false
+    },
+    {
+      "viewer": "unrelated",
+      "visibility": "followers",
+      "allowedWithoutShare": false
+    },
+    {
+      "viewer": "follower",
+      "visibility": "followers",
+      "allowedWithoutShare": true
+    },
+    {
+      "viewer": "owner",
+      "visibility": "private",
+      "allowedWithoutShare": true
+    },
+    {
+      "viewer": "linked_project_member",
+      "visibility": "private",
+      "allowedWithoutShare": true
+    },
+    {
+      "viewer": "blocked",
+      "visibility": "public",
+      "allowedWithoutShare": false
+    }
+  ],
+  "mediaCaveat": "Existing HMAC URL can remain valid after membership/share revocation until expiry; do not assert immediate revocation."
+}

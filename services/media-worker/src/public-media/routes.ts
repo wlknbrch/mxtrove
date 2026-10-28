@@ -1,8 +1,10 @@
 import { Readable } from "node:stream";
 import type { FastifyInstance, FastifyReply } from "fastify";
 
+import { fetchPublicProviderMedia, getDropboxPublicMediaUrl } from "./upstream.js";
+export { getDropboxPublicMediaUrl } from "./upstream.js";
+
 const GOOGLE_DRIVE_FILE_ID_PATTERN = /^[A-Za-z0-9_-]{20,}$/;
-const DROPBOX_HOST_SUFFIXES = [".dropbox.com", ".dropboxusercontent.com"];
 
 function buildGoogleDriveUrl(fileId: string, kind: "audio" | "image", size: string | null) {
   const encodedFileId = encodeURIComponent(fileId);
@@ -12,22 +14,6 @@ function buildGoogleDriveUrl(fileId: string, kind: "audio" | "image", size: stri
   }
 
   return `https://drive.google.com/uc?export=download&id=${encodedFileId}`;
-}
-
-export function getDropboxPublicMediaUrl(value: string | null) {
-  if (!value) return null;
-
-  try {
-    const url = new URL(value);
-    const isDropboxHost = url.hostname === "dropbox.com"
-      || DROPBOX_HOST_SUFFIXES.some((suffix) => url.hostname.endsWith(suffix));
-    if (url.protocol !== "https:" || !isDropboxHost || url.username || url.password) {
-      return null;
-    }
-    return url.toString();
-  } catch {
-    return null;
-  }
 }
 
 function copyUpstreamHeaders(headers: Headers, reply: FastifyReply) {
@@ -69,14 +55,15 @@ export async function registerPublicMediaRoutes(app: FastifyInstance) {
       const headers = new Headers();
       if (request.headers.range) headers.set("Range", request.headers.range);
 
-      const upstream = await fetch(
-        dropboxUrl ?? buildGoogleDriveUrl(fileId, kind, query.size ?? null),
-        {
-          method: request.method,
-          headers,
-          redirect: "follow",
-        },
-      );
+      let upstream: Response;
+      try {
+        upstream = await fetchPublicProviderMedia(
+          dropboxUrl ?? buildGoogleDriveUrl(fileId, kind, query.size ?? null),
+          { method: request.method, headers },
+        );
+      } catch {
+        return reply.code(502).send({ error: "The public media provider could not return a supported response." });
+      }
 
       reply.code(upstream.status);
       copyUpstreamHeaders(upstream.headers, reply);

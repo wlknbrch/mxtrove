@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import { fetchPublicProviderMedia, getDropboxPublicMediaUrl } from "./services/media-worker/src/public-media/upstream";
 
 function buildDriveProxyUrl(fileId: string, kind: "audio" | "image", size: string | null) {
   const encodedFileId = encodeURIComponent(fileId);
@@ -17,18 +18,7 @@ function buildDriveProxyUrl(fileId: string, kind: "audio" | "image", size: strin
 }
 
 function getDropboxProxyUrl(value: string | null) {
-  if (!value) {
-    return null;
-  }
-  const url = new URL(value);
-  if (
-    url.hostname !== "dropbox.com"
-    && !url.hostname.endsWith(".dropbox.com")
-    && !url.hostname.endsWith(".dropboxusercontent.com")
-  ) {
-    return null;
-  }
-  return url.toString();
+  return getDropboxPublicMediaUrl(value);
 }
 
 function copyProxyHeaders(response: Response, target: import("node:http").ServerResponse) {
@@ -88,11 +78,10 @@ function driveMediaProxyPlugin() {
             headers.set("Range", rangeHeader);
           }
 
-          const upstreamResponse = await fetch(
+          const upstreamResponse = await fetchPublicProviderMedia(
             dropboxUrl ?? buildDriveProxyUrl(fileId!, kind, size),
             {
               headers,
-              redirect: "follow",
               signal: abortController.signal,
             },
           );

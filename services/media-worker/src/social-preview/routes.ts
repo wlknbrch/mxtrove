@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import sharp from "sharp";
+import { fetchPublicProviderMedia, getDropboxPublicMediaUrl } from "../public-media/upstream.js";
 
 import { config } from "../config.js";
 import { supabaseAdmin } from "../supabase/service.js";
@@ -160,15 +161,46 @@ async function fetchImageDataUrlCandidate(url: string) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 6000);
   try {
-    const response = await fetch(url, {
+    // Resolve our public proxy candidate directly, without allowing arbitrary DB URLs
+    // to turn this image renderer into an internal-network proxy.
+    const target = new URL(url);
+    const proxy = new URL(`${config.workerPublicUrl.replace(/\/$/, "")}/v1/public-media`);
+    if (target.origin === proxy.origin && target.pathname === proxy.pathname) {
+      const id = target.searchParams.get("fileId");
+      if (target.searchParams.get("provider") === "dropbox") {
+        const direct = getDropboxPublicMediaUrl(target.searchParams.get("url"));
+        if (!direct) return null;
+        url = direct;
+      } else if (id && looksLikeGoogleDriveFileId(id)) {
+        url = buildGoogleDriveThumbnailUrl(id);
+      } else return null;
+    }
+    const response = await fetchPublicProviderMedia(url, {
       signal: controller.signal,
-      redirect: "follow",
-      headers: { "User-Agent": "MxTrove-Social-Preview/1.0" },
+      headers: new Headers({ "User-Agent": "MxTrove-Social-Preview/1.0" }),
     });
 
     if (!response.ok) return null;
-    const buffer = Buffer.from(await response.arrayBuffer());
-    if (buffer.byteLength === 0 || buffer.byteLength > 12 * 1024 * 1024) return null;
+    const maxBytes = 12 * 1024 * 1024;
+    if (Number(response.headers.get("content-length")) > maxBytes) {
+      await response.body?.cancel();
+      return null;
+    }
+    if (!response.body) return null;
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let bytes = 0;
+    try {
+      while (true) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        bytes += chunk.value.byteLength;
+        if (bytes > maxBytes) { await reader.cancel(); return null; }
+        chunks.push(chunk.value);
+      }
+    } finally { reader.releaseLock(); }
+    if (!bytes) return null;
+    const buffer = Buffer.concat(chunks, bytes);
 
     const metadata = await sharp(buffer).metadata().catch(() => null);
     if (!metadata || metadata.format === "svg") return null;

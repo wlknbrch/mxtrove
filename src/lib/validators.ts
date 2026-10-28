@@ -50,9 +50,9 @@ export const songSchema = z.object({
   lyrics: z.string().trim().max(50000, "Lyrics must be 50,000 characters or fewer.").optional().or(z.literal("")),
   musical_key: z.string().trim().max(32, "Musical key must be 32 characters or fewer.").optional().or(z.literal("")),
   tempo_bpm: z.preprocess(
-    normalizeOptionalTempoInput,
+    (value: string | number | null | undefined) => normalizeOptionalTempoInput(value),
     z
-      .number({ invalid_type_error: "Please enter a valid tempo." })
+      .number({ error: "Please enter a valid tempo." })
       .finite("Please enter a valid tempo.")
       .min(20, "Tempo must be at least 20 BPM.")
       .max(400, "Tempo must be at most 400 BPM.")
@@ -88,7 +88,9 @@ export const messageSchema = z.object({
 });
 
 export type ProfileFormValues = z.infer<typeof profileSchema>;
+export type ProfileFormInput = z.input<typeof profileSchema>;
 export type SongFormValues = z.infer<typeof songSchema>;
+export type SongFormInput = z.input<typeof songSchema>;
 export type VersionFormValues = z.infer<typeof versionSchema>;
 export type SinglePublishValues = z.infer<typeof singlePublishSchema>;
 export type CommentFormValues = z.infer<typeof commentSchema>;

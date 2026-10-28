@@ -3,8 +3,14 @@
   "private": true,
   "license": "AGPL-3.0-only",
   "author": "Tom Maucksch",
-  "repository": { "type": "git", "url": "https://github.com/wlknbrch/mxtrove.git", "directory": "services/media-worker" },
-  "engines": { "node": ">=22 <23" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wlknbrch/mxtrove.git",
+    "directory": "services/media-worker"
+  },
+  "engines": {
+    "node": ">=22 <23"
+  },
   "version": "0.1.0",
   "type": "module",
   "scripts": {
@@ -16,12 +22,13 @@
   "dependencies": {
     "@fastify/cors": "^11.3.0",
     "@fastify/multipart": "^10.1.0",
+    "@fastify/rate-limit": "^10.3.0",
     "@supabase/supabase-js": "^2.110.2",
     "@types/node": "^26.1.1",
     "fastify": "^5.10.0",
     "fflate": "^0.8.2",
     "jose": "^6.2.3",
-    "meyda": "^5.6.3",
+    "meyda": "5.6.2",
     "music-tempo": "^1.0.3",
     "sharp": "^0.35.3",
     "tsx": "^4.23.0",

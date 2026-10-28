@@ -1,0 +1,25 @@
+{
+  "fixtureVersion": 1,
+  "cases": [
+    {"id":"auth-expired-read","input":{"status":401,"operation":"safe_read"},"expected":{"kind":"auth_required","retryable":false,"outcomeUnknown":false}},
+    {"id":"permission-denied","input":{"status":403,"operation":"mutation"},"expected":{"kind":"forbidden","retryable":false,"outcomeUnknown":false}},
+    {"id":"rls-denied","input":{"code":"42501","operation":"mutation"},"expected":{"kind":"forbidden","retryable":false,"outcomeUnknown":false}},
+    {"id":"notfound-neutral","input":{"status":404,"operation":"safe_read"},"expected":{"kind":"unavailable","retryable":false,"outcomeUnknown":false}},
+    {"id":"backing-file-gone","input":{"status":410,"operation":"safe_read"},"expected":{"kind":"unavailable","retryable":false,"outcomeUnknown":false}},
+    {"id":"expired-share","input":{"shareUnavailable":true,"operation":"consuming_share_resolve"},"expected":{"kind":"share_unavailable","retryable":false,"outcomeUnknown":false}},
+    {"id":"recent-auth-gate","input":{"requiresReauth":true,"operation":"mutation"},"expected":{"kind":"reauth_required","retryable":false,"outcomeUnknown":false}},
+    {"id":"ambiguous-size-quota","input":{"status":413,"operation":"upload"},"expected":{"kind":"payload_too_large","retryable":false,"outcomeUnknown":false}},
+    {"id":"signature-mismatch","input":{"status":415,"operation":"upload"},"expected":{"kind":"unsupported_media","retryable":false,"outcomeUnknown":false}},
+    {"id":"invalid-audio-duration","input":{"status":422,"operation":"upload"},"expected":{"kind":"validation","retryable":false,"outcomeUnknown":false}},
+    {"id":"preview-not-ready","input":{"status":409,"operation":"side_effect_read"},"expected":{"kind":"conflict","retryable":false,"outcomeUnknown":false}},
+    {"id":"rate-read","input":{"status":429,"retryAfter":"3","operation":"safe_read"},"expected":{"kind":"rate_limited","retryable":true,"outcomeUnknown":false}},
+    {"id":"rate-send","input":{"status":429,"operation":"mutation"},"expected":{"kind":"rate_limited","retryable":false,"outcomeUnknown":false}},
+    {"id":"gateway-read","input":{"status":503,"operation":"safe_read"},"expected":{"kind":"transient","retryable":true,"outcomeUnknown":false}},
+    {"id":"lost-send-response","input":{"networkFailure":true,"operation":"mutation"},"expected":{"kind":"transient","retryable":false,"outcomeUnknown":true}},
+    {"id":"lost-share-response","input":{"networkFailure":true,"operation":"consuming_share_resolve"},"expected":{"kind":"transient","retryable":false,"outcomeUnknown":true}},
+    {"id":"lost-preview-response","input":{"networkFailure":true,"operation":"side_effect_read"},"expected":{"kind":"transient","retryable":false,"outcomeUnknown":true}},
+    {"id":"cancelled","input":{"cancelled":true,"operation":"upload"},"expected":{"kind":"cancelled","retryable":false,"outcomeUnknown":false}},
+    {"id":"sql-message-unclassified","input":{"code":"P0001","operation":"mutation"},"expected":{"kind":"unknown","retryable":false,"outcomeUnknown":false}},
+    {"id":"worker500-not-proof-of-transient","input":{"status":500,"operation":"mutation"},"expected":{"kind":"unknown","retryable":false,"outcomeUnknown":true}}
+  ]
+}

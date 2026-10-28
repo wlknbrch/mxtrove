@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import type { UseFormReturn } from "react-hook-form";
 
 import type { SongFormValues } from "@/lib/validators";
 import type { Song } from "@/types/domain";
@@ -16,7 +15,7 @@ export function getSongFormValues(song: Song): SongFormValues {
 }
 
 export function useSongFormHydration(
-  form: UseFormReturn<SongFormValues>,
+  form: { reset: (values: SongFormValues, options?: { keepDirtyValues?: boolean }) => void },
   song: Song | null,
 ) {
   useEffect(() => {

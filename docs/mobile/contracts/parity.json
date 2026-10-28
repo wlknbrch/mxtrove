@@ -1,0 +1,5873 @@
+{
+  "contractVersion": "0.1.1",
+  "routes": [
+    {
+      "path": "/login",
+      "source": "src/routes/router.tsx:204",
+      "gate": "public",
+      "release": "0.2",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/forgot-password",
+      "source": "src/routes/router.tsx:208",
+      "gate": "public",
+      "release": "0.2",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/reset-password",
+      "source": "src/routes/router.tsx:212",
+      "gate": "public",
+      "release": "0.2",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/oauth/callback/:provider",
+      "source": "src/routes/router.tsx:216",
+      "gate": "public",
+      "release": "0.5",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/share/:token",
+      "source": "src/routes/router.tsx:220",
+      "gate": "public",
+      "release": "1.0",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/embed/post/:postId",
+      "source": "src/routes/router.tsx:224",
+      "gate": "public",
+      "release": "1.0",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/about",
+      "source": "src/routes/router.tsx:231",
+      "gate": "public",
+      "release": "0.9",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/privacy",
+      "source": "src/routes/router.tsx:232",
+      "gate": "public",
+      "release": "0.9",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/terms",
+      "source": "src/routes/router.tsx:233",
+      "gate": "public",
+      "release": "0.9",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/post/:postId",
+      "source": "src/routes/router.tsx:234",
+      "gate": "public",
+      "release": "0.3",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/:username",
+      "source": "src/routes/router.tsx:235",
+      "gate": "public",
+      "release": "0.3",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/onboarding",
+      "source": "src/routes/router.tsx:241",
+      "gate": "session-and-terms",
+      "release": "0.2",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/",
+      "source": "src/routes/router.tsx:252",
+      "gate": "session-and-terms",
+      "release": "0.3",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/explore",
+      "source": "src/routes/router.tsx:253",
+      "gate": "session-and-terms",
+      "release": "0.3",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/search",
+      "source": "src/routes/router.tsx:254",
+      "gate": "session-and-terms",
+      "release": "0.3",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/library",
+      "source": "src/routes/router.tsx:255",
+      "gate": "session-and-terms",
+      "release": "0.5",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/library/songs",
+      "source": "src/routes/router.tsx:256",
+      "gate": "session-and-terms",
+      "release": "0.5",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/library/import",
+      "source": "src/routes/router.tsx:257",
+      "gate": "session-and-terms",
+      "release": "0.5",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/library/import/:batchId",
+      "source": "src/routes/router.tsx:258",
+      "gate": "session-and-terms",
+      "release": "0.5",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/library/songs/:songId",
+      "source": "src/routes/router.tsx:259",
+      "gate": "session-and-terms",
+      "release": "0.5",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/projects",
+      "source": "src/routes/router.tsx:260",
+      "gate": "session-and-terms",
+      "release": "0.7",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/projects/new",
+      "source": "src/routes/router.tsx:261",
+      "gate": "session-and-terms",
+      "release": "0.7",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/projects/:projectId",
+      "source": "src/routes/router.tsx:262",
+      "gate": "session-and-terms",
+      "release": "0.7",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/projects/:projectId/tracks",
+      "source": "src/routes/router.tsx:263",
+      "gate": "session-and-terms",
+      "release": "0.7",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/projects/:projectId/activity",
+      "source": "src/routes/router.tsx:264",
+      "gate": "session-and-terms",
+      "release": "0.7",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/projects/:projectId/members",
+      "source": "src/routes/router.tsx:265",
+      "gate": "session-and-terms",
+      "release": "0.7",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/projects/:projectId/settings",
+      "source": "src/routes/router.tsx:266",
+      "gate": "session-and-terms",
+      "release": "0.7",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/projects/:projectId/review",
+      "source": "src/routes/router.tsx:267",
+      "gate": "session-and-terms",
+      "release": "0.7",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/invites",
+      "source": "src/routes/router.tsx:268",
+      "gate": "session-and-terms",
+      "release": "0.7",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/invites/:token",
+      "source": "src/routes/router.tsx:269",
+      "gate": "session-and-terms",
+      "release": "1.0",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/create",
+      "source": "src/routes/router.tsx:270",
+      "gate": "session-and-terms",
+      "release": "0.6",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/create/single",
+      "source": "src/routes/router.tsx:271",
+      "gate": "session-and-terms",
+      "release": "0.6",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/create/ep",
+      "source": "src/routes/router.tsx:272",
+      "gate": "session-and-terms",
+      "release": "0.6",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/create/album",
+      "source": "src/routes/router.tsx:273",
+      "gate": "session-and-terms",
+      "release": "0.6",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/post/:postId/edit",
+      "source": "src/routes/router.tsx:274",
+      "gate": "session-and-terms",
+      "release": "0.6",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/messages",
+      "source": "src/routes/router.tsx:275",
+      "gate": "session-and-terms",
+      "release": "0.8",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/messages/:conversationId",
+      "source": "src/routes/router.tsx:276",
+      "gate": "session-and-terms",
+      "release": "0.8",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/notifications",
+      "source": "src/routes/router.tsx:277",
+      "gate": "session-and-terms",
+      "release": "0.8",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/admin",
+      "source": "src/routes/router.tsx:278",
+      "gate": "session-and-terms",
+      "release": "0.9",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/admin/reports",
+      "source": "src/routes/router.tsx:279",
+      "gate": "session-and-terms",
+      "release": "0.9",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/admin/reports/:reportId",
+      "source": "src/routes/router.tsx:280",
+      "gate": "session-and-terms",
+      "release": "0.9",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/settings",
+      "source": "src/routes/router.tsx:281",
+      "gate": "session-and-terms",
+      "release": "0.9",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/settings/profile",
+      "source": "src/routes/router.tsx:282",
+      "gate": "session-and-terms",
+      "release": "0.9",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/settings/storage",
+      "source": "src/routes/router.tsx:283",
+      "gate": "session-and-terms",
+      "release": "0.9",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/settings/appearance",
+      "source": "src/routes/router.tsx:284",
+      "gate": "session-and-terms",
+      "release": "0.9",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/settings/privacy",
+      "source": "src/routes/router.tsx:285",
+      "gate": "session-and-terms",
+      "release": "0.9",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/settings/account",
+      "source": "src/routes/router.tsx:286",
+      "gate": "session-and-terms",
+      "release": "0.9",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/settings/blocked",
+      "source": "src/routes/router.tsx:287",
+      "gate": "session-and-terms",
+      "release": "0.9",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/settings/account/export",
+      "source": "src/routes/router.tsx:288",
+      "gate": "session-and-terms",
+      "release": "0.9",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/settings/notifications",
+      "source": "src/routes/router.tsx:289",
+      "gate": "session-and-terms",
+      "release": "0.9",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/:username/followers",
+      "source": "src/routes/router.tsx:293",
+      "gate": "session-and-terms",
+      "release": "0.4",
+      "status": "audited-native-not-implemented"
+    },
+    {
+      "path": "/:username/following",
+      "source": "src/routes/router.tsx:297",
+      "gate": "session-and-terms",
+      "release": "0.4",
+      "status": "audited-native-not-implemented"
+    }
+  ],
+  "apis": [
+    {
+      "name": "getCurrentAdminRole",
+      "file": "src/features/admin/api.ts",
+      "line": 169,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "app_admin_roles"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "app_admin_roles",
+            "name": "\"admin roles self visible\"",
+            "source": "supabase/migrations/20260723125000_mxshare_v2_release_pages_moderation.sql:498"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getAdminDashboard",
+      "file": "src/features/admin/api.ts",
+      "line": 185,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "get_admin_dashboard_v1"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "get_admin_dashboard_v1(integer)",
+            "source": "supabase/migrations/20260811120000_mxtrove_admin_public_dashboard.sql:3",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "removePublicContent",
+      "file": "src/features/admin/api.ts",
+      "line": 194,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "remove_public_content_for_moderation"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "remove_public_content_for_moderation(text,uuid,text)",
+            "source": "supabase/migrations/20260812120000_mxtrove_admin_content_removal.sql:132",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "listAdminReports",
+      "file": "src/features/admin/api.ts",
+      "line": 209,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "reports"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "reports",
+            "name": "\"reports admins update\"",
+            "source": "supabase/migrations/20260723125000_mxshare_v2_release_pages_moderation.sql:514"
+          },
+          {
+            "table": "reports",
+            "name": "\"reports reporter create\"",
+            "source": "supabase/migrations/20260806120000_mxtrove_app_feedback.sql:23"
+          },
+          {
+            "table": "reports",
+            "name": "\"reports reporter or admins select\"",
+            "source": "supabase/migrations/20260723125000_mxshare_v2_release_pages_moderation.sql:507"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getAdminReport",
+      "file": "src/features/admin/api.ts",
+      "line": 225,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "get_admin_report_target_profile_id"
+      ],
+      "tableNames": [
+        "reports",
+        "report_admin_notes"
+      ],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "get_admin_report_target_profile_id(uuid)",
+            "source": "supabase/migrations/20260812130000_mxtrove_prevent_admin_self_moderation.sql:4",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": [
+          {
+            "table": "report_admin_notes",
+            "name": "\"report admin notes admins only\"",
+            "source": "supabase/migrations/20260723125000_mxshare_v2_release_pages_moderation.sql:502"
+          },
+          {
+            "table": "reports",
+            "name": "\"reports admins update\"",
+            "source": "supabase/migrations/20260723125000_mxshare_v2_release_pages_moderation.sql:514"
+          },
+          {
+            "table": "reports",
+            "name": "\"reports reporter create\"",
+            "source": "supabase/migrations/20260806120000_mxtrove_app_feedback.sql:23"
+          },
+          {
+            "table": "reports",
+            "name": "\"reports reporter or admins select\"",
+            "source": "supabase/migrations/20260723125000_mxshare_v2_release_pages_moderation.sql:507"
+          }
+        ]
+      }
+    },
+    {
+      "name": "moderateReport",
+      "file": "src/features/admin/api.ts",
+      "line": 250,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "moderate_report_v2"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "moderate_report_v2(uuid,text,text,boolean,integer)",
+            "source": "supabase/migrations/20260812120000_mxtrove_admin_content_removal.sql:286",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "getAppearanceSettings",
+      "file": "src/features/appearance/api.ts",
+      "line": 22,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "profile_appearance_settings"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "profile_appearance_settings",
+            "name": "\"appearance settings owner select\"",
+            "source": "supabase/migrations/20260723124000_mxshare_v2_appearance_cloud_providers.sql:220"
+          }
+        ]
+      }
+    },
+    {
+      "name": "saveAppearanceSettings",
+      "file": "src/features/appearance/api.ts",
+      "line": 45,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "update_appearance_settings"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "update_appearance_settings(text,text,text,boolean,boolean,boolean,boolean,numeric,boolean,boolean,boolean,boolean)",
+            "source": "supabase/migrations/20260723124000_mxshare_v2_appearance_cloud_providers.sql:142",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "getUploadableAttachmentKind",
+      "file": "src/features/attachments/api.ts",
+      "line": 29,
+      "release": "0.8",
+      "transport": "local-reference",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "uploadMessageAttachment",
+      "file": "src/features/attachments/api.ts",
+      "line": 45,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [
+        "B5",
+        "B6"
+      ],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "deleteMessageAttachment",
+      "file": "src/features/attachments/api.ts",
+      "line": 97,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "getMessageAttachmentReadUrl",
+      "file": "src/features/attachments/api.ts",
+      "line": 111,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "createMessageReferenceAttachment",
+      "file": "src/features/attachments/api.ts",
+      "line": 118,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "create_message_reference_attachment"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "create_message_reference_attachment(uuid,text,uuid)",
+            "source": "supabase/migrations/20260723135000_mxshare_v2_message_actions.sql:43",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "getMessageReferenceTarget",
+      "file": "src/features/attachments/api.ts",
+      "line": 133,
+      "release": "0.8",
+      "transport": "local-reference",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "collaboration_projects",
+        "posts",
+        "song_versions",
+        "songs"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects deletable by owner\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1460"
+          },
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects editable by editors\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1455"
+          },
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects visible to accepted members\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1451"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:763"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:754"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts read through v2 visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1070"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:758"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions delete via owner\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:739"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions insert via owner or project contributor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1526"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions owner project member or published\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1513"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions update via owner or project editor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1545"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:693"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:684"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs owner or collaboration member\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1500"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:688"
+          }
+        ]
+      }
+    },
+    {
+      "name": "signInWithPassword",
+      "file": "src/features/auth/api.ts",
+      "line": 12,
+      "release": "0.2",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "signInWithGoogle",
+      "file": "src/features/auth/api.ts",
+      "line": 23,
+      "release": "0.2",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "requestPasswordReset",
+      "file": "src/features/auth/api.ts",
+      "line": 42,
+      "release": "0.2",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "updateRecoveredPassword",
+      "file": "src/features/auth/api.ts",
+      "line": 53,
+      "release": "0.2",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "signUpWithPassword",
+      "file": "src/features/auth/api.ts",
+      "line": 62,
+      "release": "0.2",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "getCloudConnection",
+      "file": "src/features/drive/api.ts",
+      "line": 16,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "cloud_connections"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "cloud_connections",
+            "name": "\"cloud connections delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:659"
+          },
+          {
+            "table": "cloud_connections",
+            "name": "\"cloud connections insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:650"
+          },
+          {
+            "table": "cloud_connections",
+            "name": "\"cloud connections owner only\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:646"
+          },
+          {
+            "table": "cloud_connections",
+            "name": "\"cloud connections update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:654"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getCloudConnections",
+      "file": "src/features/drive/api.ts",
+      "line": 37,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "cloud_connections"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "cloud_connections",
+            "name": "\"cloud connections delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:659"
+          },
+          {
+            "table": "cloud_connections",
+            "name": "\"cloud connections insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:650"
+          },
+          {
+            "table": "cloud_connections",
+            "name": "\"cloud connections owner only\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:646"
+          },
+          {
+            "table": "cloud_connections",
+            "name": "\"cloud connections update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:654"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getProtectedMediaQuota",
+      "file": "src/features/drive/api.ts",
+      "line": 53,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "protected_media_quotas"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "protected_media_quotas",
+            "name": "\"protected quota owner select\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:968"
+          }
+        ]
+      }
+    },
+    {
+      "name": "setDefaultCloudProvider",
+      "file": "src/features/drive/api.ts",
+      "line": 77,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "set_default_cloud_provider"
+      ],
+      "tableNames": [
+        "cloud_connections"
+      ],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "set_default_cloud_provider(uuid)",
+            "source": "supabase/migrations/20260723124000_mxshare_v2_appearance_cloud_providers.sql:111",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": [
+          {
+            "table": "cloud_connections",
+            "name": "\"cloud connections delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:659"
+          },
+          {
+            "table": "cloud_connections",
+            "name": "\"cloud connections insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:650"
+          },
+          {
+            "table": "cloud_connections",
+            "name": "\"cloud connections owner only\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:646"
+          },
+          {
+            "table": "cloud_connections",
+            "name": "\"cloud connections update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:654"
+          }
+        ]
+      }
+    },
+    {
+      "name": "listOwnedAssets",
+      "file": "src/features/drive/api.ts",
+      "line": 99,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "assets"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "assets",
+            "name": "\"assets delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:676"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:667"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets read owner or public\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:663"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:671"
+          }
+        ]
+      }
+    },
+    {
+      "name": "updateAssetProviderReference",
+      "file": "src/features/drive/api.ts",
+      "line": 115,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "assets"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "assets",
+            "name": "\"assets delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:676"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:667"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets read owner or public\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:663"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:671"
+          }
+        ]
+      }
+    },
+    {
+      "name": "rewriteLegacyDropboxAssetPaths",
+      "file": "src/features/drive/api.ts",
+      "line": 144,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "assets"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "assets",
+            "name": "\"assets delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:676"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:667"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets read owner or public\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:663"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:671"
+          }
+        ]
+      }
+    },
+    {
+      "name": "upsertCloudConnection",
+      "file": "src/features/drive/api.ts",
+      "line": 191,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "cloud_connections"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "cloud_connections",
+            "name": "\"cloud connections delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:659"
+          },
+          {
+            "table": "cloud_connections",
+            "name": "\"cloud connections insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:650"
+          },
+          {
+            "table": "cloud_connections",
+            "name": "\"cloud connections owner only\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:646"
+          },
+          {
+            "table": "cloud_connections",
+            "name": "\"cloud connections update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:654"
+          }
+        ]
+      }
+    },
+    {
+      "name": "createAssetRecord",
+      "file": "src/features/drive/api.ts",
+      "line": 215,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "assets"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "assets",
+            "name": "\"assets delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:676"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:667"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets read owner or public\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:663"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:671"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getAssetById",
+      "file": "src/features/drive/api.ts",
+      "line": 312,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "assets"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "assets",
+            "name": "\"assets delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:676"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:667"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets read owner or public\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:663"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:671"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getAssetsByIds",
+      "file": "src/features/drive/api.ts",
+      "line": 332,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "assets"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "assets",
+            "name": "\"assets delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:676"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:667"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets read owner or public\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:663"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:671"
+          }
+        ]
+      }
+    },
+    {
+      "name": "updateAssetPublicLinks",
+      "file": "src/features/drive/api.ts",
+      "line": 357,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "assets"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "assets",
+            "name": "\"assets delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:676"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:667"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets read owner or public\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:663"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:671"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getAssetReferenceSummary",
+      "file": "src/features/drive/api.ts",
+      "line": 392,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "song_versions",
+        "release_tracks",
+        "songs",
+        "posts",
+        "profiles"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "posts",
+            "name": "\"posts delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:763"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:754"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts read through v2 visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1070"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:758"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles delete own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:642"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles insert own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:633"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles readable through privacy\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:782"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles update own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:637"
+          },
+          {
+            "table": "release_tracks",
+            "name": "\"release tracks modify own post\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:808"
+          },
+          {
+            "table": "release_tracks",
+            "name": "\"release tracks read through post visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1080"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions delete via owner\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:739"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions insert via owner or project contributor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1526"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions owner project member or published\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1513"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions update via owner or project editor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1545"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:693"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:684"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs owner or collaboration member\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1500"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:688"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getAssetDeletionBlockers",
+      "file": "src/features/drive/api.ts",
+      "line": 439,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "deleteAssetRecord",
+      "file": "src/features/drive/api.ts",
+      "line": 464,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "assets"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "assets",
+            "name": "\"assets delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:676"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:667"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets read owner or public\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:663"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:671"
+          }
+        ]
+      }
+    },
+    {
+      "name": "listHomeFeedPage",
+      "file": "src/features/feed/api.ts",
+      "line": 66,
+      "release": "0.3",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "list_home_feed_post_ids",
+        "list_trending_public_post_ids"
+      ],
+      "tableNames": [
+        "posts"
+      ],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "list_home_feed_post_ids(integer,integer)",
+            "source": "supabase/migrations/20260710103000_mxshare_v15_social_graph.sql:125",
+            "securityDefiner": true
+          },
+          {
+            "identity": "list_trending_public_post_ids(integer,integer)",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:842",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": [
+          {
+            "table": "posts",
+            "name": "\"posts delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:763"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:754"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts read through v2 visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1070"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:758"
+          }
+        ]
+      }
+    },
+    {
+      "name": "listExploreFeedPage",
+      "file": "src/features/feed/api.ts",
+      "line": 187,
+      "release": "0.3",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "list_trending_public_post_ids"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "list_trending_public_post_ids(integer,integer)",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:842",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "searchExploreCatalog",
+      "file": "src/features/feed/api.ts",
+      "line": 233,
+      "release": "0.3",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "search_public_catalog"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "search_public_catalog(text,integer,integer)",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:747",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "getProfileMetrics",
+      "file": "src/features/follows/api.ts",
+      "line": 80,
+      "release": "0.4",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "get_profile_metrics_v2"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "get_profile_metrics_v2(uuid)",
+            "source": "supabase/migrations/20260723134000_mxshare_v2_profile_privacy_enforcement.sql:265",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "getFollowState",
+      "file": "src/features/follows/api.ts",
+      "line": 99,
+      "release": "0.4",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "get_follow_state_v2"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "get_follow_state_v2(uuid)",
+            "source": "supabase/migrations/20260723137000_mxshare_v2_social_privacy_hardening.sql:3",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "followProfile",
+      "file": "src/features/follows/api.ts",
+      "line": 140,
+      "release": "0.4",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "follow_profile"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "follow_profile(uuid)",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:612",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "unfollowProfile",
+      "file": "src/features/follows/api.ts",
+      "line": 158,
+      "release": "0.4",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "unfollow_profile"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "unfollow_profile(uuid)",
+            "source": "supabase/migrations/20260710103000_mxshare_v15_social_graph.sql:102",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "listProfileConnections",
+      "file": "src/features/follows/api.ts",
+      "line": 176,
+      "release": "0.4",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "list_profile_connections"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "list_profile_connections(uuid,text,text,integer,integer)",
+            "source": "supabase/migrations/20260728120000_mxtrove_profile_connections_fix.sql:4",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "listCreatorDiscovery",
+      "file": "src/features/follows/api.ts",
+      "line": 284,
+      "release": "0.4",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "list_public_creators"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "list_public_creators(text,integer,integer)",
+            "source": "supabase/migrations/20260723134000_mxshare_v2_profile_privacy_enforcement.sql:422",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "getTermsAcceptance",
+      "file": "src/features/legal/api.ts",
+      "line": 9,
+      "release": "0.2",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "terms_acceptances"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "terms_acceptances",
+            "name": "\"terms acceptance readable by account owner\"",
+            "source": "supabase/migrations/20260805120000_mxtrove_terms_acceptance.sql:18"
+          }
+        ]
+      }
+    },
+    {
+      "name": "acceptTermsOfService",
+      "file": "src/features/legal/api.ts",
+      "line": 29,
+      "release": "0.2",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "accept_terms_of_service"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "accept_terms_of_service(text)",
+            "source": "supabase/migrations/20260805120000_mxtrove_terms_acceptance.sql:23",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "validateAppFeedback",
+      "file": "src/features/legal/feedback-api.ts",
+      "line": 21,
+      "release": "0.2",
+      "transport": "local-reference",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "submitAppFeedback",
+      "file": "src/features/legal/feedback-api.ts",
+      "line": 51,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "submit_app_feedback"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "submit_app_feedback(text,text,text,text,text,jsonb)",
+            "source": "supabase/migrations/20260806120000_mxtrove_app_feedback.sql:30",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "getLibraryDashboard",
+      "file": "src/features/library/api.ts",
+      "line": 16,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "songs",
+        "song_versions",
+        "assets"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "assets",
+            "name": "\"assets delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:676"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:667"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets read owner or public\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:663"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:671"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions delete via owner\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:739"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions insert via owner or project contributor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1526"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions owner project member or published\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1513"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions update via owner or project editor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1545"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:693"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:684"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs owner or collaboration member\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1500"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:688"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getSongDetail",
+      "file": "src/features/library/api.ts",
+      "line": 52,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "songs",
+        "song_versions",
+        "assets"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "assets",
+            "name": "\"assets delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:676"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:667"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets read owner or public\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:663"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:671"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions delete via owner\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:739"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions insert via owner or project contributor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1526"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions owner project member or published\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1513"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions update via owner or project editor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1545"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:693"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:684"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs owner or collaboration member\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1500"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:688"
+          }
+        ]
+      }
+    },
+    {
+      "name": "updateSong",
+      "file": "src/features/library/api.ts",
+      "line": 89,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "songs"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "songs",
+            "name": "\"songs delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:693"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:684"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs owner or collaboration member\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1500"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:688"
+          }
+        ]
+      }
+    },
+    {
+      "name": "createSong",
+      "file": "src/features/library/api.ts",
+      "line": 127,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "songs"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "songs",
+            "name": "\"songs delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:693"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:684"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs owner or collaboration member\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1500"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:688"
+          }
+        ]
+      }
+    },
+    {
+      "name": "createSongVersion",
+      "file": "src/features/library/api.ts",
+      "line": 156,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "song_versions"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "song_versions",
+            "name": "\"song versions delete via owner\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:739"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions insert via owner or project contributor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1526"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions owner project member or published\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1513"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions update via owner or project editor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1545"
+          }
+        ]
+      }
+    },
+    {
+      "name": "deleteSong",
+      "file": "src/features/library/api.ts",
+      "line": 225,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "single_posts",
+        "release_tracks",
+        "songs"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "release_tracks",
+            "name": "\"release tracks modify own post\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:808"
+          },
+          {
+            "table": "release_tracks",
+            "name": "\"release tracks read through post visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1080"
+          },
+          {
+            "table": "single_posts",
+            "name": "\"single posts modify own post\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:778"
+          },
+          {
+            "table": "single_posts",
+            "name": "\"single posts read through post visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1075"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:693"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:684"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs owner or collaboration member\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1500"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:688"
+          }
+        ]
+      }
+    },
+    {
+      "name": "deleteSongVersion",
+      "file": "src/features/library/api.ts",
+      "line": 269,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "single_posts",
+        "song_versions"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "single_posts",
+            "name": "\"single posts modify own post\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:778"
+          },
+          {
+            "table": "single_posts",
+            "name": "\"single posts read through post visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1075"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions delete via owner\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:739"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions insert via owner or project contributor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1526"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions owner project member or published\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1513"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions update via owner or project editor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1545"
+          }
+        ]
+      }
+    },
+    {
+      "name": "updateSongVersionPreview",
+      "file": "src/features/library/api.ts",
+      "line": 300,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "song_versions",
+        "release_tracks"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "release_tracks",
+            "name": "\"release tracks modify own post\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:808"
+          },
+          {
+            "table": "release_tracks",
+            "name": "\"release tracks read through post visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1080"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions delete via owner\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:739"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions insert via owner or project contributor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1526"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions owner project member or published\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1513"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions update via owner or project editor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1545"
+          }
+        ]
+      }
+    },
+    {
+      "name": "analyzeSongAudio",
+      "file": "src/features/media-processing/api.ts",
+      "line": 75,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "listMediaProcessingJobs",
+      "file": "src/features/media-processing/api.ts",
+      "line": 133,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "media_processing_jobs"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "media_processing_jobs",
+            "name": "\"media jobs owner insert\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:891"
+          },
+          {
+            "table": "media_processing_jobs",
+            "name": "\"media jobs owner select\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:887"
+          }
+        ]
+      }
+    },
+    {
+      "name": "createMediaProcessingJob",
+      "file": "src/features/media-processing/api.ts",
+      "line": 157,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [
+        "B5"
+      ],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "request_media_processing_job"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "request_media_processing_job(uuid,uuid,uuid)",
+            "source": "supabase/migrations/20260803120000_mxtrove_comment_hearts_song_metadata.sql:119",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "uploadMediaProcessingInput",
+      "file": "src/features/media-processing/api.ts",
+      "line": 244,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [
+        "B6"
+      ],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "getMediaProcessingJob",
+      "file": "src/features/media-processing/api.ts",
+      "line": 301,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "downloadMediaProcessingPreview",
+      "file": "src/features/media-processing/api.ts",
+      "line": 310,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "acknowledgeMediaProcessingJob",
+      "file": "src/features/media-processing/api.ts",
+      "line": 344,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "cancelMediaProcessingJob",
+      "file": "src/features/media-processing/api.ts",
+      "line": 355,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "cancel_media_processing_job"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "cancel_media_processing_job(uuid)",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:272",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "finalizeMediaProcessingJob",
+      "file": "src/features/media-processing/api.ts",
+      "line": 375,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "finalize_media_processing_job"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "finalize_media_processing_job(uuid,uuid)",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:293",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "sendPushTestNotification",
+      "file": "src/features/media-processing/api.ts",
+      "line": 395,
+      "release": "0.5",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "createProtectedMediaReadUrl",
+      "file": "src/features/media-processing/api.ts",
+      "line": 406,
+      "release": "0.3",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [
+        "B2"
+      ],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "listConversations",
+      "file": "src/features/messages/api.ts",
+      "line": 43,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "conversation_members",
+        "conversations",
+        "messages",
+        "collaboration_projects",
+        "profiles"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects deletable by owner\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1460"
+          },
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects editable by editors\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1455"
+          },
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects visible to accepted members\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1451"
+          },
+          {
+            "table": "conversation_members",
+            "name": "\"conversation members readable by members\"",
+            "source": "supabase/migrations/20260709001500_fix_message_rls_recursion.sql:30"
+          },
+          {
+            "table": "conversation_members",
+            "name": "\"conversation members update own read state\"",
+            "source": "supabase/migrations/20260710103000_mxshare_v15_social_graph.sql:378"
+          },
+          {
+            "table": "conversations",
+            "name": "\"conversations member only\"",
+            "source": "supabase/migrations/20260709001500_fix_message_rls_recursion.sql:25"
+          },
+          {
+            "table": "messages",
+            "name": "\"messages insert through privacy\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:787"
+          },
+          {
+            "table": "messages",
+            "name": "\"messages member only\"",
+            "source": "supabase/migrations/20260709001500_fix_message_rls_recursion.sql:35"
+          },
+          {
+            "table": "messages",
+            "name": "\"messages update own\"",
+            "source": "supabase/migrations/20260709001500_fix_message_rls_recursion.sql:48"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles delete own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:642"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles insert own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:633"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles readable through privacy\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:782"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles update own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:637"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getConversation",
+      "file": "src/features/messages/api.ts",
+      "line": 137,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "conversations",
+        "conversation_members",
+        "messages",
+        "message_attachments",
+        "protected_media_assets",
+        "collaboration_projects",
+        "profiles"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects deletable by owner\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1460"
+          },
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects editable by editors\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1455"
+          },
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects visible to accepted members\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1451"
+          },
+          {
+            "table": "conversation_members",
+            "name": "\"conversation members readable by members\"",
+            "source": "supabase/migrations/20260709001500_fix_message_rls_recursion.sql:30"
+          },
+          {
+            "table": "conversation_members",
+            "name": "\"conversation members update own read state\"",
+            "source": "supabase/migrations/20260710103000_mxshare_v15_social_graph.sql:378"
+          },
+          {
+            "table": "conversations",
+            "name": "\"conversations member only\"",
+            "source": "supabase/migrations/20260709001500_fix_message_rls_recursion.sql:25"
+          },
+          {
+            "table": "message_attachments",
+            "name": "\"message attachments conversation members select\"",
+            "source": "supabase/migrations/20260723122000_mxshare_v2_attachments_protected_media.sql:286"
+          },
+          {
+            "table": "message_attachments",
+            "name": "\"message attachments inserted by trusted functions\"",
+            "source": "supabase/migrations/20260723135000_mxshare_v2_message_actions.sql:192"
+          },
+          {
+            "table": "message_attachments",
+            "name": "\"message attachments owner update\"",
+            "source": "supabase/migrations/20260723122000_mxshare_v2_attachments_protected_media.sql:303"
+          },
+          {
+            "table": "messages",
+            "name": "\"messages insert through privacy\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:787"
+          },
+          {
+            "table": "messages",
+            "name": "\"messages member only\"",
+            "source": "supabase/migrations/20260709001500_fix_message_rls_recursion.sql:35"
+          },
+          {
+            "table": "messages",
+            "name": "\"messages update own\"",
+            "source": "supabase/migrations/20260709001500_fix_message_rls_recursion.sql:48"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles delete own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:642"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles insert own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:633"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles readable through privacy\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:782"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles update own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:637"
+          },
+          {
+            "table": "protected_media_assets",
+            "name": "\"protected media owner metadata select\"",
+            "source": "supabase/migrations/20260729130000_mxtrove_protected_message_attachment_access.sql:79"
+          }
+        ]
+      }
+    },
+    {
+      "name": "createDirectConversation",
+      "file": "src/features/messages/api.ts",
+      "line": 211,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "create_direct_conversation"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "create_direct_conversation(uuid)",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:654",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "getUnreadConversationSummary",
+      "file": "src/features/messages/api.ts",
+      "line": 227,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "conversation_members",
+        "messages"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "conversation_members",
+            "name": "\"conversation members readable by members\"",
+            "source": "supabase/migrations/20260709001500_fix_message_rls_recursion.sql:30"
+          },
+          {
+            "table": "conversation_members",
+            "name": "\"conversation members update own read state\"",
+            "source": "supabase/migrations/20260710103000_mxshare_v15_social_graph.sql:378"
+          },
+          {
+            "table": "messages",
+            "name": "\"messages insert through privacy\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:787"
+          },
+          {
+            "table": "messages",
+            "name": "\"messages member only\"",
+            "source": "supabase/migrations/20260709001500_fix_message_rls_recursion.sql:35"
+          },
+          {
+            "table": "messages",
+            "name": "\"messages update own\"",
+            "source": "supabase/migrations/20260709001500_fix_message_rls_recursion.sql:48"
+          }
+        ]
+      }
+    },
+    {
+      "name": "sendMessage",
+      "file": "src/features/messages/api.ts",
+      "line": 287,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [
+        "B5"
+      ],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "messages"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "messages",
+            "name": "\"messages insert through privacy\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:787"
+          },
+          {
+            "table": "messages",
+            "name": "\"messages member only\"",
+            "source": "supabase/migrations/20260709001500_fix_message_rls_recursion.sql:35"
+          },
+          {
+            "table": "messages",
+            "name": "\"messages update own\"",
+            "source": "supabase/migrations/20260709001500_fix_message_rls_recursion.sql:48"
+          }
+        ]
+      }
+    },
+    {
+      "name": "markConversationRead",
+      "file": "src/features/messages/api.ts",
+      "line": 319,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "mark_conversation_read"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "mark_conversation_read(uuid)",
+            "source": "supabase/migrations/20260710103000_mxshare_v15_social_graph.sql:331",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "deleteOwnMessage",
+      "file": "src/features/messages/api.ts",
+      "line": 333,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "delete_own_message"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "delete_own_message(uuid)",
+            "source": "supabase/migrations/20260723135000_mxshare_v2_message_actions.sql:155",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "listNotifications",
+      "file": "src/features/notifications/api.ts",
+      "line": 19,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "notifications"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "notifications",
+            "name": "\"notifications recipient only\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:953"
+          },
+          {
+            "table": "notifications",
+            "name": "\"notifications recipient update\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:957"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getUnreadNotificationCount",
+      "file": "src/features/notifications/api.ts",
+      "line": 70,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "notifications"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "notifications",
+            "name": "\"notifications recipient only\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:953"
+          },
+          {
+            "table": "notifications",
+            "name": "\"notifications recipient update\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:957"
+          }
+        ]
+      }
+    },
+    {
+      "name": "markNotificationRead",
+      "file": "src/features/notifications/api.ts",
+      "line": 92,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "mark_notification_read"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "mark_notification_read(uuid)",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:583",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "markAllNotificationsRead",
+      "file": "src/features/notifications/api.ts",
+      "line": 108,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "mark_all_notifications_read"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "mark_all_notifications_read()",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:597",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "getNotificationPreferences",
+      "file": "src/features/notifications/api.ts",
+      "line": 122,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "notification_preferences"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "notification_preferences",
+            "name": "\"notification preferences owner insert\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:916"
+          },
+          {
+            "table": "notification_preferences",
+            "name": "\"notification preferences owner select\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:912"
+          },
+          {
+            "table": "notification_preferences",
+            "name": "\"notification preferences owner update\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:920"
+          }
+        ]
+      }
+    },
+    {
+      "name": "updateNotificationPreferences",
+      "file": "src/features/notifications/api.ts",
+      "line": 159,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "notification_preferences"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "notification_preferences",
+            "name": "\"notification preferences owner insert\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:916"
+          },
+          {
+            "table": "notification_preferences",
+            "name": "\"notification preferences owner select\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:912"
+          },
+          {
+            "table": "notification_preferences",
+            "name": "\"notification preferences owner update\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:920"
+          }
+        ]
+      }
+    },
+    {
+      "name": "listPushSubscriptions",
+      "file": "src/features/notifications/api.ts",
+      "line": 200,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "push_subscriptions"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "push_subscriptions",
+            "name": "\"push subscriptions owner delete\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:908"
+          },
+          {
+            "table": "push_subscriptions",
+            "name": "\"push subscriptions owner insert\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:899"
+          },
+          {
+            "table": "push_subscriptions",
+            "name": "\"push subscriptions owner select\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:895"
+          },
+          {
+            "table": "push_subscriptions",
+            "name": "\"push subscriptions owner update\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:903"
+          }
+        ]
+      }
+    },
+    {
+      "name": "savePushSubscription",
+      "file": "src/features/notifications/api.ts",
+      "line": 220,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "push_subscriptions"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "push_subscriptions",
+            "name": "\"push subscriptions owner delete\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:908"
+          },
+          {
+            "table": "push_subscriptions",
+            "name": "\"push subscriptions owner insert\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:899"
+          },
+          {
+            "table": "push_subscriptions",
+            "name": "\"push subscriptions owner select\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:895"
+          },
+          {
+            "table": "push_subscriptions",
+            "name": "\"push subscriptions owner update\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:903"
+          }
+        ]
+      }
+    },
+    {
+      "name": "setPushSubscriptionActive",
+      "file": "src/features/notifications/api.ts",
+      "line": 272,
+      "release": "0.8",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "push_subscriptions"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "push_subscriptions",
+            "name": "\"push subscriptions owner delete\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:908"
+          },
+          {
+            "table": "push_subscriptions",
+            "name": "\"push subscriptions owner insert\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:899"
+          },
+          {
+            "table": "push_subscriptions",
+            "name": "\"push subscriptions owner select\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:895"
+          },
+          {
+            "table": "push_subscriptions",
+            "name": "\"push subscriptions owner update\"",
+            "source": "supabase/migrations/20260710183000_mxshare_v15_media_push_release.sql:903"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getResolvedPostCardsByIds",
+      "file": "src/features/posts/api.ts",
+      "line": 860,
+      "release": "0.3",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "get_resolved_post_cards"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "get_resolved_post_cards(uuid[])",
+            "source": "supabase/migrations/20260817120000_mxtrove_egress_optimized_post_cards.sql:58",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "listResolvedPosts",
+      "file": "src/features/posts/api.ts",
+      "line": 917,
+      "release": "0.3",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "posts"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "posts",
+            "name": "\"posts delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:763"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:754"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts read through v2 visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1070"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:758"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getResolvedPostById",
+      "file": "src/features/posts/api.ts",
+      "line": 988,
+      "release": "0.3",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "get_comment_engagement"
+      ],
+      "tableNames": [
+        "comments",
+        "post_credits",
+        "post_external_links"
+      ],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "get_comment_engagement(uuid)",
+            "source": "supabase/migrations/20260803120000_mxtrove_comment_hearts_song_metadata.sql:89",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": [
+          {
+            "table": "comments",
+            "name": "\"comments delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:891"
+          },
+          {
+            "table": "comments",
+            "name": "\"comments insert on visible unblocked posts\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:830"
+          },
+          {
+            "table": "comments",
+            "name": "\"comments readable through post visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1085"
+          },
+          {
+            "table": "comments",
+            "name": "\"comments update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:886"
+          },
+          {
+            "table": "post_credits",
+            "name": "\"post credits visible through release\"",
+            "source": "supabase/migrations/20260723125000_mxshare_v2_release_pages_moderation.sql:486"
+          },
+          {
+            "table": "post_external_links",
+            "name": "\"post external links visible through release\"",
+            "source": "supabase/migrations/20260723125000_mxshare_v2_release_pages_moderation.sql:490"
+          }
+        ]
+      }
+    },
+    {
+      "name": "findSinglePostBySongId",
+      "file": "src/features/posts/api.ts",
+      "line": 1047,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "single_posts",
+        "posts"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "posts",
+            "name": "\"posts delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:763"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:754"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts read through v2 visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1070"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:758"
+          },
+          {
+            "table": "single_posts",
+            "name": "\"single posts modify own post\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:778"
+          },
+          {
+            "table": "single_posts",
+            "name": "\"single posts read through post visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1075"
+          }
+        ]
+      }
+    },
+    {
+      "name": "publishSingleVersion",
+      "file": "src/features/posts/api.ts",
+      "line": 1082,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "publish_single_version"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "publish_single_version(uuid)",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:435",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "createSinglePost",
+      "file": "src/features/posts/api.ts",
+      "line": 1100,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "create_single_post"
+      ],
+      "tableNames": [
+        "single_posts"
+      ],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "create_single_post(uuid,uuid,text,text,uuid,text)",
+            "source": "supabase/migrations/20260725120000_mxshare_reliability_fixes.sql:3",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": [
+          {
+            "table": "single_posts",
+            "name": "\"single posts modify own post\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:778"
+          },
+          {
+            "table": "single_posts",
+            "name": "\"single posts read through post visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1075"
+          }
+        ]
+      }
+    },
+    {
+      "name": "createReleasePost",
+      "file": "src/features/posts/api.ts",
+      "line": 1137,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "create_release_post"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "create_release_post(text,text,text,text,uuid,text,jsonb)",
+            "source": "supabase/migrations/20260723143000_mxshare_v2_release_create_rpc.sql:1",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "updateSinglePostForPublish",
+      "file": "src/features/posts/api.ts",
+      "line": 1177,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "posts",
+        "single_posts"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "posts",
+            "name": "\"posts delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:763"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:754"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts read through v2 visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1070"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:758"
+          },
+          {
+            "table": "single_posts",
+            "name": "\"single posts modify own post\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:778"
+          },
+          {
+            "table": "single_posts",
+            "name": "\"single posts read through post visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1075"
+          }
+        ]
+      }
+    },
+    {
+      "name": "updateSingleLyricsVisibility",
+      "file": "src/features/posts/api.ts",
+      "line": 1217,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "single_posts"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "single_posts",
+            "name": "\"single posts modify own post\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:778"
+          },
+          {
+            "table": "single_posts",
+            "name": "\"single posts read through post visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1075"
+          }
+        ]
+      }
+    },
+    {
+      "name": "updateReleasePost",
+      "file": "src/features/posts/api.ts",
+      "line": 1242,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "update_release_post"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "update_release_post(uuid,text,text,text,uuid,jsonb)",
+            "source": "supabase/migrations/20260803130000_mxtrove_release_lyrics_visibility.sql:9",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "updatePostVisibility",
+      "file": "src/features/posts/api.ts",
+      "line": 1278,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [
+        "B2",
+        "B7"
+      ],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "posts"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "posts",
+            "name": "\"posts delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:763"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:754"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts read through v2 visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1070"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:758"
+          }
+        ]
+      }
+    },
+    {
+      "name": "makeVersionsPubliclyReadable",
+      "file": "src/features/posts/api.ts",
+      "line": 1304,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "song_versions"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "song_versions",
+            "name": "\"song versions delete via owner\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:739"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions insert via owner or project contributor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1526"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions owner project member or published\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1513"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions update via owner or project editor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1545"
+          }
+        ]
+      }
+    },
+    {
+      "name": "updateSinglePost",
+      "file": "src/features/posts/api.ts",
+      "line": 1327,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "update_release_post"
+      ],
+      "tableNames": [
+        "posts",
+        "single_posts",
+        "song_versions"
+      ],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "update_release_post(uuid,text,text,text,uuid,jsonb)",
+            "source": "supabase/migrations/20260803130000_mxtrove_release_lyrics_visibility.sql:9",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": [
+          {
+            "table": "posts",
+            "name": "\"posts delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:763"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:754"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts read through v2 visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1070"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:758"
+          },
+          {
+            "table": "single_posts",
+            "name": "\"single posts modify own post\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:778"
+          },
+          {
+            "table": "single_posts",
+            "name": "\"single posts read through post visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1075"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions delete via owner\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:739"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions insert via owner or project contributor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1526"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions owner project member or published\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1513"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions update via owner or project editor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1545"
+          }
+        ]
+      }
+    },
+    {
+      "name": "addCommentToPost",
+      "file": "src/features/posts/api.ts",
+      "line": 1412,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "comments"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "comments",
+            "name": "\"comments delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:891"
+          },
+          {
+            "table": "comments",
+            "name": "\"comments insert on visible unblocked posts\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:830"
+          },
+          {
+            "table": "comments",
+            "name": "\"comments readable through post visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1085"
+          },
+          {
+            "table": "comments",
+            "name": "\"comments update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:886"
+          }
+        ]
+      }
+    },
+    {
+      "name": "updateCommentOnPost",
+      "file": "src/features/posts/api.ts",
+      "line": 1435,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "comments"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "comments",
+            "name": "\"comments delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:891"
+          },
+          {
+            "table": "comments",
+            "name": "\"comments insert on visible unblocked posts\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:830"
+          },
+          {
+            "table": "comments",
+            "name": "\"comments readable through post visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1085"
+          },
+          {
+            "table": "comments",
+            "name": "\"comments update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:886"
+          }
+        ]
+      }
+    },
+    {
+      "name": "deleteCommentOnPost",
+      "file": "src/features/posts/api.ts",
+      "line": 1460,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "comments"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "comments",
+            "name": "\"comments delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:891"
+          },
+          {
+            "table": "comments",
+            "name": "\"comments insert on visible unblocked posts\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:830"
+          },
+          {
+            "table": "comments",
+            "name": "\"comments readable through post visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1085"
+          },
+          {
+            "table": "comments",
+            "name": "\"comments update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:886"
+          }
+        ]
+      }
+    },
+    {
+      "name": "toggleCommentHeart",
+      "file": "src/features/posts/api.ts",
+      "line": 1484,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "comment_hearts"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "comment_hearts",
+            "name": "\"comment hearts delete own\"",
+            "source": "supabase/migrations/20260803120000_mxtrove_comment_hearts_song_metadata.sql:85"
+          },
+          {
+            "table": "comment_hearts",
+            "name": "\"comment hearts insert own on visible comments\"",
+            "source": "supabase/migrations/20260803120000_mxtrove_comment_hearts_song_metadata.sql:69"
+          },
+          {
+            "table": "comment_hearts",
+            "name": "\"comment hearts readable through comment visibility\"",
+            "source": "supabase/migrations/20260803120000_mxtrove_comment_hearts_song_metadata.sql:57"
+          }
+        ]
+      }
+    },
+    {
+      "name": "togglePostHeart",
+      "file": "src/features/posts/api.ts",
+      "line": 1516,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "posts",
+        "post_hearts"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "post_hearts",
+            "name": "\"post hearts readable with release access\"",
+            "source": "supabase/migrations/20260723137000_mxshare_v2_social_privacy_hardening.sql:39"
+          },
+          {
+            "table": "post_hearts",
+            "name": "\"post hearts self-delete\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:847"
+          },
+          {
+            "table": "post_hearts",
+            "name": "\"post hearts self-owned unblocked\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:804"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:763"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:754"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts read through v2 visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1070"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:758"
+          }
+        ]
+      }
+    },
+    {
+      "name": "toggleVersionHeart",
+      "file": "src/features/posts/api.ts",
+      "line": 1605,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "toggle_version_heart"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "toggle_version_heart(uuid,boolean)",
+            "source": "supabase/migrations/20260725120000_mxshare_reliability_fixes.sql:84",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "reportPost",
+      "file": "src/features/posts/api.ts",
+      "line": 1642,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "reports"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "reports",
+            "name": "\"reports admins update\"",
+            "source": "supabase/migrations/20260723125000_mxshare_v2_release_pages_moderation.sql:514"
+          },
+          {
+            "table": "reports",
+            "name": "\"reports reporter create\"",
+            "source": "supabase/migrations/20260806120000_mxtrove_app_feedback.sql:23"
+          },
+          {
+            "table": "reports",
+            "name": "\"reports reporter or admins select\"",
+            "source": "supabase/migrations/20260723125000_mxshare_v2_release_pages_moderation.sql:507"
+          }
+        ]
+      }
+    },
+    {
+      "name": "deletePost",
+      "file": "src/features/posts/api.ts",
+      "line": 1668,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "posts"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "posts",
+            "name": "\"posts delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:763"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:754"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts read through v2 visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1070"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:758"
+          }
+        ]
+      }
+    },
+    {
+      "name": "listPostShareLinks",
+      "file": "src/features/posts/api.ts",
+      "line": 1682,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "share_links"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "share_links",
+            "name": "\"share links owner select\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1054"
+          }
+        ]
+      }
+    },
+    {
+      "name": "createPostShareLink",
+      "file": "src/features/posts/api.ts",
+      "line": 1694,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "create_share_link"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "create_share_link(text,uuid,text,timestamptz,integer)",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:800",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "revokePostShareLink",
+      "file": "src/features/posts/api.ts",
+      "line": 1714,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "revoke_share_link"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "revoke_share_link(uuid)",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:877",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "replaceReleaseCredits",
+      "file": "src/features/posts/api.ts",
+      "line": 1722,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "replace_release_credits"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "replace_release_credits(uuid,jsonb)",
+            "source": "supabase/migrations/20260723125000_mxshare_v2_release_pages_moderation.sql:227",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "replaceReleaseExternalLinks",
+      "file": "src/features/posts/api.ts",
+      "line": 1736,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "replace_release_external_links"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "replace_release_external_links(uuid,jsonb)",
+            "source": "supabase/migrations/20260723125000_mxshare_v2_release_pages_moderation.sql:272",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "updateReleasePresentation",
+      "file": "src/features/posts/api.ts",
+      "line": 1750,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "posts"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "posts",
+            "name": "\"posts delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:763"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:754"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts read through v2 visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1070"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:758"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getSharedPostByToken",
+      "file": "src/features/posts/api.ts",
+      "line": 1788,
+      "release": "1.0",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "resolve_shared_post"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "resolve_shared_post(text)",
+            "source": "supabase/migrations/20260803130000_mxtrove_release_lyrics_visibility.sql:126",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "resolveSharedLinkTarget",
+      "file": "src/features/posts/api.ts",
+      "line": 1845,
+      "release": "1.0",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "resolve_share_link_target"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "resolve_share_link_target(text)",
+            "source": "supabase/migrations/20260723133000_mxshare_v2_project_review_links.sql:3",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "listPostDrafts",
+      "file": "src/features/posts/drafts-api.ts",
+      "line": 22,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "post_drafts"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "post_drafts",
+            "name": "\"post drafts owner delete\"",
+            "source": "supabase/migrations/20260730120000_mxtrove_post_drafts.sql:43"
+          },
+          {
+            "table": "post_drafts",
+            "name": "\"post drafts owner insert\"",
+            "source": "supabase/migrations/20260730120000_mxtrove_post_drafts.sql:30"
+          },
+          {
+            "table": "post_drafts",
+            "name": "\"post drafts owner select\"",
+            "source": "supabase/migrations/20260730120000_mxtrove_post_drafts.sql:24"
+          },
+          {
+            "table": "post_drafts",
+            "name": "\"post drafts owner update\"",
+            "source": "supabase/migrations/20260730120000_mxtrove_post_drafts.sql:36"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getPostDraft",
+      "file": "src/features/posts/drafts-api.ts",
+      "line": 41,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "post_drafts"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "post_drafts",
+            "name": "\"post drafts owner delete\"",
+            "source": "supabase/migrations/20260730120000_mxtrove_post_drafts.sql:43"
+          },
+          {
+            "table": "post_drafts",
+            "name": "\"post drafts owner insert\"",
+            "source": "supabase/migrations/20260730120000_mxtrove_post_drafts.sql:30"
+          },
+          {
+            "table": "post_drafts",
+            "name": "\"post drafts owner select\"",
+            "source": "supabase/migrations/20260730120000_mxtrove_post_drafts.sql:24"
+          },
+          {
+            "table": "post_drafts",
+            "name": "\"post drafts owner update\"",
+            "source": "supabase/migrations/20260730120000_mxtrove_post_drafts.sql:36"
+          }
+        ]
+      }
+    },
+    {
+      "name": "upsertPostDraft",
+      "file": "src/features/posts/drafts-api.ts",
+      "line": 58,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [
+        "B4"
+      ],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "post_drafts"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "post_drafts",
+            "name": "\"post drafts owner delete\"",
+            "source": "supabase/migrations/20260730120000_mxtrove_post_drafts.sql:43"
+          },
+          {
+            "table": "post_drafts",
+            "name": "\"post drafts owner insert\"",
+            "source": "supabase/migrations/20260730120000_mxtrove_post_drafts.sql:30"
+          },
+          {
+            "table": "post_drafts",
+            "name": "\"post drafts owner select\"",
+            "source": "supabase/migrations/20260730120000_mxtrove_post_drafts.sql:24"
+          },
+          {
+            "table": "post_drafts",
+            "name": "\"post drafts owner update\"",
+            "source": "supabase/migrations/20260730120000_mxtrove_post_drafts.sql:36"
+          }
+        ]
+      }
+    },
+    {
+      "name": "deletePostDraft",
+      "file": "src/features/posts/drafts-api.ts",
+      "line": 102,
+      "release": "0.6",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "post_drafts"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "post_drafts",
+            "name": "\"post drafts owner delete\"",
+            "source": "supabase/migrations/20260730120000_mxtrove_post_drafts.sql:43"
+          },
+          {
+            "table": "post_drafts",
+            "name": "\"post drafts owner insert\"",
+            "source": "supabase/migrations/20260730120000_mxtrove_post_drafts.sql:30"
+          },
+          {
+            "table": "post_drafts",
+            "name": "\"post drafts owner select\"",
+            "source": "supabase/migrations/20260730120000_mxtrove_post_drafts.sql:24"
+          },
+          {
+            "table": "post_drafts",
+            "name": "\"post drafts owner update\"",
+            "source": "supabase/migrations/20260730120000_mxtrove_post_drafts.sql:36"
+          }
+        ]
+      }
+    },
+    {
+      "name": "updateAccountPassword",
+      "file": "src/features/privacy/account-api.ts",
+      "line": 3,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "updateAccountEmail",
+      "file": "src/features/privacy/account-api.ts",
+      "line": 11,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "confirmAccountPassword",
+      "file": "src/features/privacy/account-api.ts",
+      "line": 19,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "requestAccountDeletion",
+      "file": "src/features/privacy/account-api.ts",
+      "line": 33,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "request_account_deletion"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "request_account_deletion(integer,boolean)",
+            "source": "supabase/migrations/20260723136000_mxshare_v2_account_reauthentication.sql:4",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "cancelAccountDeletion",
+      "file": "src/features/privacy/account-api.ts",
+      "line": 48,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "cancel_account_deletion"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "cancel_account_deletion()",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:530",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "requestDataExport",
+      "file": "src/features/privacy/account-api.ts",
+      "line": 69,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "request_data_export"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "request_data_export(text)",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:557",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "listDataExportRequests",
+      "file": "src/features/privacy/account-api.ts",
+      "line": 80,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "data_export_requests"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "data_export_requests",
+            "name": "\"data exports owner select\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:777"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getPrivacySettings",
+      "file": "src/features/privacy/api.ts",
+      "line": 17,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "profile_privacy_settings"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "profile_privacy_settings",
+            "name": "\"privacy settings owner select\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:769"
+          }
+        ]
+      }
+    },
+    {
+      "name": "savePrivacySettings",
+      "file": "src/features/privacy/api.ts",
+      "line": 42,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "update_privacy_settings"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "update_privacy_settings(text,text,text,boolean,boolean,boolean,boolean)",
+            "source": "supabase/migrations/20260723134000_mxshare_v2_profile_privacy_enforcement.sql:184",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "blockProfile",
+      "file": "src/features/privacy/api.ts",
+      "line": 66,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "block_profile"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "block_profile(uuid)",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:294",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "unblockProfile",
+      "file": "src/features/privacy/api.ts",
+      "line": 77,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "unblock_profile"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "unblock_profile(uuid)",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:344",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "muteProfile",
+      "file": "src/features/privacy/api.ts",
+      "line": 88,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "mute_profile"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "mute_profile(uuid,boolean,boolean,boolean)",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:362",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "unmuteProfile",
+      "file": "src/features/privacy/api.ts",
+      "line": 106,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "unmute_profile"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "unmute_profile(uuid)",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:401",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "listBlockedProfiles",
+      "file": "src/features/privacy/api.ts",
+      "line": 125,
+      "release": "0.9",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "list_blocked_profiles"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "list_blocked_profiles()",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:587",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "getCurrentProfile",
+      "file": "src/features/profile/api.ts",
+      "line": 23,
+      "release": "0.3",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "get_current_profile_v2"
+      ],
+      "tableNames": [
+        "profiles"
+      ],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "get_current_profile_v2()",
+            "source": "supabase/migrations/20260723134000_mxshare_v2_profile_privacy_enforcement.sql:48",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": [
+          {
+            "table": "profiles",
+            "name": "\"profiles delete own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:642"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles insert own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:633"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles readable through privacy\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:782"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles update own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:637"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getProfileByUsername",
+      "file": "src/features/profile/api.ts",
+      "line": 89,
+      "release": "0.3",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "get_profile_by_username_v2"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "get_profile_by_username_v2(text)",
+            "source": "supabase/migrations/20260723134000_mxshare_v2_profile_privacy_enforcement.sql:80",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "getProfilesByIds",
+      "file": "src/features/profile/api.ts",
+      "line": 113,
+      "release": "0.3",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "profiles"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "profiles",
+            "name": "\"profiles delete own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:642"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles insert own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:633"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles readable through privacy\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:782"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles update own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:637"
+          }
+        ]
+      }
+    },
+    {
+      "name": "saveProfile",
+      "file": "src/features/profile/api.ts",
+      "line": 138,
+      "release": "0.4",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "save_profile_v2"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "save_profile_v2(text,text,text,text,text,text,text,text,text,uuid)",
+            "source": "supabase/migrations/20260723134000_mxshare_v2_profile_privacy_enforcement.sql:122",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "updateProfileAvatar",
+      "file": "src/features/profile/api.ts",
+      "line": 171,
+      "release": "0.4",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "profiles"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "profiles",
+            "name": "\"profiles delete own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:642"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles insert own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:633"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles readable through privacy\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:782"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles update own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:637"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getProfilePosts",
+      "file": "src/features/profile/api.ts",
+      "line": 199,
+      "release": "0.3",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "posts"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "posts",
+            "name": "\"posts delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:763"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:754"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts read through v2 visibility\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1070"
+          },
+          {
+            "table": "posts",
+            "name": "\"posts update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:758"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getDemoAvatarForProfile",
+      "file": "src/features/profile/api.ts",
+      "line": 220,
+      "release": "0.4",
+      "transport": "local-reference",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "searchProjectInviteCandidates",
+      "file": "src/features/projects/api.ts",
+      "line": 56,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "listProjects",
+      "file": "src/features/projects/api.ts",
+      "line": 80,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "collaboration_project_members",
+        "collaboration_projects",
+        "collaboration_activity",
+        "feedback_threads",
+        "profiles"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "collaboration_activity",
+            "name": "\"collaboration activity visible to members\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1495"
+          },
+          {
+            "table": "collaboration_project_members",
+            "name": "\"collaboration members visible to project members\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1464"
+          },
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects deletable by owner\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1460"
+          },
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects editable by editors\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1455"
+          },
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects visible to accepted members\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1451"
+          },
+          {
+            "table": "feedback_threads",
+            "name": "\"feedback insert through reviewer permission\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:984"
+          },
+          {
+            "table": "feedback_threads",
+            "name": "\"feedback update by author or project editor\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:991"
+          },
+          {
+            "table": "feedback_threads",
+            "name": "\"feedback visible to project reviewers\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:980"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles delete own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:642"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles insert own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:633"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles readable through privacy\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:782"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles update own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:637"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getProject",
+      "file": "src/features/projects/api.ts",
+      "line": 131,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "collaboration_projects",
+        "collaboration_project_members",
+        "collaboration_project_tracks",
+        "collaboration_activity",
+        "feedback_threads",
+        "conversations",
+        "song_versions",
+        "profiles",
+        "songs",
+        "assets",
+        "feedback_replies",
+        "feedback_reactions",
+        "version_hearts",
+        "protected_media_assets"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "assets",
+            "name": "\"assets delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:676"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:667"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets read owner or public\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:663"
+          },
+          {
+            "table": "assets",
+            "name": "\"assets update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:671"
+          },
+          {
+            "table": "collaboration_activity",
+            "name": "\"collaboration activity visible to members\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1495"
+          },
+          {
+            "table": "collaboration_project_members",
+            "name": "\"collaboration members visible to project members\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1464"
+          },
+          {
+            "table": "collaboration_project_tracks",
+            "name": "\"collaboration tracks delete by editors\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1491"
+          },
+          {
+            "table": "collaboration_project_tracks",
+            "name": "\"collaboration tracks insert by editors\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1479"
+          },
+          {
+            "table": "collaboration_project_tracks",
+            "name": "\"collaboration tracks update by editors\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1486"
+          },
+          {
+            "table": "collaboration_project_tracks",
+            "name": "\"collaboration tracks visible to members\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1475"
+          },
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects deletable by owner\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1460"
+          },
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects editable by editors\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1455"
+          },
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects visible to accepted members\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1451"
+          },
+          {
+            "table": "conversations",
+            "name": "\"conversations member only\"",
+            "source": "supabase/migrations/20260709001500_fix_message_rls_recursion.sql:25"
+          },
+          {
+            "table": "feedback_reactions",
+            "name": "\"feedback reactions delete own\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1050"
+          },
+          {
+            "table": "feedback_reactions",
+            "name": "\"feedback reactions insert own\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1038"
+          },
+          {
+            "table": "feedback_reactions",
+            "name": "\"feedback reactions visible with thread\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1027"
+          },
+          {
+            "table": "feedback_replies",
+            "name": "\"feedback replies insert by reviewers\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1010"
+          },
+          {
+            "table": "feedback_replies",
+            "name": "\"feedback replies update own\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1022"
+          },
+          {
+            "table": "feedback_replies",
+            "name": "\"feedback replies visible with thread\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:999"
+          },
+          {
+            "table": "feedback_threads",
+            "name": "\"feedback insert through reviewer permission\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:984"
+          },
+          {
+            "table": "feedback_threads",
+            "name": "\"feedback update by author or project editor\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:991"
+          },
+          {
+            "table": "feedback_threads",
+            "name": "\"feedback visible to project reviewers\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:980"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles delete own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:642"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles insert own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:633"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles readable through privacy\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:782"
+          },
+          {
+            "table": "profiles",
+            "name": "\"profiles update own row\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:637"
+          },
+          {
+            "table": "protected_media_assets",
+            "name": "\"protected media owner metadata select\"",
+            "source": "supabase/migrations/20260729130000_mxtrove_protected_message_attachment_access.sql:79"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions delete via owner\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:739"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions insert via owner or project contributor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1526"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions owner project member or published\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1513"
+          },
+          {
+            "table": "song_versions",
+            "name": "\"song versions update via owner or project editor\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1545"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs delete own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:693"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs insert own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:684"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs owner or collaboration member\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1500"
+          },
+          {
+            "table": "songs",
+            "name": "\"songs update own\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:688"
+          },
+          {
+            "table": "version_hearts",
+            "name": "\"version hearts readable with version access\"",
+            "source": "supabase/migrations/20260723137000_mxshare_v2_social_privacy_hardening.sql:47"
+          },
+          {
+            "table": "version_hearts",
+            "name": "\"version hearts self-delete\"",
+            "source": "supabase/migrations/20260707190000_mxshare_v1.sql:859"
+          },
+          {
+            "table": "version_hearts",
+            "name": "\"version hearts self-owned unblocked\"",
+            "source": "supabase/migrations/20260723123000_mxshare_v2_privacy_blocking.sql:815"
+          }
+        ]
+      }
+    },
+    {
+      "name": "createProject",
+      "file": "src/features/projects/api.ts",
+      "line": 243,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "create_collaboration_project"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "create_collaboration_project(text,text,text,text)",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:384",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "updateProject",
+      "file": "src/features/projects/api.ts",
+      "line": 260,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "collaboration_projects"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects deletable by owner\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1460"
+          },
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects editable by editors\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1455"
+          },
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects visible to accepted members\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1451"
+          }
+        ]
+      }
+    },
+    {
+      "name": "inviteProjectMember",
+      "file": "src/features/projects/api.ts",
+      "line": 275,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "invite_project_member"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "invite_project_member(uuid,text,uuid,text,integer)",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:486",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "listPendingInvites",
+      "file": "src/features/projects/api.ts",
+      "line": 309,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "list_pending_project_invites"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "list_pending_project_invites()",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:635",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "resolveProjectInvite",
+      "file": "src/features/projects/api.ts",
+      "line": 316,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "resolve_project_invite"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "resolve_project_invite(text)",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:603",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "acceptProjectInvite",
+      "file": "src/features/projects/api.ts",
+      "line": 333,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "accept_project_invite",
+        "accept_project_invite_by_id"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "accept_project_invite_by_id(uuid)",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:808",
+            "securityDefiner": true
+          },
+          {
+            "identity": "accept_project_invite(text)",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:671",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "declineProjectInvite",
+      "file": "src/features/projects/api.ts",
+      "line": 360,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "decline_project_invite"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "decline_project_invite(text)",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:787",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "acceptProjectInviteById",
+      "file": "src/features/projects/api.ts",
+      "line": 368,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "accept_project_invite_by_id"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "accept_project_invite_by_id(uuid)",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:808",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "declineProjectInviteById",
+      "file": "src/features/projects/api.ts",
+      "line": 377,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "decline_project_invite_by_id"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "decline_project_invite_by_id(uuid)",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:900",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "addProjectTrack",
+      "file": "src/features/projects/api.ts",
+      "line": 385,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "add_project_track"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "add_project_track(uuid,uuid,uuid,text)",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1151",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "reorderProjectTracks",
+      "file": "src/features/projects/api.ts",
+      "line": 402,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "reorder_project_tracks"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "reorder_project_tracks(uuid,uuid[])",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1251",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "removeProjectTrack",
+      "file": "src/features/projects/api.ts",
+      "line": 411,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "collaboration_project_tracks"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "collaboration_project_tracks",
+            "name": "\"collaboration tracks delete by editors\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1491"
+          },
+          {
+            "table": "collaboration_project_tracks",
+            "name": "\"collaboration tracks insert by editors\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1479"
+          },
+          {
+            "table": "collaboration_project_tracks",
+            "name": "\"collaboration tracks update by editors\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1486"
+          },
+          {
+            "table": "collaboration_project_tracks",
+            "name": "\"collaboration tracks visible to members\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1475"
+          }
+        ]
+      }
+    },
+    {
+      "name": "updateProjectTrack",
+      "file": "src/features/projects/api.ts",
+      "line": 421,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "collaboration_project_tracks"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "collaboration_project_tracks",
+            "name": "\"collaboration tracks delete by editors\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1491"
+          },
+          {
+            "table": "collaboration_project_tracks",
+            "name": "\"collaboration tracks insert by editors\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1479"
+          },
+          {
+            "table": "collaboration_project_tracks",
+            "name": "\"collaboration tracks update by editors\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1486"
+          },
+          {
+            "table": "collaboration_project_tracks",
+            "name": "\"collaboration tracks visible to members\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1475"
+          }
+        ]
+      }
+    },
+    {
+      "name": "selectProjectTrackVersion",
+      "file": "src/features/projects/api.ts",
+      "line": 441,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "select_project_track_version"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "select_project_track_version(uuid,uuid,uuid)",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1317",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "updateProjectStatus",
+      "file": "src/features/projects/api.ts",
+      "line": 455,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "update_project_status"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "update_project_status(uuid,text)",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1380",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "changeProjectMemberRole",
+      "file": "src/features/projects/api.ts",
+      "line": 464,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "change_project_member_role"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "change_project_member_role(uuid,uuid,text)",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:986",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "removeProjectMember",
+      "file": "src/features/projects/api.ts",
+      "line": 478,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "remove_project_member"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "remove_project_member(uuid,uuid)",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:919",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "leaveProject",
+      "file": "src/features/projects/api.ts",
+      "line": 487,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "leave_collaboration_project"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "leave_collaboration_project(uuid)",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1048",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "transferProjectOwnership",
+      "file": "src/features/projects/api.ts",
+      "line": 495,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "transfer_project_ownership"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "transfer_project_ownership(uuid,uuid)",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1098",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "deleteProject",
+      "file": "src/features/projects/api.ts",
+      "line": 504,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "collaboration_projects"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects deletable by owner\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1460"
+          },
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects editable by editors\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1455"
+          },
+          {
+            "table": "collaboration_projects",
+            "name": "\"collaboration projects visible to accepted members\"",
+            "source": "supabase/migrations/20260723120000_mxshare_v2_projects_collaboration.sql:1451"
+          }
+        ]
+      }
+    },
+    {
+      "name": "toggleFeedbackReaction",
+      "file": "src/features/projects/api.ts",
+      "line": 513,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "set_feedback_reaction"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "set_feedback_reaction(uuid,text,boolean)",
+            "source": "supabase/migrations/20260729120000_mxtrove_feedback_reaction_exclusivity.sql:25",
+            "securityDefiner": false
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "createFeedback",
+      "file": "src/features/projects/api.ts",
+      "line": 527,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "create_feedback_thread"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "create_feedback_thread(uuid,uuid,uuid,numeric,numeric,text,text,text,text,uuid)",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:553",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "replyToFeedback",
+      "file": "src/features/projects/api.ts",
+      "line": 556,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "reply_to_feedback_thread"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "reply_to_feedback_thread(uuid,text)",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:665",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "setFeedbackResolved",
+      "file": "src/features/projects/api.ts",
+      "line": 566,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "resolve_feedback_thread",
+        "reopen_feedback_thread"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "reopen_feedback_thread(uuid)",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:772",
+            "securityDefiner": true
+          },
+          {
+            "identity": "resolve_feedback_thread(uuid)",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:711",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "updateFeedbackStatus",
+      "file": "src/features/projects/api.ts",
+      "line": 575,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "update_feedback_thread_status"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "update_feedback_thread_status(uuid,text)",
+            "source": "supabase/migrations/20260723132000_mxshare_v2_review_workflow.sql:3",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "updateVersionReviewStatus",
+      "file": "src/features/projects/api.ts",
+      "line": 587,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "update_song_version_review_status"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "update_song_version_review_status(uuid,uuid,text)",
+            "source": "supabase/migrations/20260723132000_mxshare_v2_review_workflow.sql:56",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "getProtectedAssetPlaybackUrl",
+      "file": "src/features/projects/api.ts",
+      "line": 601,
+      "release": "0.3",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "getSharedProjectByToken",
+      "file": "src/features/projects/api.ts",
+      "line": 622,
+      "release": "1.0",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "resolve_shared_project"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "resolve_shared_project(text)",
+            "source": "supabase/migrations/20260723133000_mxshare_v2_project_review_links.sql:19",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "createSharedProjectFeedback",
+      "file": "src/features/projects/api.ts",
+      "line": 633,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [
+        "B2"
+      ],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "create_shared_feedback_thread"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "create_shared_feedback_thread(text,uuid,uuid,numeric,numeric,text,text,text,text)",
+            "source": "supabase/migrations/20260723133000_mxshare_v2_project_review_links.sql:119",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "listProjectShareLinks",
+      "file": "src/features/projects/api.ts",
+      "line": 660,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [
+        "share_links"
+      ],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": [
+          {
+            "table": "share_links",
+            "name": "\"share links owner select\"",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:1054"
+          }
+        ]
+      }
+    },
+    {
+      "name": "createProjectShareLink",
+      "file": "src/features/projects/api.ts",
+      "line": 672,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "create_share_link"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "create_share_link(text,uuid,text,timestamptz,integer)",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:800",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "revokeProjectShareLink",
+      "file": "src/features/projects/api.ts",
+      "line": 693,
+      "release": "0.7",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "revoke_share_link"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "revoke_share_link(uuid)",
+            "source": "supabase/migrations/20260723121000_mxshare_v2_feedback_sharing.sql:877",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "searchV2",
+      "file": "src/features/search/api.ts",
+      "line": 14,
+      "release": "0.3",
+      "transport": "reuse-existing-service-with-native-orchestration",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [
+        "search_v2_catalog"
+      ],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [
+          {
+            "identity": "search_v2_catalog(text,integer)",
+            "source": "supabase/migrations/20260728130000_mxtrove_fuzzy_creator_search.sql:4",
+            "securityDefiner": true
+          }
+        ],
+        "tablePolicies": []
+      }
+    },
+    {
+      "name": "getSearchResultPath",
+      "file": "src/features/search/api.ts",
+      "line": 28,
+      "release": "0.3",
+      "transport": "local-reference",
+      "gaps": [],
+      "status": "audited-native-not-implemented",
+      "rpcNames": [],
+      "tableNames": [],
+      "authorizationEvidence": {
+        "functions": [],
+        "tablePolicies": []
+      }
+    }
+  ]
+}

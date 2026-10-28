@@ -65,10 +65,11 @@ npm: see [distribution requirements](docs/licensing.md#binary-and-container-dist
 | @fastify/merge-json-schemas | 0.2.1 | MIT |
 | @fastify/multipart | 10.1.0 | MIT |
 | @fastify/proxy-addr | 5.1.0 | MIT |
+| @fastify/rate-limit | 10.3.0 | MIT |
 | @fontsource/instrument-sans | 5.3.0 | OFL-1.1 |
 | @fontsource/jetbrains-mono | 5.3.0 | OFL-1.1 |
 | @fontsource/space-grotesk | 5.3.0 | OFL-1.1 |
-| @hookform/resolvers | 3.10.0 | MIT |
+| @hookform/resolvers | 5.9.2 | MIT |
 | @img/colour | 1.1.0 | MIT |
 | @img/sharp-darwin-arm64 | 0.35.5 | Apache-2.0 |
 | @img/sharp-darwin-x64 | 0.35.5 | Apache-2.0 |
@@ -102,9 +103,9 @@ npm: see [distribution requirements](docs/licensing.md#binary-and-container-dist
 | @jridgewell/sourcemap-codec | 1.5.5 | MIT |
 | @jridgewell/sourcemap-codec | 1.6.0 | MIT |
 | @jridgewell/trace-mapping | 0.3.31 | MIT |
+| @lukeed/ms | 2.0.2 | MIT |
 | @oxc-project/types | 0.154.0 | MIT |
 | @pinojs/redact | 0.4.0 | MIT |
-| @remix-run/router | 1.23.4 | MIT |
 | @rolldown/binding-android-arm-eabi | 1.2.14 | MIT |
 | @rolldown/binding-android-arm64 | 1.2.14 | MIT |
 | @rolldown/binding-darwin-arm64 | 1.2.14 | MIT |
@@ -121,8 +122,6 @@ npm: see [distribution requirements](docs/licensing.md#binary-and-container-dist
 | @rolldown/binding-win32-arm64-msvc | 1.2.14 | MIT |
 | @rolldown/binding-win32-x64-msvc | 1.2.14 | MIT |
 | @rolldown/pluginutils | 1.0.1 | MIT |
-| @rollup/plugin-node-resolve | 15.3.1 | MIT |
-| @rollup/pluginutils | 5.4.0 | MIT |
 | @rollup/rollup-android-arm-eabi | 4.62.2 | MIT |
 | @rollup/rollup-android-arm64 | 4.62.2 | MIT |
 | @rollup/rollup-darwin-arm64 | 4.62.2 | MIT |
@@ -149,6 +148,7 @@ npm: see [distribution requirements](docs/licensing.md#binary-and-container-dist
 | @rollup/rollup-win32-x64-gnu | 4.62.2 | MIT |
 | @rollup/rollup-win32-x64-msvc | 4.62.2 | MIT |
 | @standard-schema/spec | 1.1.0 | MIT |
+| @standard-schema/utils | 0.3.0 | MIT |
 | @supabase/auth-js | 2.110.2 | MIT |
 | @supabase/auth-js | 2.110.8 | MIT |
 | @supabase/functions-js | 2.110.2 | MIT |
@@ -210,7 +210,6 @@ npm: see [distribution requirements](docs/licensing.md#binary-and-container-dist
 | @types/qrcode | 1.5.6 | MIT |
 | @types/react-dom | 19.2.3 | MIT |
 | @types/react | 19.2.17 | MIT |
-| @types/resolve | 1.20.2 | MIT |
 | @typescript/typescript-aix-ppc64 | 7.0.2 | Apache-2.0 |
 | @typescript/typescript-darwin-arm64 | 7.0.2 | Apache-2.0 |
 | @typescript/typescript-darwin-x64 | 7.0.2 | Apache-2.0 |
@@ -281,7 +280,6 @@ npm: see [distribution requirements](docs/licensing.md#binary-and-container-dist
 | debug | 4.4.3 | MIT |
 | decamelize | 1.2.0 | MIT |
 | decimal.js | 10.6.0 | MIT |
-| deepmerge | 4.3.1 | MIT |
 | delayed-stream | 1.0.0 | MIT |
 | dequal | 2.0.3 | MIT |
 | detect-libc | 2.1.2 | Apache-2.0 |
@@ -300,7 +298,6 @@ npm: see [distribution requirements](docs/licensing.md#binary-and-container-dist
 | es-object-atoms | 1.1.2 | MIT |
 | es-set-tostringtag | 2.1.0 | MIT |
 | esbuild | 0.28.1 | MIT |
-| estree-walker | 2.0.2 | MIT |
 | estree-walker | 3.0.3 | MIT |
 | expect-type | 1.4.0 | Apache-2.0 |
 | fast-decode-uri-component | 1.0.1 | MIT |
@@ -309,6 +306,7 @@ npm: see [distribution requirements](docs/licensing.md#binary-and-container-dist
 | fast-querystring | 1.1.2 | MIT |
 | fast-uri | 3.1.9 | BSD-3-Clause |
 | fast-uri | 4.2.3 | BSD-3-Clause |
+| fastify-plugin | 5.1.0 | MIT |
 | fastify-plugin | 6.0.0 | MIT |
 | fastify | 5.12.7 | MIT |
 | fastq | 1.20.1 | ISC |
@@ -338,9 +336,7 @@ npm: see [distribution requirements](docs/licensing.md#binary-and-container-dist
 | indent-string | 4.0.0 | MIT |
 | inherits | 2.0.4 | ISC |
 | ipaddr.js | 2.4.0 | MIT |
-| is-core-module | 2.16.2 | MIT |
 | is-fullwidth-code-point | 3.0.0 | MIT |
-| is-module | 1.0.0 | MIT |
 | is-potential-custom-element-name | 1.0.1 | MIT |
 | isarray | 0.0.1 | MIT |
 | jiti | 2.7.0 | MIT |
@@ -382,7 +378,7 @@ npm: see [distribution requirements](docs/licensing.md#binary-and-container-dist
 | lz-string | 1.5.0 | MIT |
 | magic-string | 0.30.21 | MIT |
 | math-intrinsics | 1.1.0 | MIT |
-| meyda | 5.6.3 | MIT |
+| meyda | 5.6.2 | MIT |
 | mime-db | 1.52.0 | MIT |
 | mime-types | 2.1.35 | MIT |
 | min-indent | 1.0.1 | MIT |
@@ -402,7 +398,6 @@ npm: see [distribution requirements](docs/licensing.md#binary-and-container-dist
 | p-try | 2.2.0 | MIT |
 | parse5 | 7.3.0 | MIT |
 | path-exists | 4.0.0 | MIT |
-| path-parse | 1.0.7 | MIT |
 | pathe | 2.0.3 | MIT |
 | picocolors | 1.1.1 | ISC |
 | picomatch | 4.0.5 | MIT |
@@ -424,8 +419,8 @@ npm: see [distribution requirements](docs/licensing.md#binary-and-container-dist
 | react-dom | 19.2.8 | MIT |
 | react-hook-form | 7.82.0 | MIT |
 | react-is | 17.0.2 | MIT |
-| react-router-dom | 6.30.6 | MIT |
-| react-router | 6.30.6 | MIT |
+| react-router-dom | 7.18.4 | MIT |
+| react-router | 7.18.4 | MIT |
 | react | 19.2.8 | MIT |
 | readable-stream | 1.1.14 | MIT |
 | real-require | 0.2.0 | MIT |
@@ -434,7 +429,6 @@ npm: see [distribution requirements](docs/licensing.md#binary-and-container-dist
 | require-directory | 2.1.1 | MIT |
 | require-from-string | 2.0.2 | MIT |
 | require-main-filename | 2.0.0 | ISC |
-| resolve | 1.22.12 | MIT |
 | ret | 0.5.0 | MIT |
 | reusify | 1.1.0 | MIT |
 | rfdc | 1.4.1 | MIT |
@@ -452,6 +446,7 @@ npm: see [distribution requirements](docs/licensing.md#binary-and-container-dist
 | semver | 7.8.5 | ISC |
 | set-blocking | 2.0.0 | ISC |
 | set-cookie-parser | 2.7.2 | MIT |
+| set-cookie-parser | 2.7.3 | MIT |
 | sharp | 0.35.5 | Apache-2.0 |
 | siginfo | 2.0.0 | ISC |
 | sonic-boom | 4.2.1 | MIT |
@@ -465,7 +460,6 @@ npm: see [distribution requirements](docs/licensing.md#binary-and-container-dist
 | string-width | 4.2.3 | MIT |
 | strip-ansi | 6.0.1 | MIT |
 | strip-indent | 3.0.0 | MIT |
-| supports-preserve-symlinks-flag | 1.0.0 | MIT |
 | symbol-tree | 3.2.4 | MIT |
 | tailwind-merge | 2.6.1 | MIT |
 | tailwindcss | 4.3.3 | MIT |
@@ -486,7 +480,7 @@ npm: see [distribution requirements](docs/licensing.md#binary-and-container-dist
 | typescript | 7.0.2 | Apache-2.0 |
 | undici-types | 6.21.0 | MIT |
 | undici-types | 8.3.0 | MIT |
-| vite | 7.3.6 | MIT |
+| vite | 7.3.7 | MIT |
 | vite | 8.3.4 | MIT |
 | vitest | 4.1.12 | MIT |
 | w3c-xmlserializer | 5.0.0 | MIT |
@@ -505,7 +499,7 @@ npm: see [distribution requirements](docs/licensing.md#binary-and-container-dist
 | y18n | 4.0.3 | ISC |
 | yargs-parser | 18.1.3 | ISC |
 | yargs | 15.4.1 | MIT |
-| zod | 3.25.76 | MIT |
+| zod | 4.6.7 | MIT |
 | zustand | 5.0.14 | MIT |
 
 ## @adobe/css-tools@4.5.0
@@ -919,6 +913,32 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## @fastify/rate-limit@10.3.0
+
+```text
+MIT License
+
+Copyright (c) 2018 Fastify
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ## @fontsource/instrument-sans@5.3.0
 
 ```text
@@ -1213,7 +1233,7 @@ FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 ```
 
-## @hookform/resolvers@3.10.0, react-hook-form@7.82.0
+## @hookform/resolvers@5.9.2, react-hook-form@7.82.0
 
 ```text
 MIT License
@@ -1570,6 +1590,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## @lukeed/ms@2.0.2, clsx@2.1.1
+
+```text
+MIT License
+
+Copyright (c) Luke Edwards <luke.edwards05@gmail.com> (lukeed.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+
 ## @oxc-project/types@0.154.0
 
 ```text
@@ -1623,34 +1657,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## @remix-run/router@1.23.4, react-router-dom@6.30.6, react-router@6.30.6
-
-```text
-MIT License
-
-Copyright (c) React Training LLC 2015-2019
-Copyright (c) Remix Software Inc. 2020-2021
-Copyright (c) Shopify Inc. 2022-2023
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
 ## @rolldown/pluginutils@1.0.1
 
 ```text
@@ -1677,12 +1683,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## @rollup/plugin-node-resolve@15.3.1, @rollup/pluginutils@5.4.0
+## @standard-schema/spec@1.1.0
 
 ```text
-The MIT License (MIT)
+MIT License
 
-Copyright (c) 2019 RollupJS Plugin Contributors (https://github.com/rollup/plugins/graphs/contributors)
+Copyright (c) 2024 Colin McDonnell
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -1691,24 +1697,24 @@ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
 
-## @standard-schema/spec@1.1.0
+## @standard-schema/utils@0.3.0
 
 ```text
 MIT License
 
-Copyright (c) 2024 Colin McDonnell
+Copyright (c) 2024 Fabian Hiller
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -2115,7 +2121,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## @types/aria-query@5.0.4, @types/chai@5.2.3, @types/deep-eql@4.0.2, @types/estree@1.0.9, @types/node@22.20.1, @types/node@26.1.1, @types/qrcode@1.5.6, @types/react-dom@19.2.3, @types/react@19.2.17, @types/resolve@1.20.2
+## @types/aria-query@5.0.4, @types/chai@5.2.3, @types/deep-eql@4.0.2, @types/estree@1.0.9, @types/node@22.20.1, @types/node@26.1.1, @types/qrcode@1.5.6, @types/react-dom@19.2.3, @types/react@19.2.17
 
 ```text
 MIT License
@@ -3458,20 +3464,6 @@ WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
 ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ```
 
-## clsx@2.1.1
-
-```text
-MIT License
-
-Copyright (c) Luke Edwards <luke.edwards05@gmail.com> (lukeed.com)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-```
-
 ## color-convert@2.0.1
 
 ```text
@@ -3825,32 +3817,6 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-```
-
-## deepmerge@4.3.1
-
-```text
-The MIT License (MIT)
-
-Copyright (c) 2012 James Halliday, Josh Duff, and other contributors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
 ```
 
 ## dequal@2.0.3
@@ -4475,7 +4441,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## estree-walker@2.0.2, estree-walker@3.0.3
+## estree-walker@3.0.3
 
 ```text
 Copyright (c) 2015-20 [these people](https://github.com/Rich-Harris/estree-walker/graphs/contributors)
@@ -4827,6 +4793,34 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 The complete list of contributors can be found at:
 - https://github.com/garycourt/uri-js/graphs/contributors
+```
+
+## fastify-plugin@5.1.0
+
+```text
+MIT License
+
+Copyright (c) 2017-present The Fastify team
+
+The Fastify team members are listed at https://github.com/fastify/fastify#team.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
 
 ## fastify@5.12.7
@@ -5318,31 +5312,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
-```
-
-## is-core-module@2.16.2
-
-```text
-The MIT License (MIT)
-
-Copyright (c) 2014 Dave Justice
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
 ## jiti@2.7.0, std-env@4.2.0
@@ -5991,7 +5960,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-## meyda@5.6.3
+## meyda@5.6.2
 
 ```text
 # The MIT License (MIT)
@@ -6346,32 +6315,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
-```
-
-## path-parse@1.0.7
-
-```text
-The MIT License (MIT)
-
-Copyright (c) 2015 Javier Blanco
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
 ```
 
 ## pathe@2.0.3
@@ -6970,6 +6913,34 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## react-router-dom@7.18.4, react-router@7.18.4
+
+```text
+MIT License
+
+Copyright (c) React Training LLC 2015-2019
+Copyright (c) Remix Software Inc. 2020-2021
+Copyright (c) Shopify Inc. 2022-2023
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ## readable-stream@1.1.14
 
 ```text
@@ -7089,32 +7060,6 @@ LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES
 OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
 WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
 ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-```
-
-## resolve@1.22.12
-
-```text
-MIT License
-
-Copyright (c) 2012 James Halliday
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
 ```
 
 ## ret@0.5.0
@@ -8076,7 +8021,7 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR
 IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ```
 
-## set-cookie-parser@2.7.2
+## set-cookie-parser@2.7.2, set-cookie-parser@2.7.3
 
 ```text
 The MIT License (MIT)
@@ -8274,32 +8219,6 @@ NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
 DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
 USE OR OTHER DEALINGS IN THE SOFTWARE.
-```
-
-## supports-preserve-symlinks-flag@1.0.0
-
-```text
-MIT License
-
-Copyright (c) 2022 Inspect JS
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
 ```
 
 ## symbol-tree@3.2.4
@@ -8614,7 +8533,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## vite@7.3.6
+## vite@7.3.7
 
 ```text
 # Vite core license
@@ -14252,7 +14171,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## zod@3.25.76
+## zod@4.6.7
 
 ```text
 MIT License
