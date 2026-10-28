@@ -14,7 +14,7 @@ jobs:
   web:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: 22
@@ -28,7 +28,7 @@ jobs:
       run:
         working-directory: services/media-worker
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: 22
@@ -46,7 +46,7 @@ jobs:
       contents: read
       packages: read
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Authenticate container registry
@@ -82,7 +82,7 @@ jobs:
   containers:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Build web image
         run: |
           docker build \
