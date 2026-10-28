@@ -170,10 +170,18 @@ describe("social preview cards", () => {
     expect(imageDataUrl).toMatch(/^data:image\/png;base64,/);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain(
-      "mxtrove.example/worker/v1/public-media",
+      "drive.google.com/thumbnail",
     );
     expect(String(fetchMock.mock.calls[1]?.[0])).toContain(
       "lh3.googleusercontent.com/stale-private-thumb",
     );
+  });
+
+  it("rejects stored artwork pointing at an internal network without fetching", async () => {
+    const fetchMock = vi.fn<typeof fetch>();
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await resolvePublicAssetImageDataUrl({ provider: "onedrive", remote_file_id: "example", thumbnail_url: "http://169.254.169.254/latest/meta-data/", share_url: "https://127.0.0.1/", view_url: null });
+    expect(result).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

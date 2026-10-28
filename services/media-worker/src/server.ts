@@ -2,6 +2,7 @@ import fs from "node:fs";
 import fsPromises from "node:fs/promises";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
 import type { Readable } from "node:stream";
 
 import { registerAttachmentRoutes } from "./attachments/routes.js";
@@ -29,7 +30,8 @@ import { registerPublicMediaRoutes } from "./public-media/routes.js";
 import { dispatchPushBatch, sendImmediateTestPush } from "./push/dispatcher.js";
 import { registerSocialPreviewRoutes } from "./social-preview/routes.js";
 import { processDataExportBatch } from "./exports/processor.js";
-import { InMemoryRateLimiter, selectRateLimitPolicy } from "./security/rate-limit.js";
+import { workerRateLimitOptions } from "./security/http-rate-limit.js";
+import { workerErrorResponse } from "./security/http-errors.js";
 
 const app = Fastify({
   bodyLimit: config.maxUploadBytes,
@@ -47,7 +49,7 @@ const app = Fastify({
 });
 
 const allowedOrigins = new Set(config.appOrigins);
-const rateLimiter = new InMemoryRateLimiter();
+await app.register(rateLimit, workerRateLimitOptions(config.rateLimitEnabled));
 
 await app.register(cors, {
   origin: (origin, callback) => {
@@ -80,30 +82,6 @@ await app.register(cors, {
 
 app.addContentTypeParser("*", function rawStreamParser(_request, payload, done) {
   done(null, payload);
-});
-
-app.addHook("onRequest", async (request, reply) => {
-  if (!config.rateLimitEnabled) {
-    return;
-  }
-
-  const pathname = new URL(request.url, "http://mxshare-worker.local").pathname;
-  const policy = selectRateLimitPolicy(request.method, pathname);
-  if (!policy) {
-    return;
-  }
-
-  const result = rateLimiter.check(`${policy.bucket}:${request.ip}`, policy);
-  reply
-    .header("X-RateLimit-Limit", result.limit)
-    .header("X-RateLimit-Remaining", result.remaining)
-    .header("Retry-After", result.retryAfterSeconds);
-
-  if (!result.allowed) {
-    return reply.code(429).send({
-      error: "Too many requests. Please wait briefly and try again.",
-    });
-  }
 });
 
 app.get("/healthz", async () => ({ ok: true, worker: config.workerInstanceId }));
@@ -279,21 +257,9 @@ await registerAttachmentRoutes(app);
 await registerSocialPreviewRoutes(app);
 
 app.setErrorHandler((error, _request, reply) => {
-  const message = error instanceof Error ? error.message : "Worker request failed.";
-  const statusCode =
-    message.includes("bearer token") || message.includes("JWT")
-      ? 401
-      : message.includes("quota") || message.includes("size limit")
-        ? 413
-        : 500;
-
-  app.log.error(error);
-  return reply.code(statusCode).send({
-    error:
-      statusCode === 500 && config.nodeEnv === "production"
-        ? "The media worker could not complete this request."
-        : message,
-  });
+  const result = workerErrorResponse(error, config.nodeEnv === "production");
+  if (result.statusCode >= 500) app.log.error(error);
+  return reply.code(result.statusCode).send(result.body);
 });
 
 await Promise.all([
@@ -306,7 +272,6 @@ function scheduleCleanupCycle() {
   setTimeout(async () => {
     try {
       await runCleanupCycle();
-      rateLimiter.prune();
     } catch (error) {
       app.log.error(error);
     } finally {

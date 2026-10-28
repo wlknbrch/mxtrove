@@ -1,0 +1,7066 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "MxTrove existing media worker",
+    "version": "0.1.1",
+    "description": "Phase-0 contracts plus backward-compatible security maintenance. Worker package 0.1.0 is not protocol capability discovery. JSON syntax is valid YAML 1.2. No planned mobile endpoint is asserted as implemented."
+  },
+  "servers": [
+    {
+      "url": "{workerBase}",
+      "variables": {
+        "workerBase": {
+          "default": "http://127.0.0.1:8080",
+          "description": "Explicit staging base or deployed /worker URL; never auto-select production."
+        }
+      }
+    }
+  ],
+  "paths": {
+    "/v1/messages/{messageId}/attachments": {
+      "post": {
+        "operationId": "post__v1_messages_messageId_attachments",
+        "summary": "POST /v1/messages/:messageId/attachments",
+        "x-source": "services/media-worker/src/attachments/routes.ts:119",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [
+          {
+            "userJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "messageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-MxShare-Filename",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-MxShare-Attachment-Type",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "audio",
+                "image",
+                "document"
+              ]
+            }
+          },
+          {
+            "name": "Content-Length",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageAttachment"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Explicit handler validation/unavailable error; see source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Current message-based JWT error classification; some verification errors can surface as 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Global size/quota exception classification where matched; not a stable quota code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Unsupported/mismatched signature",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Audio duration invalid/above limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "description": "Own sender message + current can-send permission. Raw bytes, signature sniffing, sanitization; audio/image processing. Default max audio50MiB/image15MiB/document20MiB. No multipart/resume/idempotency."
+      }
+    },
+    "/v1/message-attachments/{attachmentId}": {
+      "delete": {
+        "operationId": "delete__v1_message_attachments_attachmentId",
+        "summary": "DELETE /v1/message-attachments/:attachmentId",
+        "x-source": "services/media-worker/src/attachments/routes.ts:275",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [
+          {
+            "userJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "attachmentId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Cancels job or soft-deletes own attachment and releases storage"
+          },
+          "401": {
+            "description": "Current message-based JWT error classification; some verification errors can surface as 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/protected-media/{assetId}": {
+      "get": {
+        "operationId": "get__v1_protected_media_assetId",
+        "summary": "GET /v1/protected-media/:assetId",
+        "x-source": "services/media-worker/src/protected-media/routes.ts:55",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [
+          {
+            "mediaSignature": []
+          },
+          {
+            "userJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "expires",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "signature",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-MxShare-Share-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Range",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full file; HEAD no body",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Single byte range; HEAD no body",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Current message-based JWT error classification; some verification errors can surface as 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Backing media file missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Unsatisfiable/invalid single range; Content-Range bytes */size, no body"
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Valid asset+expiry HMAC bypasses live membership/share checks. Otherwise JWT required, optionally share header. Asset must remain ready/nondeleted and file present. Private no-store; Accept-Ranges bytes; invalid/satisfiability Range ->416. Signature expiry is epoch seconds."
+      },
+      "head": {
+        "operationId": "head__v1_protected_media_assetId",
+        "summary": "HEAD /v1/protected-media/:assetId",
+        "x-source": "services/media-worker/src/protected-media/routes.ts:55",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [
+          {
+            "mediaSignature": []
+          },
+          {
+            "userJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "expires",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "signature",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-MxShare-Share-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Range",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full file; HEAD no body"
+          },
+          "206": {
+            "description": "Single byte range; HEAD no body"
+          },
+          "401": {
+            "description": "Current message-based JWT error classification; some verification errors can surface as 500"
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource"
+          },
+          "410": {
+            "description": "Backing media file missing"
+          },
+          "416": {
+            "description": "Unsatisfiable/invalid single range; Content-Range bytes */size, no body"
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete."
+          }
+        },
+        "description": "Valid asset+expiry HMAC bypasses live membership/share checks. Otherwise JWT required, optionally share header. Asset must remain ready/nondeleted and file present. Private no-store; Accept-Ranges bytes; invalid/satisfiability Range ->416. Signature expiry is epoch seconds."
+      }
+    },
+    "/v1/protected-media/{assetId}/read-url": {
+      "post": {
+        "operationId": "post__v1_protected_media_assetId_read_url",
+        "summary": "POST /v1/protected-media/:assetId/read-url",
+        "x-source": "services/media-worker/src/protected-media/routes.ts:137",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [
+          {
+            "userJWT": []
+          },
+          {
+            "shareToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-MxShare-Share-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadUrl"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Current message-based JWT error classification; some verification errors can surface as 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Backing media file missing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Global size/quota exception classification where matched; not a stable quota code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Authorizes caller/share through RPC. No body. 404 for denied; 410 for missing storage. Token issuance is not immediate revocation of an existing signed URL."
+      }
+    },
+    "/v1/public-media": {
+      "get": {
+        "operationId": "get__v1_public_media",
+        "summary": "GET /v1/public-media",
+        "x-source": "services/media-worker/src/public-media/routes.ts:34",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{20,}$"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "audio",
+                "image"
+              ],
+              "default": "image"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "url",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "w1200"
+            }
+          },
+          {
+            "name": "Range",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Upstream bytes; HEAD has no body",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "206": {
+            "description": "Upstream partial response",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unsupported public source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Explicit handler validation/unavailable error; see source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Upstream status/body (including non-JSON provider errors) passes through."
+          }
+        },
+        "description": "No JWT. Drive fileId OR provider=dropbox + HTTPS URL on dropbox.com/www.dropbox.com/dl.dropboxusercontent.com, no credentials/nonstandard port. At most five redirects, each validated against trusted public provider hosts; unsupported destination/loop returns502. Invalid/non-audio kind defaults to image. Upstream status/type/ETag/Last-Modified/Content-Range forwarded. Public images max-age=86400/SWR604800; audio max-age=86400/SWR86400. Does not revoke external public links."
+      },
+      "head": {
+        "operationId": "head__v1_public_media",
+        "summary": "HEAD /v1/public-media",
+        "x-source": "services/media-worker/src/public-media/routes.ts:34",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{20,}$"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "audio",
+                "image"
+              ],
+              "default": "image"
+            }
+          },
+          {
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "url",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "w1200"
+            }
+          },
+          {
+            "name": "Range",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Upstream bytes; HEAD has no body"
+          },
+          "206": {
+            "description": "Upstream partial response"
+          },
+          "400": {
+            "description": "Unsupported public source"
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete."
+          },
+          "502": {
+            "description": "Explicit handler validation/unavailable error; see source"
+          },
+          "default": {
+            "description": "Upstream status/body (including non-JSON provider errors) passes through."
+          }
+        },
+        "description": "No JWT. Drive fileId OR provider=dropbox + HTTPS URL on dropbox.com/www.dropbox.com/dl.dropboxusercontent.com, no credentials/nonstandard port. At most five redirects, each validated against trusted public provider hosts; unsupported destination/loop returns502. Invalid/non-audio kind defaults to image. Upstream status/type/ETag/Last-Modified/Content-Range forwarded. Public images max-age=86400/SWR604800; audio max-age=86400/SWR86400. Does not revoke external public links."
+      }
+    },
+    "/healthz": {
+      "get": {
+        "operationId": "get__healthz",
+        "summary": "GET /healthz",
+        "x-source": "services/media-worker/src/server.ts:87",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "worker": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "worker"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "operationId": "head__healthz",
+        "summary": "HEAD /healthz",
+        "x-source": "services/media-worker/src/server.ts:87",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete."
+          }
+        },
+        "x-fastify-implicit-head": true,
+        "description": "Fastify automatic HEAD using GET handler; may retain GET side effects. "
+      }
+    },
+    "/source": {
+      "get": {
+        "operationId": "get__source",
+        "summary": "GET /source",
+        "x-source": "services/media-worker/src/server.ts:89",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "302": {
+            "description": "Redirect to configured corresponding source URL",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "operationId": "head__source",
+        "summary": "HEAD /source",
+        "x-source": "services/media-worker/src/server.ts:89",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "302": {
+            "description": "Redirect to configured corresponding source URL",
+            "headers": {
+              "Location": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete."
+          }
+        },
+        "x-fastify-implicit-head": true,
+        "description": "Fastify automatic HEAD using GET handler; may retain GET side effects. "
+      }
+    },
+    "/readyz": {
+      "get": {
+        "operationId": "get__readyz",
+        "summary": "GET /readyz",
+        "x-source": "services/media-worker/src/server.ts:91",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    },
+                    "tempDir": {
+                      "type": "string"
+                    },
+                    "protectedMedia": {
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "ok",
+                    "tempDir",
+                    "protectedMedia"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Checks temporary/protected directories. Does not prove all migrations, auth, FFmpeg or providers are ready."
+      },
+      "head": {
+        "operationId": "head__readyz",
+        "summary": "HEAD /readyz",
+        "x-source": "services/media-worker/src/server.ts:91",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete."
+          }
+        },
+        "description": "Fastify automatic HEAD using GET handler; may retain GET side effects. Checks temporary/protected directories. Does not prove all migrations, auth, FFmpeg or providers are ready.",
+        "x-fastify-implicit-head": true
+      }
+    },
+    "/v1/media/jobs": {
+      "post": {
+        "operationId": "post__v1_media_jobs",
+        "summary": "POST /v1/media/jobs",
+        "x-source": "services/media-worker/src/server.ts:103",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [
+          {
+            "userJWT": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Explicit handler validation/unavailable error; see source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Current message-based JWT error classification; some verification errors can surface as 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Global size/quota exception classification where matched; not a stable quota code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateJob"
+              }
+            }
+          }
+        },
+        "description": "sourceAssetId required (only truthiness at HTTP boundary); owner/mode/context checked in media-jobs. May reuse active job. No persistent Idempotency-Key."
+      }
+    },
+    "/v1/media/jobs/{jobId}/input": {
+      "put": {
+        "operationId": "put__v1_media_jobs_jobId_input",
+        "summary": "PUT /v1/media/jobs/:jobId/input",
+        "x-source": "services/media-worker/src/server.ts:138",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [
+          {
+            "userJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Current message-based JWT error classification; some verification errors can surface as 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Global size/quota exception classification where matched; not a stable quota code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "description": "Full raw stream only, MIME may be audio/*; no multipart/Content-Range session protocol. Defaults max 524288000 bytes. Re-upload in active job not guaranteed safe."
+      }
+    },
+    "/v1/media/jobs/{jobId}": {
+      "get": {
+        "operationId": "get__v1_media_jobs_jobId",
+        "summary": "GET /v1/media/jobs/:jobId",
+        "x-source": "services/media-worker/src/server.ts:163",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [
+          {
+            "userJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaProcessingJob"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Current message-based JWT error classification; some verification errors can surface as 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "delete__v1_media_jobs_jobId",
+        "summary": "DELETE /v1/media/jobs/:jobId",
+        "x-source": "services/media-worker/src/server.ts:217",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [
+          {
+            "userJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Cancels job or soft-deletes own attachment and releases storage"
+          },
+          "401": {
+            "description": "Current message-based JWT error classification; some verification errors can surface as 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "operationId": "head__v1_media_jobs_jobId",
+        "summary": "HEAD /v1/media/jobs/:jobId",
+        "x-source": "services/media-worker/src/server.ts:163",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [
+          {
+            "userJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "401": {
+            "description": "Current message-based JWT error classification; some verification errors can surface as 500"
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource"
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete."
+          }
+        },
+        "x-fastify-implicit-head": true,
+        "description": "Fastify automatic HEAD using GET handler; may retain GET side effects. "
+      }
+    },
+    "/v1/media/jobs/{jobId}/preview": {
+      "get": {
+        "operationId": "get__v1_media_jobs_jobId_preview",
+        "summary": "GET /v1/media/jobs/:jobId/preview",
+        "x-source": "services/media-worker/src/server.ts:175",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [
+          {
+            "userJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Temporary owner MP3 download; reading ready changes job to uploading_to_drive",
+            "content": {
+              "audio/mpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Current message-based JWT error classification; some verification errors can surface as 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Not in ready/uploading_to_drive/completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "operationId": "head__v1_media_jobs_jobId_preview",
+        "summary": "HEAD /v1/media/jobs/:jobId/preview",
+        "x-source": "services/media-worker/src/server.ts:175",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [
+          {
+            "userJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Temporary owner MP3 download; reading ready changes job to uploading_to_drive"
+          },
+          "401": {
+            "description": "Current message-based JWT error classification; some verification errors can surface as 500"
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource"
+          },
+          "409": {
+            "description": "Not in ready/uploading_to_drive/completed"
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete."
+          }
+        },
+        "x-fastify-implicit-head": true,
+        "description": "Fastify automatic HEAD using GET handler; may retain GET side effects. "
+      }
+    },
+    "/v1/media/jobs/{jobId}/acknowledge": {
+      "post": {
+        "operationId": "post__v1_media_jobs_jobId_acknowledge",
+        "summary": "POST /v1/media/jobs/:jobId/acknowledge",
+        "x-source": "services/media-worker/src/server.ts:204",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [
+          {
+            "userJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removes temporary job directory, does not finalize DB metadata"
+          },
+          "401": {
+            "description": "Current message-based JWT error classification; some verification errors can surface as 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Global size/quota exception classification where matched; not a stable quota code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/media/analyze-song": {
+      "post": {
+        "operationId": "post__v1_media_analyze_song",
+        "summary": "POST /v1/media/analyze-song",
+        "x-source": "services/media-worker/src/server.ts:230",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [
+          {
+            "userJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "X-MxShare-Song-Id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "X-MxShare-Source-Asset-Id",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SongAnalysis"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Explicit handler validation/unavailable error; see source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Current message-based JWT error classification; some verification errors can surface as 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Global size/quota exception classification where matched; not a stable quota code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "description": "Raw audio, ownership checked, updates stored song analysis; not a read-only GET."
+      }
+    },
+    "/v1/push/test": {
+      "post": {
+        "operationId": "post__v1_push_test",
+        "summary": "POST /v1/push/test",
+        "x-source": "services/media-worker/src/server.ts:248",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [
+          {
+            "userJWT": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "const": true
+                    }
+                  },
+                  "required": [
+                    "ok"
+                  ],
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Current message-based JWT error classification; some verification errors can surface as 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Global size/quota exception classification where matched; not a stable quota code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Tests existing browser Web Push for authenticated user. Not APNs."
+      }
+    },
+    "/og/post/{postId}/track/{trackId}.png": {
+      "get": {
+        "operationId": "get__og_post_postId_track_trackId_png",
+        "summary": "GET /og/post/:postId/track/:trackId.png",
+        "x-source": "services/media-worker/src/social-preview/routes.ts:420",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public-only generated OpenGraph image, cached",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "operationId": "head__og_post_postId_track_trackId_png",
+        "summary": "HEAD /og/post/:postId/track/:trackId.png",
+        "x-source": "services/media-worker/src/social-preview/routes.ts:420",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public-only generated OpenGraph image, cached"
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource"
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete."
+          }
+        },
+        "x-fastify-implicit-head": true,
+        "description": "Fastify automatic HEAD using GET handler; may retain GET side effects. "
+      }
+    },
+    "/og/post/{postId}.png": {
+      "get": {
+        "operationId": "get__og_post_postId_png",
+        "summary": "GET /og/post/:postId.png",
+        "x-source": "services/media-worker/src/social-preview/routes.ts:449",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public-only generated OpenGraph image, cached",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "operationId": "head__og_post_postId_png",
+        "summary": "HEAD /og/post/:postId.png",
+        "x-source": "services/media-worker/src/social-preview/routes.ts:449",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public-only generated OpenGraph image, cached"
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource"
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete."
+          }
+        },
+        "x-fastify-implicit-head": true,
+        "description": "Fastify automatic HEAD using GET handler; may retain GET side effects. "
+      }
+    },
+    "/og/profile/{username}.png": {
+      "get": {
+        "operationId": "get__og_profile_username_png",
+        "summary": "GET /og/profile/:username.png",
+        "x-source": "services/media-worker/src/social-preview/routes.ts:471",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public-only generated OpenGraph image, cached",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "operationId": "head__og_profile_username_png",
+        "summary": "HEAD /og/profile/:username.png",
+        "x-source": "services/media-worker/src/social-preview/routes.ts:471",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public-only generated OpenGraph image, cached"
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource"
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete."
+          }
+        },
+        "x-fastify-implicit-head": true,
+        "description": "Fastify automatic HEAD using GET handler; may retain GET side effects. "
+      }
+    },
+    "/social/post/{postId}": {
+      "get": {
+        "operationId": "get__social_post_postId",
+        "summary": "GET /social/post/:postId",
+        "x-source": "services/media-worker/src/social-preview/routes.ts:494",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public-only HTML with OG metadata and browser meta-refresh; not JSON or HTTP redirect",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "operationId": "head__social_post_postId",
+        "summary": "HEAD /social/post/:postId",
+        "x-source": "services/media-worker/src/social-preview/routes.ts:494",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public-only HTML with OG metadata and browser meta-refresh; not JSON or HTTP redirect"
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource"
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete."
+          }
+        },
+        "x-fastify-implicit-head": true,
+        "description": "Fastify automatic HEAD using GET handler; may retain GET side effects. "
+      }
+    },
+    "/social/post/{postId}/track/{trackId}": {
+      "get": {
+        "operationId": "get__social_post_postId_track_trackId",
+        "summary": "GET /social/post/:postId/track/:trackId",
+        "x-source": "services/media-worker/src/social-preview/routes.ts:511",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public-only HTML with OG metadata and browser meta-refresh; not JSON or HTTP redirect",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "operationId": "head__social_post_postId_track_trackId",
+        "summary": "HEAD /social/post/:postId/track/:trackId",
+        "x-source": "services/media-worker/src/social-preview/routes.ts:511",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "trackId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public-only HTML with OG metadata and browser meta-refresh; not JSON or HTTP redirect"
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource"
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete."
+          }
+        },
+        "x-fastify-implicit-head": true,
+        "description": "Fastify automatic HEAD using GET handler; may retain GET side effects. "
+      }
+    },
+    "/social/profile/{username}": {
+      "get": {
+        "operationId": "get__social_profile_username",
+        "summary": "GET /social/profile/:username",
+        "x-source": "services/media-worker/src/social-preview/routes.ts:536",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public-only HTML with OG metadata and browser meta-refresh; not JSON or HTTP redirect",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "operationId": "head__social_profile_username",
+        "summary": "HEAD /social/profile/:username",
+        "x-source": "services/media-worker/src/social-preview/routes.ts:536",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [],
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public-only HTML with OG metadata and browser meta-refresh; not JSON or HTTP redirect"
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource"
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete."
+          }
+        },
+        "x-fastify-implicit-head": true,
+        "description": "Fastify automatic HEAD using GET handler; may retain GET side effects. "
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "userJWT": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Supabase user JWT; not service-role or provider access token."
+      },
+      "shareToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-MxShare-Share-Token"
+      },
+      "mediaSignature": {
+        "type": "apiKey",
+        "in": "query",
+        "name": "signature",
+        "description": "HMAC plus required expires query; temporary bearer capability."
+      }
+    },
+    "schemas": {
+      "Visibility": {
+        "type": "string",
+        "enum": [
+          "private",
+          "followers",
+          "unlisted",
+          "public"
+        ]
+      },
+      "PostType": {
+        "type": "string",
+        "enum": [
+          "single",
+          "ep",
+          "album"
+        ]
+      },
+      "AssetType": {
+        "type": "string",
+        "enum": [
+          "audio_original",
+          "audio_preview",
+          "cover_artwork",
+          "avatar"
+        ]
+      },
+      "CloudProvider": {
+        "type": "string",
+        "enum": [
+          "google_drive",
+          "dropbox",
+          "onedrive"
+        ]
+      },
+      "ConversationKind": {
+        "type": "string",
+        "enum": [
+          "direct",
+          "project"
+        ]
+      },
+      "NotificationType": {
+        "type": "string",
+        "enum": [
+          "follow",
+          "post_heart",
+          "version_heart",
+          "comment_heart",
+          "comment",
+          "comment_reply",
+          "single_version",
+          "release_update",
+          "message",
+          "project_invite",
+          "project_invite_accepted",
+          "project_member_removed",
+          "project_role_changed",
+          "project_feedback",
+          "project_feedback_reply",
+          "project_feedback_resolved",
+          "project_version_uploaded",
+          "project_status_changed",
+          "message_attachment",
+          "share_link_review",
+          "content_moderated"
+        ]
+      },
+      "PreviewGeneration": {
+        "type": "string",
+        "enum": [
+          "manual",
+          "automatic"
+        ]
+      },
+      "MediaProcessingJobStatus": {
+        "type": "string",
+        "enum": [
+          "created",
+          "uploading",
+          "queued",
+          "probing",
+          "transcoding",
+          "generating_waveform",
+          "ready",
+          "uploading_to_drive",
+          "completed",
+          "failed",
+          "cancelled",
+          "expired"
+        ]
+      },
+      "ReportReason": {
+        "type": "string",
+        "enum": [
+          "spam",
+          "harassment",
+          "copyright",
+          "hate",
+          "sexual_content",
+          "illegal_content",
+          "other"
+        ]
+      },
+      "Profile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "bio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "website_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "instagram_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spotify_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "youtube_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "support_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "avatar_asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pinned_post_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "onboarding_completed": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "display_name",
+          "bio",
+          "location",
+          "website_url",
+          "instagram_url",
+          "spotify_url",
+          "youtube_url",
+          "support_url",
+          "avatar_asset_id",
+          "pinned_post_id",
+          "onboarding_completed",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": true
+      },
+      "CloudConnection": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "profile_id": {
+            "type": "string"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/CloudProvider"
+          },
+          "provider_account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provider_account_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "root_folder_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "audio_originals_folder_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "audio_previews_folder_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "artwork_folder_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "avatars_folder_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "exports_folder_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_default": {
+            "type": "boolean"
+          },
+          "connection_status": {
+            "type": "string",
+            "enum": [
+              "connected",
+              "expired",
+              "disconnected",
+              "error"
+            ]
+          },
+          "capabilities": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "connected_at": {
+            "type": "string"
+          },
+          "last_verified_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "profile_id",
+          "provider",
+          "provider_account_id",
+          "provider_account_email",
+          "root_folder_id",
+          "audio_originals_folder_id",
+          "audio_previews_folder_id",
+          "artwork_folder_id",
+          "avatars_folder_id",
+          "exports_folder_id",
+          "is_default",
+          "connection_status",
+          "capabilities",
+          "last_error",
+          "connected_at",
+          "last_verified_at",
+          "updated_at"
+        ],
+        "additionalProperties": true
+      },
+      "Asset": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "string"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/CloudProvider"
+          },
+          "remote_file_id": {
+            "type": "string"
+          },
+          "remote_parent_folder_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "filename": {
+            "type": "string"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "file_extension": {
+            "type": "string"
+          },
+          "bytes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "asset_type": {
+            "$ref": "#/components/schemas/AssetType"
+          },
+          "access_mode": {
+            "$ref": "#/components/schemas/Visibility"
+          },
+          "share_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "view_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "waveform_peaks": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WaveformDataV1"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "derived_from_asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "processing_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "preview_generation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PreviewGeneration"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "codec": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sample_rate_hz": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "channels": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bit_rate_bps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "waveform_version": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "waveform_bucket_count": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "waveform_generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "owner_id",
+          "provider",
+          "remote_file_id",
+          "remote_parent_folder_id",
+          "filename",
+          "display_name",
+          "mime_type",
+          "file_extension",
+          "bytes",
+          "duration_seconds",
+          "checksum",
+          "asset_type",
+          "access_mode",
+          "share_url",
+          "view_url",
+          "thumbnail_url",
+          "waveform_peaks",
+          "derived_from_asset_id",
+          "processing_job_id",
+          "preview_generation",
+          "codec",
+          "sample_rate_hz",
+          "channels",
+          "bit_rate_bps",
+          "waveform_version",
+          "waveform_bucket_count",
+          "waveform_generated_at",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": true
+      },
+      "Song": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lyrics": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "musical_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tempo_bpm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tempo_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "key_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "audio_analysis_updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "default_artwork_asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "owner_id",
+          "title",
+          "notes",
+          "lyrics",
+          "musical_key",
+          "tempo_bpm",
+          "tempo_confidence",
+          "key_confidence",
+          "audio_analysis_updated_at",
+          "default_artwork_asset_id",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": true
+      },
+      "SongVersion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "song_id": {
+            "type": "string"
+          },
+          "source_asset_id": {
+            "type": "string"
+          },
+          "preview_asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version_number": {
+            "type": "number"
+          },
+          "version_label": {
+            "type": "string"
+          },
+          "production_stage": {
+            "type": "string"
+          },
+          "changelog": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_published": {
+            "type": "boolean"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "owner_id": {
+            "type": "string"
+          },
+          "collaboration_project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "collaboration_track_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sharing_mode": {
+            "type": "string",
+            "enum": [
+              "private",
+              "project_members",
+              "followers",
+              "public"
+            ]
+          },
+          "review_status": {
+            "type": "string",
+            "enum": [
+              "not_requested",
+              "review_requested",
+              "changes_requested",
+              "approved"
+            ]
+          },
+          "protected_preview_asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "song_id",
+          "source_asset_id",
+          "preview_asset_id",
+          "version_number",
+          "version_label",
+          "production_stage",
+          "changelog",
+          "is_published",
+          "published_at",
+          "owner_id",
+          "collaboration_project_id",
+          "collaboration_track_id",
+          "sharing_mode",
+          "review_status",
+          "protected_preview_asset_id",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": true
+      },
+      "Post": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "string"
+          },
+          "post_type": {
+            "$ref": "#/components/schemas/PostType"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility"
+          },
+          "artwork_asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "release_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "release_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "allow_embed": {
+            "type": "boolean"
+          },
+          "hidden_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_published": {
+            "type": "boolean"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "activity_at": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "owner_id",
+          "post_type",
+          "title",
+          "description",
+          "visibility",
+          "artwork_asset_id",
+          "release_url",
+          "slug",
+          "release_notes",
+          "allow_embed",
+          "hidden_at",
+          "is_published",
+          "published_at",
+          "activity_at",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": true
+      },
+      "PostDraft": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "string"
+          },
+          "post_type": {
+            "$ref": "#/components/schemas/PostType"
+          },
+          "title": {
+            "type": "string"
+          },
+          "current_step": {
+            "type": "number"
+          },
+          "schema_version": {
+            "type": "number"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": {
+              "x-typescript-type": "unknown"
+            }
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "owner_id",
+          "post_type",
+          "title",
+          "current_step",
+          "schema_version",
+          "payload",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": true
+      },
+      "SinglePost": {
+        "type": "object",
+        "properties": {
+          "post_id": {
+            "type": "string"
+          },
+          "song_id": {
+            "type": "string"
+          },
+          "featured_version_id": {
+            "type": "string"
+          },
+          "show_lyrics": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "post_id",
+          "song_id",
+          "featured_version_id",
+          "show_lyrics"
+        ],
+        "additionalProperties": true
+      },
+      "ReleaseTrack": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "post_id": {
+            "type": "string"
+          },
+          "song_id": {
+            "type": "string"
+          },
+          "song_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "track_title": {
+            "type": "string"
+          },
+          "track_number": {
+            "type": "number"
+          },
+          "preview_asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "production_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "show_lyrics": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "post_id",
+          "song_id",
+          "song_version_id",
+          "track_title",
+          "track_number",
+          "preview_asset_id",
+          "production_stage",
+          "show_lyrics",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": true
+      },
+      "Follow": {
+        "type": "object",
+        "properties": {
+          "follower_id": {
+            "type": "string"
+          },
+          "followed_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "follower_id",
+          "followed_id",
+          "created_at"
+        ],
+        "additionalProperties": true
+      },
+      "Comment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "post_id": {
+            "type": "string"
+          },
+          "author_id": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "parent_comment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "post_id",
+          "author_id",
+          "body",
+          "parent_comment_id",
+          "created_at",
+          "updated_at",
+          "deleted_at"
+        ],
+        "additionalProperties": true
+      },
+      "Conversation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ConversationKind"
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "history_visible_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "project_id",
+          "history_visible_from",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": true
+      },
+      "ConversationMember": {
+        "type": "object",
+        "properties": {
+          "conversation_id": {
+            "type": "string"
+          },
+          "profile_id": {
+            "type": "string"
+          },
+          "joined_at": {
+            "type": "string"
+          },
+          "last_read_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "conversation_id",
+          "profile_id",
+          "joined_at",
+          "last_read_at"
+        ],
+        "additionalProperties": true
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "conversation_id": {
+            "type": "string"
+          },
+          "sender_id": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "edited_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "conversation_id",
+          "sender_id",
+          "body",
+          "created_at",
+          "edited_at",
+          "deleted_at"
+        ],
+        "additionalProperties": true
+      },
+      "Notification": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "recipient_id": {
+            "type": "string"
+          },
+          "actor_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": {
+            "$ref": "#/components/schemas/NotificationType"
+          },
+          "post_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "song_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "comment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "context": {
+            "type": "object",
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "is_read": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "recipient_id",
+          "actor_id",
+          "type",
+          "post_id",
+          "song_version_id",
+          "comment_id",
+          "conversation_id",
+          "project_id",
+          "is_read",
+          "created_at"
+        ],
+        "additionalProperties": true
+      },
+      "ProfilePublicMetrics": {
+        "type": "object",
+        "properties": {
+          "profile_id": {
+            "type": "string"
+          },
+          "followers_count": {
+            "type": "number"
+          },
+          "following_count": {
+            "type": "number"
+          },
+          "public_posts_count": {
+            "type": "number"
+          },
+          "single_count": {
+            "type": "number"
+          },
+          "ep_count": {
+            "type": "number"
+          },
+          "album_count": {
+            "type": "number"
+          },
+          "last_public_activity_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "follower_counts_visible": {
+            "type": "boolean"
+          },
+          "activity_visible": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "profile_id",
+          "followers_count",
+          "following_count",
+          "public_posts_count",
+          "single_count",
+          "ep_count",
+          "album_count",
+          "last_public_activity_at"
+        ],
+        "additionalProperties": true
+      },
+      "WaveformDataV1": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "number",
+            "const": 1
+          },
+          "durationSeconds": {
+            "type": "number"
+          },
+          "sourceSampleRate": {
+            "type": "number"
+          },
+          "analysisSampleRate": {
+            "type": "number",
+            "const": 8000
+          },
+          "bucketCount": {
+            "type": "number"
+          },
+          "peaks": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "minItems": 2,
+              "maxItems": 2,
+              "items": false
+            }
+          }
+        },
+        "required": [
+          "version",
+          "durationSeconds",
+          "sourceSampleRate",
+          "analysisSampleRate",
+          "bucketCount",
+          "peaks"
+        ],
+        "additionalProperties": true
+      },
+      "MediaProcessingJob": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "string"
+          },
+          "source_asset_id": {
+            "type": "string"
+          },
+          "song_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/MediaProcessingJobStatus"
+          },
+          "stage": {
+            "type": "string"
+          },
+          "progress": {
+            "type": "number"
+          },
+          "input_filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "input_mime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "input_bytes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "input_checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "output_mime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "output_bytes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detected_codec": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sample_rate_hz": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "channels": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bit_rate_bps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "waveform_data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WaveformDataV1"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "song_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detected_tempo_bpm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detected_musical_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tempo_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "key_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attempt_count": {
+            "type": "number"
+          },
+          "worker_instance_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cancel_requested_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ready_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "output_mode": {
+            "type": "string",
+            "enum": [
+              "public_cloud",
+              "protected"
+            ]
+          },
+          "protected_purpose": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "post_preview"
+              },
+              {
+                "type": "string",
+                "const": "collaboration_preview"
+              },
+              {
+                "type": "string",
+                "const": "message_audio"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target_project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "target_post_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "protected_asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "owner_id",
+          "source_asset_id",
+          "song_version_id",
+          "status",
+          "stage",
+          "progress",
+          "input_filename",
+          "input_mime_type",
+          "input_bytes",
+          "input_checksum",
+          "output_mime_type",
+          "output_bytes",
+          "duration_seconds",
+          "detected_codec",
+          "sample_rate_hz",
+          "channels",
+          "bit_rate_bps",
+          "waveform_data",
+          "song_id",
+          "detected_tempo_bpm",
+          "detected_musical_key",
+          "tempo_confidence",
+          "key_confidence",
+          "error_code",
+          "error_message",
+          "attempt_count",
+          "worker_instance_id",
+          "cancel_requested_at",
+          "created_at",
+          "started_at",
+          "ready_at",
+          "completed_at",
+          "expires_at",
+          "output_mode",
+          "protected_purpose",
+          "target_project_id",
+          "target_post_id",
+          "protected_asset_id",
+          "updated_at"
+        ],
+        "additionalProperties": true
+      },
+      "PushSubscriptionRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "profile_id": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "p256dh": {
+            "type": "string"
+          },
+          "auth": {
+            "type": "string"
+          },
+          "user_agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "device_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_failure_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "failure_count": {
+            "type": "number"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "profile_id",
+          "endpoint",
+          "p256dh",
+          "auth",
+          "user_agent",
+          "device_label",
+          "is_active",
+          "last_success_at",
+          "last_failure_at",
+          "failure_count",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": true
+      },
+      "NotificationPreferences": {
+        "type": "object",
+        "properties": {
+          "profile_id": {
+            "type": "string"
+          },
+          "push_enabled": {
+            "type": "boolean"
+          },
+          "follows_enabled": {
+            "type": "boolean"
+          },
+          "post_hearts_enabled": {
+            "type": "boolean"
+          },
+          "version_hearts_enabled": {
+            "type": "boolean"
+          },
+          "comments_enabled": {
+            "type": "boolean"
+          },
+          "replies_enabled": {
+            "type": "boolean"
+          },
+          "messages_enabled": {
+            "type": "boolean"
+          },
+          "single_updates_enabled": {
+            "type": "boolean"
+          },
+          "project_invites_enabled": {
+            "type": "boolean"
+          },
+          "project_feedback_enabled": {
+            "type": "boolean"
+          },
+          "project_activity_enabled": {
+            "type": "boolean"
+          },
+          "message_attachments_enabled": {
+            "type": "boolean"
+          },
+          "privacy_safe_push": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "profile_id",
+          "push_enabled",
+          "follows_enabled",
+          "post_hearts_enabled",
+          "version_hearts_enabled",
+          "comments_enabled",
+          "replies_enabled",
+          "messages_enabled",
+          "single_updates_enabled",
+          "project_invites_enabled",
+          "project_feedback_enabled",
+          "project_activity_enabled",
+          "message_attachments_enabled",
+          "privacy_safe_push",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": true
+      },
+      "FeedEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "actor_id": {
+            "type": "string"
+          },
+          "post_id": {
+            "type": "string"
+          },
+          "song_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "single_release",
+              "single_update",
+              "release_publish"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "actor_id",
+          "post_id",
+          "song_version_id",
+          "event_type",
+          "created_at"
+        ],
+        "additionalProperties": true
+      },
+      "CollaborationProjectType": {
+        "type": "string",
+        "enum": [
+          "single",
+          "ep",
+          "album",
+          "loose_collection"
+        ]
+      },
+      "CollaborationProjectVisibility": {
+        "type": "string",
+        "enum": [
+          "private",
+          "members_only",
+          "link_invite"
+        ]
+      },
+      "CollaborationProjectStatus": {
+        "type": "string",
+        "enum": [
+          "planning",
+          "active",
+          "review",
+          "finalizing",
+          "completed",
+          "archived"
+        ]
+      },
+      "CollaborationRole": {
+        "type": "string",
+        "enum": [
+          "owner",
+          "admin",
+          "editor",
+          "contributor",
+          "reviewer",
+          "viewer"
+        ]
+      },
+      "CollaborationTrackStatus": {
+        "type": "string",
+        "enum": [
+          "idea",
+          "draft",
+          "recording",
+          "arrangement",
+          "mixing",
+          "review",
+          "approved",
+          "final"
+        ]
+      },
+      "CollaborationProject": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "string"
+          },
+          "project_type": {
+            "$ref": "#/components/schemas/CollaborationProjectType"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "artwork_asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/CollaborationProjectVisibility"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CollaborationProjectStatus"
+          },
+          "linked_post_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "archived_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "owner_id",
+          "project_type",
+          "title",
+          "description",
+          "artwork_asset_id",
+          "visibility",
+          "status",
+          "linked_post_id",
+          "created_at",
+          "updated_at",
+          "archived_at"
+        ],
+        "additionalProperties": true
+      },
+      "CollaborationProjectMember": {
+        "type": "object",
+        "properties": {
+          "project_id": {
+            "type": "string"
+          },
+          "profile_id": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/CollaborationRole"
+          },
+          "membership_status": {
+            "type": "string",
+            "enum": [
+              "invited",
+              "accepted",
+              "declined",
+              "removed"
+            ]
+          },
+          "invited_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "joined_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "project_id",
+          "profile_id",
+          "role",
+          "membership_status",
+          "invited_by",
+          "joined_at",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": true
+      },
+      "CollaborationProjectInvite": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "invited_by": {
+            "type": "string"
+          },
+          "invited_profile_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "invited_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "editor",
+              "contributor",
+              "reviewer",
+              "viewer"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "declined",
+              "revoked",
+              "expired"
+            ]
+          },
+          "expires_at": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "accepted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "invited_by",
+          "invited_profile_id",
+          "invited_email",
+          "role",
+          "status",
+          "expires_at",
+          "created_at",
+          "accepted_at",
+          "revoked_at"
+        ],
+        "additionalProperties": true
+      },
+      "CollaborationProjectTrack": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "song_id": {
+            "type": "string"
+          },
+          "active_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "track_title": {
+            "type": "string"
+          },
+          "track_number": {
+            "type": "number"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/CollaborationTrackStatus"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "assigned_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "song_id",
+          "active_version_id",
+          "track_title",
+          "track_number",
+          "notes",
+          "status",
+          "created_by",
+          "assigned_to",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": true
+      },
+      "CollaborationActivity": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "actor_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "activity_type": {
+            "type": "string"
+          },
+          "entity_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "entity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "x-typescript-type": "unknown"
+            }
+          },
+          "created_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "actor_id",
+          "activity_type",
+          "entity_type",
+          "entity_id",
+          "metadata",
+          "created_at"
+        ],
+        "additionalProperties": true
+      },
+      "FeedbackCategory": {
+        "type": "string",
+        "enum": [
+          "general",
+          "arrangement",
+          "mix",
+          "vocals",
+          "lyrics",
+          "sound_design",
+          "mastering",
+          "performance",
+          "technical"
+        ]
+      },
+      "FeedbackThread": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string"
+          },
+          "track_id": {
+            "type": "string"
+          },
+          "song_version_id": {
+            "type": "string"
+          },
+          "author_id": {
+            "type": "string"
+          },
+          "start_seconds": {
+            "type": "number"
+          },
+          "end_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "body": {
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/FeedbackCategory"
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "low",
+              "normal",
+              "high",
+              "blocking"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "in_progress",
+              "resolved",
+              "wont_fix"
+            ]
+          },
+          "assigned_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resolved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "project_id",
+          "track_id",
+          "song_version_id",
+          "author_id",
+          "start_seconds",
+          "end_seconds",
+          "title",
+          "body",
+          "category",
+          "priority",
+          "status",
+          "assigned_to",
+          "created_at",
+          "updated_at",
+          "resolved_at",
+          "resolved_by"
+        ],
+        "additionalProperties": true
+      },
+      "FeedbackReply": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "thread_id": {
+            "type": "string"
+          },
+          "author_id": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "thread_id",
+          "author_id",
+          "body",
+          "created_at",
+          "updated_at",
+          "deleted_at"
+        ],
+        "additionalProperties": true
+      },
+      "FeedbackReaction": {
+        "type": "object",
+        "properties": {
+          "thread_id": {
+            "type": "string"
+          },
+          "profile_id": {
+            "type": "string"
+          },
+          "reaction": {
+            "type": "string",
+            "enum": [
+              "agree",
+              "disagree",
+              "done",
+              "important"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "thread_id",
+          "profile_id",
+          "reaction",
+          "created_at"
+        ],
+        "additionalProperties": true
+      },
+      "ProtectedMediaAsset": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "reserved",
+              "processing",
+              "ready",
+              "failed",
+              "deleted"
+            ]
+          },
+          "filename": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "bytes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "waveform_data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WaveformDataV1"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "post_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "song_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "ready_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "owner_id",
+          "purpose",
+          "status",
+          "filename",
+          "mime_type",
+          "bytes",
+          "duration_seconds",
+          "waveform_data",
+          "post_id",
+          "project_id",
+          "song_version_id",
+          "message_id",
+          "created_at",
+          "ready_at"
+        ],
+        "additionalProperties": true
+      },
+      "ProtectedMediaQuota": {
+        "type": "object",
+        "properties": {
+          "profile_id": {
+            "type": "string"
+          },
+          "used_bytes": {
+            "type": "number"
+          },
+          "reserved_bytes": {
+            "type": "number"
+          },
+          "attachment_used_bytes": {
+            "type": "number"
+          },
+          "attachment_reserved_bytes": {
+            "type": "number"
+          },
+          "protected_limit_bytes": {
+            "type": "number"
+          },
+          "attachment_limit_bytes": {
+            "type": "number"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "profile_id",
+          "used_bytes",
+          "reserved_bytes",
+          "attachment_used_bytes",
+          "attachment_reserved_bytes",
+          "protected_limit_bytes",
+          "attachment_limit_bytes",
+          "updated_at"
+        ],
+        "additionalProperties": true
+      },
+      "MessageAttachment": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "message_id": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "string"
+          },
+          "attachment_type": {
+            "type": "string",
+            "enum": [
+              "audio",
+              "image",
+              "document",
+              "project_reference",
+              "post_reference",
+              "song_version_reference"
+            ]
+          },
+          "protected_asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "post_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "project_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "song_version_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "filename": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "bytes": {
+            "type": "number"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "message_id",
+          "owner_id",
+          "attachment_type",
+          "protected_asset_id",
+          "asset_id",
+          "post_id",
+          "project_id",
+          "song_version_id",
+          "filename",
+          "mime_type",
+          "bytes",
+          "duration_seconds",
+          "width",
+          "height",
+          "created_at",
+          "deleted_at"
+        ],
+        "additionalProperties": true
+      },
+      "ProfilePrivacySettings": {
+        "type": "object",
+        "properties": {
+          "profile_id": {
+            "type": "string"
+          },
+          "profile_visibility": {
+            "type": "string",
+            "enum": [
+              "public",
+              "members_only"
+            ]
+          },
+          "message_permission": {
+            "type": "string",
+            "enum": [
+              "everyone",
+              "people_i_follow",
+              "mutual_follows",
+              "nobody"
+            ]
+          },
+          "project_invite_permission": {
+            "type": "string",
+            "enum": [
+              "everyone",
+              "people_i_follow",
+              "mutual_follows",
+              "nobody"
+            ]
+          },
+          "show_location": {
+            "type": "boolean"
+          },
+          "show_follower_counts": {
+            "type": "boolean"
+          },
+          "show_activity_status": {
+            "type": "boolean"
+          },
+          "allow_profile_discovery": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "profile_id",
+          "profile_visibility",
+          "message_permission",
+          "project_invite_permission",
+          "show_location",
+          "show_follower_counts",
+          "show_activity_status",
+          "allow_profile_discovery",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": true
+      },
+      "ProfileAppearanceSettings": {
+        "type": "object",
+        "properties": {
+          "profile_id": {
+            "type": "string"
+          },
+          "theme": {
+            "type": "string",
+            "enum": [
+              "system",
+              "dark",
+              "light"
+            ]
+          },
+          "accent": {
+            "type": "string",
+            "enum": [
+              "violet",
+              "rose",
+              "cyan",
+              "emerald",
+              "amber"
+            ]
+          },
+          "interface_density": {
+            "type": "string",
+            "enum": [
+              "comfortable",
+              "compact"
+            ]
+          },
+          "show_waveforms": {
+            "type": "boolean"
+          },
+          "reduced_motion": {
+            "type": "boolean"
+          },
+          "autoplay_next": {
+            "type": "boolean"
+          },
+          "remember_volume": {
+            "type": "boolean"
+          },
+          "player_volume": {
+            "type": "number"
+          },
+          "increase_contrast": {
+            "type": "boolean"
+          },
+          "reduce_transparency": {
+            "type": "boolean"
+          },
+          "reduce_motion": {
+            "type": "boolean"
+          },
+          "larger_ui_text": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "profile_id",
+          "theme",
+          "accent",
+          "interface_density",
+          "show_waveforms",
+          "reduced_motion",
+          "autoplay_next",
+          "remember_volume",
+          "player_volume",
+          "increase_contrast",
+          "reduce_transparency",
+          "reduce_motion",
+          "larger_ui_text",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": true
+      },
+      "PostCredit": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "post_id": {
+            "type": "string"
+          },
+          "profile_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "position": {
+            "type": "number"
+          },
+          "created_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "post_id",
+          "profile_id",
+          "display_name",
+          "role",
+          "position",
+          "created_at"
+        ],
+        "additionalProperties": true
+      },
+      "PostExternalLink": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "post_id": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "position": {
+            "type": "number"
+          },
+          "created_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "post_id",
+          "platform",
+          "label",
+          "url",
+          "position",
+          "created_at"
+        ],
+        "additionalProperties": true
+      },
+      "ShareLink": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "string"
+          },
+          "target_type": {
+            "type": "string",
+            "enum": [
+              "post",
+              "collaboration_project",
+              "song_version"
+            ]
+          },
+          "target_id": {
+            "type": "string"
+          },
+          "permission": {
+            "type": "string",
+            "enum": [
+              "view",
+              "review"
+            ]
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "max_uses": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "use_count": {
+            "type": "number"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "owner_id",
+          "target_type",
+          "target_id",
+          "permission",
+          "expires_at",
+          "max_uses",
+          "use_count",
+          "is_active",
+          "created_at",
+          "revoked_at"
+        ],
+        "additionalProperties": true
+      },
+      "ReportStatus": {
+        "type": "string",
+        "enum": [
+          "open",
+          "reviewing",
+          "action_taken",
+          "dismissed"
+        ]
+      },
+      "AdminRemovableContentType": {
+        "type": "string",
+        "enum": [
+          "post",
+          "comment"
+        ]
+      },
+      "AdminRemovalReason": {
+        "type": "string",
+        "enum": [
+          "copyright",
+          "hate",
+          "harassment",
+          "sexual_content",
+          "illegal_content",
+          "spam",
+          "other"
+        ]
+      },
+      "MessageReferenceAttachmentType": {
+        "type": "string",
+        "enum": [
+          "project_reference",
+          "post_reference",
+          "song_version_reference"
+        ]
+      },
+      "UploadableAttachmentKind": {
+        "type": "string",
+        "enum": [
+          "audio",
+          "image",
+          "document"
+        ]
+      },
+      "AppFeedbackKind": {
+        "type": "string",
+        "enum": [
+          "bug",
+          "feedback",
+          "feature_request"
+        ]
+      },
+      "LibraryImportStatus": {
+        "type": "string",
+        "enum": [
+          "queued",
+          "creating",
+          "uploading",
+          "ready",
+          "attention",
+          "failed"
+        ]
+      },
+      "CommentSortMode": {
+        "type": "string",
+        "enum": [
+          "relevant",
+          "chronological"
+        ]
+      },
+      "ReleasePresentationField": {
+        "type": "string",
+        "enum": [
+          "title",
+          "releaseUrl",
+          "credits",
+          "externalLinks"
+        ]
+      },
+      "DraftSaveStatus": {
+        "type": "string",
+        "enum": [
+          "idle",
+          "saving",
+          "saved",
+          "error"
+        ]
+      },
+      "SearchCategory": {
+        "type": "string",
+        "enum": [
+          "creator",
+          "release",
+          "song",
+          "project",
+          "message"
+        ]
+      },
+      "WorkerError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": true
+      },
+      "JobSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/MediaProcessingJobStatus"
+          },
+          "stage": {
+            "type": "string"
+          },
+          "progress": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "stage",
+          "progress"
+        ],
+        "additionalProperties": true
+      },
+      "ReadUrl": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "expiresInSeconds": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "url",
+          "expiresInSeconds"
+        ],
+        "additionalProperties": true
+      },
+      "SongAnalysis": {
+        "type": "object",
+        "properties": {
+          "tempoBpm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tempoConfidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "musicalKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "keyConfidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "tempoBpm",
+          "tempoConfidence",
+          "musicalKey",
+          "keyConfidence"
+        ],
+        "additionalProperties": true
+      },
+      "CreateJob": {
+        "type": "object",
+        "properties": {
+          "sourceAssetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "songVersionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "songId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "outputMode": {
+            "type": "string",
+            "enum": [
+              "public_cloud",
+              "protected"
+            ]
+          },
+          "protectedPurpose": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "post_preview",
+                  "collaboration_preview",
+                  "message_audio"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "projectId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "postId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "sourceAssetId"
+        ],
+        "additionalProperties": true
+      },
+      "CardAsset": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "owner_id": {
+            "type": "string"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/CloudProvider"
+          },
+          "remote_file_id": {
+            "type": "string"
+          },
+          "remote_parent_folder_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "filename": {
+            "type": "string"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "file_extension": {
+            "type": "string"
+          },
+          "bytes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "checksum": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "asset_type": {
+            "$ref": "#/components/schemas/AssetType"
+          },
+          "access_mode": {
+            "$ref": "#/components/schemas/Visibility"
+          },
+          "share_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "view_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "waveform_peaks": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WaveformDataV1"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "derived_from_asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "processing_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "preview_generation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PreviewGeneration"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "codec": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sample_rate_hz": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "channels": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "bit_rate_bps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "waveform_version": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "waveform_bucket_count": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "waveform_generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "updated_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "owner_id",
+          "provider",
+          "remote_file_id",
+          "remote_parent_folder_id",
+          "filename",
+          "display_name",
+          "mime_type",
+          "file_extension",
+          "bytes",
+          "duration_seconds",
+          "checksum",
+          "asset_type",
+          "access_mode",
+          "share_url",
+          "view_url",
+          "thumbnail_url",
+          "derived_from_asset_id",
+          "processing_job_id",
+          "preview_generation",
+          "codec",
+          "sample_rate_hz",
+          "channels",
+          "bit_rate_bps",
+          "waveform_version",
+          "waveform_bucket_count",
+          "waveform_generated_at",
+          "created_at",
+          "updated_at"
+        ],
+        "additionalProperties": true
+      },
+      "CardSingle": {
+        "type": "object",
+        "properties": {
+          "song": {
+            "$ref": "#/components/schemas/Song"
+          },
+          "showLyrics": {
+            "type": "boolean"
+          },
+          "featuredVersion": {
+            "$ref": "#/components/schemas/SongVersion"
+          },
+          "previousVersion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SongVersion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "previewAsset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Asset"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "protectedPreviewAsset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProtectedMediaAsset"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "versionHeartCount": {
+            "type": "number"
+          },
+          "viewerHasHeartedVersion": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "song",
+          "showLyrics",
+          "featuredVersion",
+          "previousVersion",
+          "previewAsset",
+          "protectedPreviewAsset",
+          "versionHeartCount",
+          "viewerHasHeartedVersion"
+        ],
+        "additionalProperties": true
+      },
+      "CardReleaseTrack": {
+        "type": "object",
+        "properties": {
+          "track": {
+            "$ref": "#/components/schemas/ReleaseTrack"
+          },
+          "song": {
+            "$ref": "#/components/schemas/Song"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SongVersion"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "versionLabel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "previewAsset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Asset"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "protectedPreviewAsset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProtectedMediaAsset"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "versionHeartCount": {
+            "type": "number"
+          },
+          "viewerHasHeartedVersion": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "track",
+          "song",
+          "version",
+          "versionLabel",
+          "previewAsset",
+          "protectedPreviewAsset",
+          "versionHeartCount",
+          "viewerHasHeartedVersion"
+        ],
+        "additionalProperties": true
+      },
+      "PostCard": {
+        "type": "object",
+        "properties": {
+          "post": {
+            "$ref": "#/components/schemas/Post"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Profile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "artwork": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CardAsset"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "single": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CardSingle"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "releaseTracks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CardReleaseTrack"
+            }
+          },
+          "heartCount": {
+            "type": "number"
+          },
+          "viewerHasHearted": {
+            "type": "boolean"
+          },
+          "versionHeartCount": {
+            "type": "number"
+          },
+          "viewerHasHeartedVersion": {
+            "type": "boolean"
+          },
+          "commentCount": {
+            "type": "number"
+          },
+          "comments": {
+            "type": "array",
+            "maxItems": 0
+          },
+          "credits": {
+            "type": "array",
+            "maxItems": 0
+          },
+          "externalLinks": {
+            "type": "array",
+            "maxItems": 0
+          },
+          "feedEvent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FeedEvent"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "post",
+          "owner",
+          "artwork",
+          "single",
+          "releaseTracks",
+          "heartCount",
+          "viewerHasHearted",
+          "versionHeartCount",
+          "viewerHasHeartedVersion",
+          "commentCount",
+          "comments",
+          "credits",
+          "externalLinks",
+          "feedEvent"
+        ],
+        "additionalProperties": true
+      },
+      "PostCardRows": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "post_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "card": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/PostCard"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "post_id",
+            "card"
+          ],
+          "additionalProperties": true
+        },
+        "maxItems": 50
+      },
+      "SharedProjectDetail": {
+        "type": "object",
+        "properties": {
+          "targetType": {
+            "type": "string",
+            "enum": [
+              "collaboration_project",
+              "song_version"
+            ]
+          },
+          "targetId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "permission": {
+            "type": "string",
+            "enum": [
+              "view",
+              "review"
+            ]
+          },
+          "project": {
+            "$ref": "#/components/schemas/CollaborationProject"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/Profile"
+          },
+          "tracks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "track": {
+                  "$ref": "#/components/schemas/CollaborationProjectTrack"
+                },
+                "song": {
+                  "$ref": "#/components/schemas/Song"
+                },
+                "version": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/SongVersion"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "protectedAsset": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ProtectedMediaAsset"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "track",
+                "song",
+                "version",
+                "protectedAsset"
+              ],
+              "additionalProperties": true
+            }
+          },
+          "feedbackThreads": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedbackThread"
+            }
+          }
+        },
+        "required": [
+          "targetType",
+          "targetId",
+          "permission",
+          "project",
+          "owner",
+          "tracks",
+          "feedbackThreads"
+        ],
+        "additionalProperties": true
+      },
+      "LegacyWaveform": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        }
+      },
+      "ClientError": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "auth_required",
+              "reauth_required",
+              "forbidden",
+              "unavailable",
+              "share_unavailable",
+              "quota_exceeded",
+              "payload_too_large",
+              "unsupported_media",
+              "validation",
+              "conflict",
+              "rate_limited",
+              "transient",
+              "cancelled",
+              "unknown"
+            ]
+          },
+          "retryable": {
+            "type": "boolean"
+          },
+          "outcomeUnknown": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "retryable",
+          "outcomeUnknown"
+        ],
+        "additionalProperties": true
+      }
+    }
+  }
+}

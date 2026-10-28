@@ -4,20 +4,8 @@ export interface RateLimitPolicy {
   windowMs: number;
 }
 
-interface RateLimitEntry {
-  count: number;
-  resetAt: number;
-}
-
-export interface RateLimitResult {
-  allowed: boolean;
-  limit: number;
-  remaining: number;
-  retryAfterSeconds: number;
-}
-
 export function selectRateLimitPolicy(method: string, pathname: string): RateLimitPolicy | null {
-  if (pathname === "/healthz" || pathname === "/readyz") {
+  if (pathname === "/healthz") {
     return null;
   }
   if (pathname.startsWith("/social/") || pathname.startsWith("/og/")) {
@@ -41,32 +29,4 @@ export function selectRateLimitPolicy(method: string, pathname: string): RateLim
     return { bucket: "upload", limit: 30, windowMs: 60_000 };
   }
   return { bucket: "mutation", limit: 120, windowMs: 60_000 };
-}
-
-export class InMemoryRateLimiter {
-  private readonly entries = new Map<string, RateLimitEntry>();
-
-  check(key: string, policy: RateLimitPolicy, now = Date.now()): RateLimitResult {
-    const existing = this.entries.get(key);
-    const entry = !existing || existing.resetAt <= now
-      ? { count: 0, resetAt: now + policy.windowMs }
-      : existing;
-    entry.count += 1;
-    this.entries.set(key, entry);
-
-    return {
-      allowed: entry.count <= policy.limit,
-      limit: policy.limit,
-      remaining: Math.max(0, policy.limit - entry.count),
-      retryAfterSeconds: Math.max(1, Math.ceil((entry.resetAt - now) / 1000)),
-    };
-  }
-
-  prune(now = Date.now()) {
-    for (const [key, entry] of this.entries) {
-      if (entry.resetAt <= now) {
-        this.entries.delete(key);
-      }
-    }
-  }
 }

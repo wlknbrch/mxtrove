@@ -1,4 +1,5 @@
 import { env } from "@/lib/env";
+import { escapeDriveQueryLiteral } from "./drive-query";
 import {
   buildGoogleDriveFilePageUrl,
   buildGoogleDrivePublicDownloadUrl,
@@ -298,12 +299,12 @@ export class GoogleDriveProvider implements CloudStorageProvider {
     const accessToken = await this.ensureAuthenticated();
     const queryParts = [
       `mimeType = 'application/vnd.google-apps.folder'`,
-      `name = '${name.replace(/'/g, "\\'")}'`,
+      `name = '${escapeDriveQueryLiteral(name)}'`,
       "trashed = false",
     ];
 
     if (parentId) {
-      queryParts.push(`'${parentId}' in parents`);
+      queryParts.push(`'${escapeDriveQueryLiteral(parentId)}' in parents`);
     }
 
     const response = await authorizedFetch(

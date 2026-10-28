@@ -53,6 +53,7 @@ import {
   normalizeOptionalTempoInput,
   songSchema,
   type SongFormValues,
+  type SongFormInput,
   versionSchema,
   type VersionFormValues,
 } from "@/lib/validators";
@@ -92,7 +93,7 @@ export function SongDetailPage() {
     enabled: Boolean(viewer.userId),
   });
 
-  const songForm = useForm<SongFormValues>({
+  const songForm = useForm<SongFormInput, unknown, SongFormValues>({
     resolver: zodResolver(songSchema),
     defaultValues: {
       title: "",
@@ -531,10 +532,10 @@ export function SongDetailPage() {
         viewUrl: publicArtwork.viewUrl,
       });
 
-      const nextValues = {
+      const nextValues = songSchema.parse({
         ...songForm.getValues(),
         default_artwork_asset_id: asset.id,
-      };
+      });
 
       syncSongArtwork(asset.id);
       await persistSong(nextValues);
