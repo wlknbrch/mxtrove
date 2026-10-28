@@ -47,10 +47,18 @@ DCT/FFT dependencies instead of bundling them. Audio-analysis regressions must
 pass before publication. This removes the vulnerable dependency rather than
 dismissing the alert or hiding it from audits.
 
-Gitleaks also matched the literal documentation phrase `inaccessible entities,
-signature/MIME ` as a generic key. An anchored full-match exception permits
-only that exact text, including historical copies; credential patterns and
-CodeQL rules remain enabled.
+Gitleaks mistook prose in the media-attachment verification checklist for a
+generic key. The anchored exception permits only that exact phrase, allowing
+line wrapping in historical copies; credential patterns and CodeQL rules remain
+enabled.
+
+The first published candidate's CodeQL analysis returned zero results. CI also
+caught a missing Docker build input for the shared Vite upstream validator and
+an incorrect new pgTAP expectation about the account-deletion RPC's EXECUTE
+grant. The image now includes the specific helper. The SQL test invokes the RPC
+as anon and requires the existing Authentication required exception before any
+account action, rather than treating callable and authorized as equivalent.
+Fresh GitHub checks still need to validate these integration corrections.
 
 ## Historical publication baseline — 2026-10-20
 

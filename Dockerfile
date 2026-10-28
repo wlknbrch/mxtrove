@@ -8,6 +8,7 @@ RUN npm ci
 COPY index.html tsconfig.json vite.config.ts ./
 COPY public ./public
 COPY src ./src
+COPY services/media-worker/src/public-media/upstream.ts ./services/media-worker/src/public-media/upstream.ts
 COPY scripts/copy-license-notices.mjs ./scripts/copy-license-notices.mjs
 COPY LICENSE NOTICE THIRD_PARTY_NOTICES.md ./
 

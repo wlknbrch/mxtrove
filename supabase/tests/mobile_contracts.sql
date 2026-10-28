@@ -34,10 +34,17 @@ select is(
   250,
   'V1 compact waveform bucketCount is updated with peaks'
 );
-select ok(
-  not has_function_privilege('anon', 'public.request_account_deletion(integer,boolean)', 'EXECUTE'),
-  'Anonymous users cannot invoke account deletion'
+-- EXECUTE may be inherited from PUBLIC; the function must still reject anon.
+set local role anon;
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claims', '{"role":"anon"}', true);
+select throws_ok(
+  'select public.request_account_deletion(14, false)',
+  'P0001',
+  'Authentication required.',
+  'Anonymous account deletion is rejected before changing account state'
 );
+reset role;
 
 -- Synthetic local seed user; all changes roll back. No production data is read.
 insert into public.posts (id, owner_id, post_type, title, visibility)
