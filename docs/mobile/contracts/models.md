@@ -532,7 +532,7 @@ export interface SongUploadGroup {
 
 ## SongAudioAnalysisResult
 
-[src/features/media-processing/api.ts:68](../../../src/features/media-processing/api.ts#L68)
+[src/features/media-processing/api.ts:74](../../../src/features/media-processing/api.ts#L74)
 
 ```typescript
 export interface SongAudioAnalysisResult {

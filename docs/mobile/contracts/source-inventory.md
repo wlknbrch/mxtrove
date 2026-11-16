@@ -737,7 +737,7 @@ export async function updateSongVersionPreview(input: {
 
 ### analyzeSongAudio
 
-[src/features/media-processing/api.ts:75](../../../src/features/media-processing/api.ts#L75)
+[src/features/media-processing/api.ts:81](../../../src/features/media-processing/api.ts#L81)
 
 ```typescript
 export async function analyzeSongAudio(input: {
@@ -753,7 +753,7 @@ Local orchestration; follow its imported helpers and callers.
 
 ### listMediaProcessingJobs
 
-[src/features/media-processing/api.ts:133](../../../src/features/media-processing/api.ts#L133)
+[src/features/media-processing/api.ts:151](../../../src/features/media-processing/api.ts#L151)
 
 ```typescript
 export async function listMediaProcessingJobs(sourceAssetId?: string)
@@ -763,7 +763,7 @@ export async function listMediaProcessingJobs(sourceAssetId?: string)
 
 ### createMediaProcessingJob
 
-[src/features/media-processing/api.ts:157](../../../src/features/media-processing/api.ts#L157)
+[src/features/media-processing/api.ts:175](../../../src/features/media-processing/api.ts#L175)
 
 ```typescript
 export async function createMediaProcessingJob(input: {
@@ -782,7 +782,7 @@ export async function createMediaProcessingJob(input: {
 
 ### uploadMediaProcessingInput
 
-[src/features/media-processing/api.ts:244](../../../src/features/media-processing/api.ts#L244)
+[src/features/media-processing/api.ts:262](../../../src/features/media-processing/api.ts#L262)
 
 ```typescript
 export async function uploadMediaProcessingInput(input: {
@@ -797,7 +797,7 @@ Local orchestration; follow its imported helpers and callers.
 
 ### getMediaProcessingJob
 
-[src/features/media-processing/api.ts:301](../../../src/features/media-processing/api.ts#L301)
+[src/features/media-processing/api.ts:331](../../../src/features/media-processing/api.ts#L331)
 
 ```typescript
 export async function getMediaProcessingJob(jobId: string)
@@ -807,7 +807,7 @@ export async function getMediaProcessingJob(jobId: string)
 
 ### downloadMediaProcessingPreview
 
-[src/features/media-processing/api.ts:310](../../../src/features/media-processing/api.ts#L310)
+[src/features/media-processing/api.ts:340](../../../src/features/media-processing/api.ts#L340)
 
 ```typescript
 export async function downloadMediaProcessingPreview(jobId: string)
@@ -817,7 +817,7 @@ Local orchestration; follow its imported helpers and callers.
 
 ### acknowledgeMediaProcessingJob
 
-[src/features/media-processing/api.ts:344](../../../src/features/media-processing/api.ts#L344)
+[src/features/media-processing/api.ts:385](../../../src/features/media-processing/api.ts#L385)
 
 ```typescript
 export async function acknowledgeMediaProcessingJob(jobId: string)
@@ -827,7 +827,7 @@ export async function acknowledgeMediaProcessingJob(jobId: string)
 
 ### cancelMediaProcessingJob
 
-[src/features/media-processing/api.ts:355](../../../src/features/media-processing/api.ts#L355)
+[src/features/media-processing/api.ts:396](../../../src/features/media-processing/api.ts#L396)
 
 ```typescript
 export async function cancelMediaProcessingJob(jobId: string)
@@ -838,7 +838,7 @@ export async function cancelMediaProcessingJob(jobId: string)
 
 ### finalizeMediaProcessingJob
 
-[src/features/media-processing/api.ts:375](../../../src/features/media-processing/api.ts#L375)
+[src/features/media-processing/api.ts:416](../../../src/features/media-processing/api.ts#L416)
 
 ```typescript
 export async function finalizeMediaProcessingJob(input: {
@@ -851,7 +851,7 @@ export async function finalizeMediaProcessingJob(input: {
 
 ### sendPushTestNotification
 
-[src/features/media-processing/api.ts:395](../../../src/features/media-processing/api.ts#L395)
+[src/features/media-processing/api.ts:436](../../../src/features/media-processing/api.ts#L436)
 
 ```typescript
 export async function sendPushTestNotification()
@@ -861,7 +861,7 @@ export async function sendPushTestNotification()
 
 ### createProtectedMediaReadUrl
 
-[src/features/media-processing/api.ts:406](../../../src/features/media-processing/api.ts#L406)
+[src/features/media-processing/api.ts:447](../../../src/features/media-processing/api.ts#L447)
 
 ```typescript
 export async function createProtectedMediaReadUrl(

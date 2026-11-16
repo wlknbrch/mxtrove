@@ -2211,7 +2211,7 @@
     {
       "name": "analyzeSongAudio",
       "file": "src/features/media-processing/api.ts",
-      "line": 75,
+      "line": 81,
       "release": "0.5",
       "transport": "reuse-existing-service-with-native-orchestration",
       "gaps": [],
@@ -2226,7 +2226,7 @@
     {
       "name": "listMediaProcessingJobs",
       "file": "src/features/media-processing/api.ts",
-      "line": 133,
+      "line": 151,
       "release": "0.5",
       "transport": "reuse-existing-service-with-native-orchestration",
       "gaps": [],
@@ -2254,7 +2254,7 @@
     {
       "name": "createMediaProcessingJob",
       "file": "src/features/media-processing/api.ts",
-      "line": 157,
+      "line": 175,
       "release": "0.5",
       "transport": "reuse-existing-service-with-native-orchestration",
       "gaps": [
@@ -2279,7 +2279,7 @@
     {
       "name": "uploadMediaProcessingInput",
       "file": "src/features/media-processing/api.ts",
-      "line": 244,
+      "line": 262,
       "release": "0.5",
       "transport": "reuse-existing-service-with-native-orchestration",
       "gaps": [
@@ -2296,7 +2296,7 @@
     {
       "name": "getMediaProcessingJob",
       "file": "src/features/media-processing/api.ts",
-      "line": 301,
+      "line": 331,
       "release": "0.5",
       "transport": "reuse-existing-service-with-native-orchestration",
       "gaps": [],
@@ -2311,7 +2311,7 @@
     {
       "name": "downloadMediaProcessingPreview",
       "file": "src/features/media-processing/api.ts",
-      "line": 310,
+      "line": 340,
       "release": "0.5",
       "transport": "reuse-existing-service-with-native-orchestration",
       "gaps": [],
@@ -2326,7 +2326,7 @@
     {
       "name": "acknowledgeMediaProcessingJob",
       "file": "src/features/media-processing/api.ts",
-      "line": 344,
+      "line": 385,
       "release": "0.5",
       "transport": "reuse-existing-service-with-native-orchestration",
       "gaps": [],
@@ -2341,7 +2341,7 @@
     {
       "name": "cancelMediaProcessingJob",
       "file": "src/features/media-processing/api.ts",
-      "line": 355,
+      "line": 396,
       "release": "0.5",
       "transport": "reuse-existing-service-with-native-orchestration",
       "gaps": [],
@@ -2364,7 +2364,7 @@
     {
       "name": "finalizeMediaProcessingJob",
       "file": "src/features/media-processing/api.ts",
-      "line": 375,
+      "line": 416,
       "release": "0.5",
       "transport": "reuse-existing-service-with-native-orchestration",
       "gaps": [],
@@ -2387,7 +2387,7 @@
     {
       "name": "sendPushTestNotification",
       "file": "src/features/media-processing/api.ts",
-      "line": 395,
+      "line": 436,
       "release": "0.5",
       "transport": "reuse-existing-service-with-native-orchestration",
       "gaps": [],
@@ -2402,7 +2402,7 @@
     {
       "name": "createProtectedMediaReadUrl",
       "file": "src/features/media-processing/api.ts",
-      "line": 406,
+      "line": 447,
       "release": "0.3",
       "transport": "reuse-existing-service-with-native-orchestration",
       "gaps": [

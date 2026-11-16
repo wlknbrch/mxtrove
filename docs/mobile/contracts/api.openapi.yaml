@@ -616,7 +616,7 @@
       "get": {
         "operationId": "get__v1_public_media",
         "summary": "GET /v1/public-media",
-        "x-source": "services/media-worker/src/public-media/routes.ts:34",
+        "x-source": "services/media-worker/src/public-media/routes.ts:52",
         "x-contract-status": "existing-source-not-live-verified",
         "security": [],
         "parameters": [
@@ -757,7 +757,7 @@
       "head": {
         "operationId": "head__v1_public_media",
         "summary": "HEAD /v1/public-media",
-        "x-source": "services/media-worker/src/public-media/routes.ts:34",
+        "x-source": "services/media-worker/src/public-media/routes.ts:52",
         "x-contract-status": "existing-source-not-live-verified",
         "security": [],
         "parameters": [

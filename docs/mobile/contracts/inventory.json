@@ -1639,7 +1639,7 @@
       "apiFile": false,
       "calls": [],
       "file": "src/features/legal/changelog.ts",
-      "line": 94
+      "line": 106
     },
     {
       "name": "getArchivedAppReleases",
@@ -1647,7 +1647,7 @@
       "apiFile": false,
       "calls": [],
       "file": "src/features/legal/changelog.ts",
-      "line": 98
+      "line": 110
     },
     {
       "name": "validateAppFeedback",
@@ -2044,7 +2044,7 @@
       "apiFile": false,
       "calls": [],
       "file": "src/features/library/library-import-page.tsx",
-      "line": 61
+      "line": 62
     },
     {
       "name": "readLibraryImportSession",
@@ -2116,7 +2116,7 @@
       "apiFile": true,
       "calls": [],
       "file": "src/features/media-processing/api.ts",
-      "line": 75
+      "line": 81
     },
     {
       "name": "listMediaProcessingJobs",
@@ -2131,11 +2131,11 @@
           ],
           "expression": "client\n    .from(\"media_processing_jobs\")",
           "file": "src/features/media-processing/api.ts",
-          "line": 140
+          "line": 158
         }
       ],
       "file": "src/features/media-processing/api.ts",
-      "line": 133
+      "line": 151
     },
     {
       "name": "createMediaProcessingJob",
@@ -2150,7 +2150,7 @@
           ],
           "expression": "workerRequest<MediaProcessingJob>(\"/v1/media/jobs\", {\n      method: \"POST\",\n      headers: {\n        \"Content-Type\": \"application/json\",\n      },\n      body: JSON.stringify({\n        sourceAssetId: input.sourceAssetId,\n        songVersionId: input.songVersionId ?? null,\n        songId: input.songId ?? null,\n        outputMode: \"protected\",\n        protectedPurpose: input.protectedPurpose ?? \"collaboration_preview\",\n        projectId: input.projectId ?? null,\n        postId: input.postId ?? null,\n      }),\n    })",
           "file": "src/features/media-processing/api.ts",
-          "line": 213
+          "line": 231
         },
         {
           "kind": "rpc",
@@ -2160,11 +2160,11 @@
           ],
           "expression": "client.rpc(\"request_media_processing_job\", {\n    source_asset_id: input.sourceAssetId,\n    linked_song_version_id: input.songVersionId ?? null,\n    linked_song_id: input.songId ?? null,\n  })",
           "file": "src/features/media-processing/api.ts",
-          "line": 231
+          "line": 249
         }
       ],
       "file": "src/features/media-processing/api.ts",
-      "line": 157
+      "line": 175
     },
     {
       "name": "uploadMediaProcessingInput",
@@ -2172,7 +2172,7 @@
       "apiFile": true,
       "calls": [],
       "file": "src/features/media-processing/api.ts",
-      "line": 244
+      "line": 262
     },
     {
       "name": "getMediaProcessingJob",
@@ -2185,11 +2185,11 @@
           "targets": [],
           "expression": "workerRequest<MediaProcessingJob>(`/v1/media/jobs/${jobId}`)",
           "file": "src/features/media-processing/api.ts",
-          "line": 307
+          "line": 337
         }
       ],
       "file": "src/features/media-processing/api.ts",
-      "line": 301
+      "line": 331
     },
     {
       "name": "downloadMediaProcessingPreview",
@@ -2197,7 +2197,7 @@
       "apiFile": true,
       "calls": [],
       "file": "src/features/media-processing/api.ts",
-      "line": 310
+      "line": 340
     },
     {
       "name": "acknowledgeMediaProcessingJob",
@@ -2210,11 +2210,11 @@
           "targets": [],
           "expression": "workerRequest(`/v1/media/jobs/${jobId}/acknowledge`, {\n    method: \"POST\",\n  })",
           "file": "src/features/media-processing/api.ts",
-          "line": 350
+          "line": 391
         }
       ],
       "file": "src/features/media-processing/api.ts",
-      "line": 344
+      "line": 385
     },
     {
       "name": "cancelMediaProcessingJob",
@@ -2229,7 +2229,7 @@
           ],
           "expression": "client.rpc(\"cancel_media_processing_job\", {\n    job_id: jobId,\n  })",
           "file": "src/features/media-processing/api.ts",
-          "line": 362
+          "line": 403
         },
         {
           "kind": "workerRequest",
@@ -2237,11 +2237,11 @@
           "targets": [],
           "expression": "workerRequest(`/v1/media/jobs/${jobId}`, {\n    method: \"DELETE\",\n  })",
           "file": "src/features/media-processing/api.ts",
-          "line": 370
+          "line": 411
         }
       ],
       "file": "src/features/media-processing/api.ts",
-      "line": 355
+      "line": 396
     },
     {
       "name": "finalizeMediaProcessingJob",
@@ -2256,11 +2256,11 @@
           ],
           "expression": "client.rpc(\"finalize_media_processing_job\", {\n    job_id: input.jobId,\n    preview_asset_id: input.previewAssetId,\n  })",
           "file": "src/features/media-processing/api.ts",
-          "line": 385
+          "line": 426
         }
       ],
       "file": "src/features/media-processing/api.ts",
-      "line": 375
+      "line": 416
     },
     {
       "name": "sendPushTestNotification",
@@ -2275,11 +2275,11 @@
           ],
           "expression": "workerRequest(\"/v1/push/test\", {\n    method: \"POST\",\n  })",
           "file": "src/features/media-processing/api.ts",
-          "line": 401
+          "line": 442
         }
       ],
       "file": "src/features/media-processing/api.ts",
-      "line": 395
+      "line": 436
     },
     {
       "name": "createProtectedMediaReadUrl",
@@ -2292,7 +2292,7 @@
           "targets": [],
           "expression": "client.auth.getSession()",
           "file": "src/features/media-processing/api.ts",
-          "line": 412
+          "line": 453
         },
         {
           "kind": "fetch",
@@ -2300,7 +2300,7 @@
           "targets": [],
           "expression": "fetch(\n      `${env.mediaWorkerUrl}/v1/protected-media/${encodeURIComponent(assetId)}/read-url`,\n      {\n        method: \"POST\",\n        headers: {\n          ...(data.session?.access_token\n            ? { Authorization: `Bearer ${data.session.access_token}` }\n            : {}),\n          \"X-MxShare-Share-Token\": shareToken,\n        },\n      },\n    )",
           "file": "src/features/media-processing/api.ts",
-          "line": 413
+          "line": 454
         },
         {
           "kind": "workerRequest",
@@ -2308,11 +2308,19 @@
           "targets": [],
           "expression": "workerRequest<{ url: string; expiresInSeconds: number }>(\n    `/v1/protected-media/${encodeURIComponent(assetId)}/read-url`,\n    {\n      method: \"POST\",\n      headers: shareToken\n        ? { \"X-MxShare-Share-Token\": shareToken }\n        : undefined,\n    },\n  )",
           "file": "src/features/media-processing/api.ts",
-          "line": 435
+          "line": 476
         }
       ],
       "file": "src/features/media-processing/api.ts",
-      "line": 406
+      "line": 447
+    },
+    {
+      "name": "waitForJobToSettle",
+      "signature": "export async function waitForJobToSettle(params: {\n  jobId: string;\n  signal?: AbortSignal;\n  onJobChange?: (job: MediaProcessingJob | null) => void;\n  onProgress?: (progress: number) => void;\n})",
+      "apiFile": false,
+      "calls": [],
+      "file": "src/features/media-processing/automatic-preview.ts",
+      "line": 52
     },
     {
       "name": "generateAutomaticPreview",
@@ -2320,7 +2328,7 @@
       "apiFile": false,
       "calls": [],
       "file": "src/features/media-processing/automatic-preview.ts",
-      "line": 68
+      "line": 122
     },
     {
       "name": "generateAutomaticPreviewFromSourceAsset",
@@ -2328,7 +2336,7 @@
       "apiFile": false,
       "calls": [],
       "file": "src/features/media-processing/automatic-preview.ts",
-      "line": 175
+      "line": 229
     },
     {
       "name": "analyzeSongMetadataFromSourceAsset",
@@ -2336,7 +2344,7 @@
       "apiFile": false,
       "calls": [],
       "file": "src/features/media-processing/automatic-preview.ts",
-      "line": 206
+      "line": 260
     },
     {
       "name": "generateProtectedPreviewFromSourceAsset",
@@ -2344,7 +2352,7 @@
       "apiFile": false,
       "calls": [],
       "file": "src/features/media-processing/automatic-preview.ts",
-      "line": 229
+      "line": 283
     },
     {
       "name": "uploadOriginalWithAutomaticPreview",
@@ -2352,7 +2360,7 @@
       "apiFile": false,
       "calls": [],
       "file": "src/features/media-processing/automatic-preview.ts",
-      "line": 283
+      "line": 337
     },
     {
       "name": "MediaProcessingStatusCard",
@@ -7051,84 +7059,84 @@
       "label": "Back to library",
       "handler": "\"/library\"",
       "file": "src/features/library/library-import-page.tsx",
-      "line": 330
+      "line": 365
     },
     {
       "event": "onClick",
       "label": "New import",
       "handler": "{() => {\n                itemsRef.current = [];\n                setItems([]);\n                batchIdRef.current = \"\";\n                navigate(\"/library/import\", { replace: true });\n              }}",
       "file": "src/features/library/library-import-page.tsx",
-      "line": 343
+      "line": 378
     },
     {
       "event": "onClick",
       "label": "",
       "handler": "{() => {\n                    if (item.songId) navigate(`/library/songs/${item.songId}?batch=${batchIdRef.current}`);\n                  }}",
       "file": "src/features/library/library-import-page.tsx",
-      "line": 397
+      "line": 432
     },
     {
       "event": "onClick",
       "label": "Start editing",
       "handler": "{() => navigate(`/library/songs/${firstWorkspaceItem.songId}?batch=${batchIdRef.current}`)}",
       "file": "src/features/library/library-import-page.tsx",
-      "line": 460
+      "line": 495
     },
     {
       "event": "onDragEnter",
       "label": "",
       "handler": "{(event: DragEvent<HTMLDivElement>) => { event.preventDefault(); setDragging(true); }}",
       "file": "src/features/library/library-import-page.tsx",
-      "line": 473
+      "line": 508
     },
     {
       "event": "onDragLeave",
       "label": "",
       "handler": "{(event: DragEvent<HTMLDivElement>) => { event.preventDefault(); setDragging(false); }}",
       "file": "src/features/library/library-import-page.tsx",
-      "line": 474
+      "line": 509
     },
     {
       "event": "onDragOver",
       "label": "",
       "handler": "{(event: DragEvent<HTMLDivElement>) => { event.preventDefault(); setDragging(true); }}",
       "file": "src/features/library/library-import-page.tsx",
-      "line": 475
+      "line": 510
     },
     {
       "event": "onDrop",
       "label": "",
       "handler": "{(event: DragEvent<HTMLDivElement>) => {\n              event.preventDefault();\n              setDragging(false);\n              void startImport(Array.from(event.dataTransfer.files));\n            }}",
       "file": "src/features/library/library-import-page.tsx",
-      "line": 476
+      "line": 511
     },
     {
       "event": "onChange",
       "label": "",
       "handler": "{(event) => {\n                  const files = Array.from(event.currentTarget.files ?? []);\n                  event.currentTarget.value = \"\";\n                  void startImport(files);\n                }}",
       "file": "src/features/library/library-import-page.tsx",
-      "line": 498
+      "line": 533
     },
     {
       "event": "to",
       "label": "",
       "handler": "\"/settings/storage\"",
       "file": "src/features/library/library-import-page.tsx",
-      "line": 515
+      "line": 550
     },
     {
       "event": "onAbort",
       "label": "",
       "handler": "{abortAndLeave}",
       "file": "src/features/library/library-import-page.tsx",
-      "line": 529
+      "line": 564
     },
     {
       "event": "onStay",
       "label": "",
       "handler": "{() => {\n          if (navigationBlocker.state === \"blocked\") navigationBlocker.reset();\n        }}",
       "file": "src/features/library/library-import-page.tsx",
-      "line": 530
+      "line": 565
     },
     {
       "event": "useMutation",
@@ -10825,7 +10833,7 @@
       "targets": [],
       "expression": "fetch(input, {\n    ...init,\n    headers: {\n      Authorization: `Bearer ${accessToken}`,\n      ...(init?.headers ?? {}),\n    },\n  })",
       "file": "src/features/drive/providers/google-drive-provider.ts",
-      "line": 115
+      "line": 116
     },
     {
       "kind": "fetch",
@@ -11223,15 +11231,15 @@
       "targets": [],
       "expression": "client.auth.getSession()",
       "file": "src/features/media-processing/api.ts",
-      "line": 7
+      "line": 10
     },
     {
       "kind": "fetch",
       "target": "`${env.mediaWorkerUrl}${path}`",
       "targets": [],
-      "expression": "fetch(`${env.mediaWorkerUrl}${path}`, {\n    ...init,\n    headers: {\n      Authorization: `Bearer ${accessToken}`,\n      ...(init?.headers ?? {}),\n    },\n  })",
+      "expression": "fetch(`${env.mediaWorkerUrl}${path}`, {\n    ...init,\n    // Status calls are small JSON exchanges; a hard cap keeps a hung connection\n    // from freezing a whole import lane while it waits for a poll response.\n    signal: AbortSignal.timeout(WORKER_REQUEST_TIMEOUT_MS),\n    headers: {\n      Authorization: `Bearer ${accessToken}`,\n      ...(init?.headers ?? {}),\n    },\n  })",
       "file": "src/features/media-processing/api.ts",
-      "line": 41
+      "line": 44
     },
     {
       "kind": "from",
@@ -11241,7 +11249,7 @@
       ],
       "expression": "client\n    .from(\"media_processing_jobs\")",
       "file": "src/features/media-processing/api.ts",
-      "line": 140
+      "line": 158
     },
     {
       "kind": "workerRequest",
@@ -11251,7 +11259,7 @@
       ],
       "expression": "workerRequest<MediaProcessingJob>(\"/v1/media/jobs\", {\n      method: \"POST\",\n      headers: {\n        \"Content-Type\": \"application/json\",\n      },\n      body: JSON.stringify({\n        sourceAssetId: input.sourceAssetId,\n        songVersionId: input.songVersionId ?? null,\n        songId: input.songId ?? null,\n        outputMode: \"protected\",\n        protectedPurpose: input.protectedPurpose ?? \"collaboration_preview\",\n        projectId: input.projectId ?? null,\n        postId: input.postId ?? null,\n      }),\n    })",
       "file": "src/features/media-processing/api.ts",
-      "line": 213
+      "line": 231
     },
     {
       "kind": "rpc",
@@ -11261,7 +11269,7 @@
       ],
       "expression": "client.rpc(\"request_media_processing_job\", {\n    source_asset_id: input.sourceAssetId,\n    linked_song_version_id: input.songVersionId ?? null,\n    linked_song_id: input.songId ?? null,\n  })",
       "file": "src/features/media-processing/api.ts",
-      "line": 231
+      "line": 249
     },
     {
       "kind": "workerRequest",
@@ -11269,7 +11277,7 @@
       "targets": [],
       "expression": "workerRequest<MediaProcessingJob>(`/v1/media/jobs/${jobId}`)",
       "file": "src/features/media-processing/api.ts",
-      "line": 307
+      "line": 337
     },
     {
       "kind": "workerRequest",
@@ -11277,7 +11285,7 @@
       "targets": [],
       "expression": "workerRequest(`/v1/media/jobs/${jobId}/acknowledge`, {\n    method: \"POST\",\n  })",
       "file": "src/features/media-processing/api.ts",
-      "line": 350
+      "line": 391
     },
     {
       "kind": "rpc",
@@ -11287,7 +11295,7 @@
       ],
       "expression": "client.rpc(\"cancel_media_processing_job\", {\n    job_id: jobId,\n  })",
       "file": "src/features/media-processing/api.ts",
-      "line": 362
+      "line": 403
     },
     {
       "kind": "workerRequest",
@@ -11295,7 +11303,7 @@
       "targets": [],
       "expression": "workerRequest(`/v1/media/jobs/${jobId}`, {\n    method: \"DELETE\",\n  })",
       "file": "src/features/media-processing/api.ts",
-      "line": 370
+      "line": 411
     },
     {
       "kind": "rpc",
@@ -11305,7 +11313,7 @@
       ],
       "expression": "client.rpc(\"finalize_media_processing_job\", {\n    job_id: input.jobId,\n    preview_asset_id: input.previewAssetId,\n  })",
       "file": "src/features/media-processing/api.ts",
-      "line": 385
+      "line": 426
     },
     {
       "kind": "workerRequest",
@@ -11315,7 +11323,7 @@
       ],
       "expression": "workerRequest(\"/v1/push/test\", {\n    method: \"POST\",\n  })",
       "file": "src/features/media-processing/api.ts",
-      "line": 401
+      "line": 442
     },
     {
       "kind": "getSession",
@@ -11323,7 +11331,7 @@
       "targets": [],
       "expression": "client.auth.getSession()",
       "file": "src/features/media-processing/api.ts",
-      "line": 412
+      "line": 453
     },
     {
       "kind": "fetch",
@@ -11331,7 +11339,7 @@
       "targets": [],
       "expression": "fetch(\n      `${env.mediaWorkerUrl}/v1/protected-media/${encodeURIComponent(assetId)}/read-url`,\n      {\n        method: \"POST\",\n        headers: {\n          ...(data.session?.access_token\n            ? { Authorization: `Bearer ${data.session.access_token}` }\n            : {}),\n          \"X-MxShare-Share-Token\": shareToken,\n        },\n      },\n    )",
       "file": "src/features/media-processing/api.ts",
-      "line": 413
+      "line": 454
     },
     {
       "kind": "workerRequest",
@@ -11339,7 +11347,7 @@
       "targets": [],
       "expression": "workerRequest<{ url: string; expiresInSeconds: number }>(\n    `/v1/protected-media/${encodeURIComponent(assetId)}/read-url`,\n    {\n      method: \"POST\",\n      headers: shareToken\n        ? { \"X-MxShare-Share-Token\": shareToken }\n        : undefined,\n    },\n  )",
       "file": "src/features/media-processing/api.ts",
-      "line": 435
+      "line": 476
     },
     {
       "kind": "from",
@@ -13758,7 +13766,7 @@
       ],
       "expression": "supabaseAdmin.from(\"media_processing_jobs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 63
+      "line": 65
     },
     {
       "kind": "from",
@@ -13768,7 +13776,7 @@
       ],
       "expression": "supabaseAdmin\n    .from(\"media_processing_jobs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 79
+      "line": 81
     },
     {
       "kind": "from",
@@ -13778,7 +13786,7 @@
       ],
       "expression": "supabaseAdmin\n    .from(\"assets\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 103
+      "line": 105
     },
     {
       "kind": "from",
@@ -13788,7 +13796,7 @@
       ],
       "expression": "supabaseAdmin\n      .from(\"song_versions\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 119
+      "line": 121
     },
     {
       "kind": "from",
@@ -13798,7 +13806,7 @@
       ],
       "expression": "supabaseAdmin\n      .from(\"songs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 135
+      "line": 137
     },
     {
       "kind": "rpc",
@@ -13808,7 +13816,7 @@
       ],
       "expression": "supabaseAdmin.rpc(\n      \"can_upload_project_version\",\n      {\n        target_project_id: input.projectId,\n        target_profile_id: input.ownerId,\n      },\n    )",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 155
+      "line": 157
     },
     {
       "kind": "from",
@@ -13818,7 +13826,7 @@
       ],
       "expression": "supabaseAdmin\n      .from(\"posts\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 174
+      "line": 176
     },
     {
       "kind": "from",
@@ -13828,7 +13836,7 @@
       ],
       "expression": "supabaseAdmin\n    .from(\"media_processing_jobs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 188
+      "line": 190
     },
     {
       "kind": "from",
@@ -13838,7 +13846,7 @@
       ],
       "expression": "supabaseAdmin\n        .from(\"media_processing_jobs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 214
+      "line": 216
     },
     {
       "kind": "from",
@@ -13848,7 +13856,7 @@
       ],
       "expression": "supabaseAdmin\n    .from(\"media_processing_jobs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 231
+      "line": 233
     },
     {
       "kind": "from",
@@ -13858,7 +13866,17 @@
       ],
       "expression": "supabaseAdmin\n    .from(\"media_processing_jobs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 308
+      "line": 310
+    },
+    {
+      "kind": "from",
+      "target": "media_processing_jobs",
+      "targets": [
+        "media_processing_jobs"
+      ],
+      "expression": "supabaseAdmin\n      .from(\"media_processing_jobs\")",
+      "file": "services/media-worker/src/jobs/media-jobs.ts",
+      "line": 337
     },
     {
       "kind": "from",
@@ -13868,7 +13886,7 @@
       ],
       "expression": "supabaseAdmin\n          .from(\"song_versions\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 423
+      "line": 450
     },
     {
       "kind": "rpc",
@@ -13878,7 +13896,7 @@
       ],
       "expression": "supabaseAdmin.rpc(\"release_protected_media_asset\", {\n        target_asset_id: reservedProtectedAssetId,\n      })",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 471
+      "line": 498
     },
     {
       "kind": "rpc",
@@ -13888,7 +13906,7 @@
       ],
       "expression": "supabaseAdmin.rpc(\"reserve_protected_media_asset\", {\n    target_owner_id: input.job.owner_id,\n    target_purpose: input.job.protected_purpose ?? \"collaboration_preview\",\n    target_filename: `${input.job.id}.mp3`,\n    target_mime_type: \"audio/mpeg\",\n    expected_bytes: input.outputBytes,\n    target_source_asset_id: input.job.source_asset_id,\n    target_post_id: input.job.target_post_id,\n    target_project_id: input.job.target_project_id,\n    target_song_version_id: input.job.song_version_id,\n    target_expires_at: null,\n  })",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 510
+      "line": 537
     },
     {
       "kind": "rpc",
@@ -13898,7 +13916,7 @@
       ],
       "expression": "supabaseAdmin.rpc(\"finalize_protected_media_asset\", {\n    target_asset_id: input.assetId,\n    actual_bytes: input.bytes,\n    target_checksum: input.checksum,\n    target_duration_seconds: input.durationSeconds,\n    target_width: null,\n    target_height: null,\n    target_waveform_data: input.waveform,\n  })",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 540
+      "line": 567
     },
     {
       "kind": "from",
@@ -13908,7 +13926,7 @@
       ],
       "expression": "supabaseAdmin\n    .from(\"media_processing_jobs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 555
+      "line": 582
     },
     {
       "kind": "from",
@@ -13918,7 +13936,17 @@
       ],
       "expression": "supabaseAdmin\n    .from(\"media_processing_jobs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 583
+      "line": 611
+    },
+    {
+      "kind": "from",
+      "target": "media_processing_jobs",
+      "targets": [
+        "media_processing_jobs"
+      ],
+      "expression": "supabaseAdmin\n    .from(\"media_processing_jobs\")",
+      "file": "services/media-worker/src/jobs/media-jobs.ts",
+      "line": 634
     },
     {
       "kind": "on",
@@ -15378,7 +15406,7 @@
       ],
       "enumValues": null,
       "file": "src/features/media-processing/api.ts",
-      "line": 68
+      "line": 74
     },
     {
       "name": "ConversationPreview",
@@ -19797,16 +19825,16 @@
     {
       "method": "GET",
       "path": "/v1/public-media",
-      "handler": "app.route({\n    method: [\"GET\", \"HEAD\"],\n    url: \"/v1/public-media\",\n    handler: async (request, reply) => {\n      const query = request.query as {\n        fileId?: string;\n        kind?: string;\n        provider?: string;\n        size?: string;\n        url?: string;\n      };\n      const kind = query.kind === \"audio\" ? \"audio\" : \"image\";\n      const fileId = query.fileId?.trim() ?? \"\";\n      const dropboxUrl = query.provider === \"dropbox\"\n        ? getDropboxPublicMediaUrl(query.url ?? null)\n        : null;\n\n      if (!dropboxUrl && !GOOGLE_DRIVE_FILE_ID_PATTERN.test(fileId)) {\n        return reply.code(400).send({ error: \"Missing or unsupported public media source.\" });\n      }\n\n      const headers = new Headers();\n      if (request.headers.range) headers.set(\"Range\", request.headers.range);\n\n      let upstream: Response;\n      try {\n        upstream = await fetchPublicProviderMedia(\n          dropboxUrl ?? buildGoogleDriveUrl(fileId, kind, query.size ?? null),\n          { method: request.method, headers },\n        );\n      } catch {\n        return reply.code(502).send({ error: \"The public media provider could not return a supported response.\" });\n      }\n\n      reply.code(upstream.status);\n      copyUpstreamHeaders(upstream.headers, reply);\n      reply\n        .header(\"Cache-Control\", kind === \"image\"\n          ? \"public, max-age=86400, stale-while-revalidate=604800\"\n          : \"public, max-age=86400, stale-while-revalidate=86400\")\n        .header(\"X-Content-Type-Options\", \"nosniff\");\n\n      if (\n        dropboxUrl\n        && (!upstream.headers.get(\"content-type\") || upstream.headers.get(\"content-type\") === \"application/octet-stream\")\n      ) {\n        reply.type(kind === \"audio\" ? \"audio/mpeg\" : \"image/jpeg\");\n      }\n\n      if (request.method === \"HEAD\" || !upstream.body) {\n        return reply.send();\n      }\n\n      return reply.send(Readable.fromWeb(upstream.body as import(\"node:stream/web\").ReadableStream));\n    },\n  })",
+      "handler": "app.route({\n    method: [\"GET\", \"HEAD\"],\n    url: \"/v1/public-media\",\n    handler: async (request, reply) => {\n      const query = request.query as {\n        fileId?: string;\n        kind?: string;\n        provider?: string;\n        size?: string;\n        url?: string;\n      };\n      const kind = query.kind === \"audio\" ? \"audio\" : \"image\";\n      const fileId = query.fileId?.trim() ?? \"\";\n      const dropboxUrl = query.provider === \"dropbox\"\n        ? getDropboxPublicMediaUrl(query.url ?? null)\n        : null;\n\n      if (!dropboxUrl && !GOOGLE_DRIVE_FILE_ID_PATTERN.test(fileId)) {\n        return reply.code(400).send({ error: \"Missing or unsupported public media source.\" });\n      }\n\n      const headers = new Headers();\n      if (request.headers.range) headers.set(\"Range\", request.headers.range);\n\n      let upstream: Response;\n      try {\n        upstream = await fetchPublicProviderMedia(\n          dropboxUrl ?? buildGoogleDriveUrl(fileId, kind, query.size ?? null),\n          { method: request.method, headers },\n        );\n\n        if (!dropboxUrl && TRANSIENT_GOOGLE_STATUSES.has(upstream.status)) {\n          await new Promise((resolve) => setTimeout(resolve, GOOGLE_RETRY_DELAY_MS));\n          const retry = await fetchPublicProviderMedia(\n            buildGoogleDriveAlternateUrl(fileId, kind, query.size ?? null),\n            { method: request.method, headers },\n          );\n          if (!TRANSIENT_GOOGLE_STATUSES.has(retry.status) && retry.status < 500) {\n            await upstream.body?.cancel().catch(() => undefined);\n            upstream = retry;\n          }\n        }\n      } catch {\n        return reply.code(502).send({ error: \"The public media provider could not return a supported response.\" });\n      }\n\n      if (TRANSIENT_GOOGLE_STATUSES.has(upstream.status)) {\n        await upstream.body?.cancel().catch(() => undefined);\n        return reply.code(502).send({\n          error: \"This media file is not publicly readable yet. Try again in a few moments.\",\n        });\n      }\n\n      reply.code(upstream.status);\n      copyUpstreamHeaders(upstream.headers, reply);\n      reply\n        .header(\"Cache-Control\", kind === \"image\"\n          ? \"public, max-age=86400, stale-while-revalidate=604800\"\n          : \"public, max-age=86400, stale-while-revalidate=86400\")\n        .header(\"X-Content-Type-Options\", \"nosniff\");\n\n      if (\n        dropboxUrl\n        && (!upstream.headers.get(\"content-type\") || upstream.headers.get(\"content-type\") === \"application/octet-stream\")\n      ) {\n        reply.type(kind === \"audio\" ? \"audio/mpeg\" : \"image/jpeg\");\n      }\n\n      if (request.method === \"HEAD\" || !upstream.body) {\n        return reply.send();\n      }\n\n      return reply.send(Readable.fromWeb(upstream.body as import(\"node:stream/web\").ReadableStream));\n    },\n  })",
       "file": "services/media-worker/src/public-media/routes.ts",
-      "line": 34
+      "line": 52
     },
     {
       "method": "HEAD",
       "path": "/v1/public-media",
-      "handler": "app.route({\n    method: [\"GET\", \"HEAD\"],\n    url: \"/v1/public-media\",\n    handler: async (request, reply) => {\n      const query = request.query as {\n        fileId?: string;\n        kind?: string;\n        provider?: string;\n        size?: string;\n        url?: string;\n      };\n      const kind = query.kind === \"audio\" ? \"audio\" : \"image\";\n      const fileId = query.fileId?.trim() ?? \"\";\n      const dropboxUrl = query.provider === \"dropbox\"\n        ? getDropboxPublicMediaUrl(query.url ?? null)\n        : null;\n\n      if (!dropboxUrl && !GOOGLE_DRIVE_FILE_ID_PATTERN.test(fileId)) {\n        return reply.code(400).send({ error: \"Missing or unsupported public media source.\" });\n      }\n\n      const headers = new Headers();\n      if (request.headers.range) headers.set(\"Range\", request.headers.range);\n\n      let upstream: Response;\n      try {\n        upstream = await fetchPublicProviderMedia(\n          dropboxUrl ?? buildGoogleDriveUrl(fileId, kind, query.size ?? null),\n          { method: request.method, headers },\n        );\n      } catch {\n        return reply.code(502).send({ error: \"The public media provider could not return a supported response.\" });\n      }\n\n      reply.code(upstream.status);\n      copyUpstreamHeaders(upstream.headers, reply);\n      reply\n        .header(\"Cache-Control\", kind === \"image\"\n          ? \"public, max-age=86400, stale-while-revalidate=604800\"\n          : \"public, max-age=86400, stale-while-revalidate=86400\")\n        .header(\"X-Content-Type-Options\", \"nosniff\");\n\n      if (\n        dropboxUrl\n        && (!upstream.headers.get(\"content-type\") || upstream.headers.get(\"content-type\") === \"application/octet-stream\")\n      ) {\n        reply.type(kind === \"audio\" ? \"audio/mpeg\" : \"image/jpeg\");\n      }\n\n      if (request.method === \"HEAD\" || !upstream.body) {\n        return reply.send();\n      }\n\n      return reply.send(Readable.fromWeb(upstream.body as import(\"node:stream/web\").ReadableStream));\n    },\n  })",
+      "handler": "app.route({\n    method: [\"GET\", \"HEAD\"],\n    url: \"/v1/public-media\",\n    handler: async (request, reply) => {\n      const query = request.query as {\n        fileId?: string;\n        kind?: string;\n        provider?: string;\n        size?: string;\n        url?: string;\n      };\n      const kind = query.kind === \"audio\" ? \"audio\" : \"image\";\n      const fileId = query.fileId?.trim() ?? \"\";\n      const dropboxUrl = query.provider === \"dropbox\"\n        ? getDropboxPublicMediaUrl(query.url ?? null)\n        : null;\n\n      if (!dropboxUrl && !GOOGLE_DRIVE_FILE_ID_PATTERN.test(fileId)) {\n        return reply.code(400).send({ error: \"Missing or unsupported public media source.\" });\n      }\n\n      const headers = new Headers();\n      if (request.headers.range) headers.set(\"Range\", request.headers.range);\n\n      let upstream: Response;\n      try {\n        upstream = await fetchPublicProviderMedia(\n          dropboxUrl ?? buildGoogleDriveUrl(fileId, kind, query.size ?? null),\n          { method: request.method, headers },\n        );\n\n        if (!dropboxUrl && TRANSIENT_GOOGLE_STATUSES.has(upstream.status)) {\n          await new Promise((resolve) => setTimeout(resolve, GOOGLE_RETRY_DELAY_MS));\n          const retry = await fetchPublicProviderMedia(\n            buildGoogleDriveAlternateUrl(fileId, kind, query.size ?? null),\n            { method: request.method, headers },\n          );\n          if (!TRANSIENT_GOOGLE_STATUSES.has(retry.status) && retry.status < 500) {\n            await upstream.body?.cancel().catch(() => undefined);\n            upstream = retry;\n          }\n        }\n      } catch {\n        return reply.code(502).send({ error: \"The public media provider could not return a supported response.\" });\n      }\n\n      if (TRANSIENT_GOOGLE_STATUSES.has(upstream.status)) {\n        await upstream.body?.cancel().catch(() => undefined);\n        return reply.code(502).send({\n          error: \"This media file is not publicly readable yet. Try again in a few moments.\",\n        });\n      }\n\n      reply.code(upstream.status);\n      copyUpstreamHeaders(upstream.headers, reply);\n      reply\n        .header(\"Cache-Control\", kind === \"image\"\n          ? \"public, max-age=86400, stale-while-revalidate=604800\"\n          : \"public, max-age=86400, stale-while-revalidate=86400\")\n        .header(\"X-Content-Type-Options\", \"nosniff\");\n\n      if (\n        dropboxUrl\n        && (!upstream.headers.get(\"content-type\") || upstream.headers.get(\"content-type\") === \"application/octet-stream\")\n      ) {\n        reply.type(kind === \"audio\" ? \"audio/mpeg\" : \"image/jpeg\");\n      }\n\n      if (request.method === \"HEAD\" || !upstream.body) {\n        return reply.send();\n      }\n\n      return reply.send(Readable.fromWeb(upstream.body as import(\"node:stream/web\").ReadableStream));\n    },\n  })",
       "file": "services/media-worker/src/public-media/routes.ts",
-      "line": 34
+      "line": 52
     },
     {
       "method": "GET",
@@ -24844,7 +24872,7 @@
     },
     {
       "file": "src/features/drive/providers/google-drive-provider.ts",
-      "sha256": "075d8e39c54fb6cfc98e870d43d730b6f9a504b66699e3d2ea34b35595117a33"
+      "sha256": "0572c37a2992cad15ca0b47d39947d03412c95efd4ec4685822e1e760e4cb866"
     },
     {
       "file": "src/features/drive/use-google-drive-provider.ts",
@@ -24900,7 +24928,7 @@
     },
     {
       "file": "src/features/legal/changelog.ts",
-      "sha256": "f7789babf32192ca147facfc15720ec19ba1fc62a1ff728bdebe8b68f427e621"
+      "sha256": "8d495fd6a310160d3f3956480eebd8844be8daab2e8a6ac7d15c1a490630cc92"
     },
     {
       "file": "src/features/legal/feedback-api.ts",
@@ -24952,7 +24980,7 @@
     },
     {
       "file": "src/features/library/library-import-page.tsx",
-      "sha256": "197728250201c1e8528b04d7b9f00481cdbfaf1f8df45b1c9a0d7ab86d8b1456"
+      "sha256": "c9724fb5f78cc93461945e71374adef74126460ed60d3b0ad905b5a414476387"
     },
     {
       "file": "src/features/library/library-import-session.ts",
@@ -24968,11 +24996,11 @@
     },
     {
       "file": "src/features/media-processing/api.ts",
-      "sha256": "e3be44c2606bc63c8bc8ea7e43a552bb81cf247b6279f02254b1aafb9fe84ccb"
+      "sha256": "218c5f5c5c291ff8ed57e75d1c6230ad60f1fff98648cd7bbd9ecce8ac33c3f0"
     },
     {
       "file": "src/features/media-processing/automatic-preview.ts",
-      "sha256": "cdd0e20de35d78e84298fb462108c083dd47f754534fc82bc8103ab9bbac1675"
+      "sha256": "789bf751d7eba3fef47485cdcc6079644d5b27a48ff1eba3902b69a58067fc6d"
     },
     {
       "file": "src/features/media-processing/media-processing-status-card.tsx",
@@ -25335,6 +25363,10 @@
       "sha256": "90bf5ec47410995c31acfe6c1b81e658a960784964bd07f6d5545e420e49961d"
     },
     {
+      "file": "src/lib/xhr-stall-guard.ts",
+      "sha256": "d1c86f578995df499957e9fd000c776b170b53ec37e087f8450f68a888a4f3e8"
+    },
+    {
       "file": "src/main.tsx",
       "sha256": "d261aa45680b34aab9a6c1fde855c7d230897764db132e422fffded6eeb9129d"
     },
@@ -25380,7 +25412,7 @@
     },
     {
       "file": "services/media-worker/src/config.ts",
-      "sha256": "33335a40afde0cc8d6fe075b3ca85d5f03ee5dd633619c6f48d6a04df109dc9e"
+      "sha256": "0e6595b714c5c8b297035455ce2976e29c8d04f824846247cf4fd6d5b2695a92"
     },
     {
       "file": "services/media-worker/src/exports/archive.ts",
@@ -25392,7 +25424,7 @@
     },
     {
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "sha256": "d7bfaefd97e2d5b69d33cfbb4553a7042f3d86b83719fd7d66193abfb8da5981"
+      "sha256": "d228dd3030a59a554dcea15473216f48db88f641b0a657633b2b86bff209e828"
     },
     {
       "file": "services/media-worker/src/media/ffmpeg.ts",
@@ -25440,7 +25472,7 @@
     },
     {
       "file": "services/media-worker/src/public-media/routes.ts",
-      "sha256": "dfb6a0d58dfbbe3f3641577952777034499938f1ec8c3f72b31e7a746c38f232"
+      "sha256": "dd665c2c7ba132d6b5912cf53dbe9ea24269c38aa4a7047fb7659d14db707755"
     },
     {
       "file": "services/media-worker/src/public-media/upstream.ts",
@@ -25468,7 +25500,7 @@
     },
     {
       "file": "services/media-worker/src/server.ts",
-      "sha256": "55b9ca6e8801509b391c2633298a5681da657114542b655291bfe30755faec20"
+      "sha256": "6dcf2bcb4e2c3bf769295f2108e45cee47aa7ac2e30b26e9b0afc7e4a0311400"
     },
     {
       "file": "services/media-worker/src/social-preview/routes.ts",
@@ -25498,7 +25530,7 @@
   "configurationFiles": [
     {
       "file": "package.json",
-      "sha256": "ca26e8b28d28ae14f50720a7ebdf88ba235ae5a90cb455079a767cf0385a8447"
+      "sha256": "77b32bb64308e1a94cf28c40ffc5affc1f901fbfc46cc20dcd610a5fc00be4ec"
     },
     {
       "file": "package-lock.json",
@@ -25506,7 +25538,7 @@
     },
     {
       "file": "services/media-worker/package.json",
-      "sha256": "de157b3a67d891ff94087d62b8fe93683a9c2daef1f4d47c1b19158e17dc034c"
+      "sha256": "c4c17842778f4da515aaeb0f01228ec9b05f0c913fcf2f06318e46701fa045cd"
     },
     {
       "file": "services/media-worker/package-lock.json",
@@ -25526,7 +25558,7 @@
     },
     {
       "file": "docker-compose.production.yml",
-      "sha256": "0a14aa815c5e8a1b4558f2d114aee1bf687c6689e9b4077dfe55a9ed098e7170"
+      "sha256": "f053992940565a602f6854fb956859a9c253b675778b64c182280624802f36c0"
     },
     {
       "file": "docker-compose.selfhost.yml",
