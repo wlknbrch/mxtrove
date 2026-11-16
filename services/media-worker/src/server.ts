@@ -280,6 +280,21 @@ function scheduleCleanupCycle() {
   }, config.cleanupIntervalMs).unref();
 }
 
+// Jobs that never settle (for example after a worker restart that lost the
+// in-memory queue) must become visible failures again. Without this recurring
+// pass, clients would poll such jobs forever.
+function scheduleStaleMediaJobRecovery() {
+  setTimeout(async () => {
+    try {
+      await recoverStaleMediaJobs();
+    } catch (error) {
+      app.log.error(error);
+    } finally {
+      scheduleStaleMediaJobRecovery();
+    }
+  }, config.staleJobRecoveryIntervalMs).unref();
+}
+
 function schedulePushCycle(delayMs = 0) {
   setTimeout(async () => {
     let processed = 0;
@@ -309,6 +324,7 @@ function scheduleDataExportCycle(delayMs = 0) {
 }
 
 scheduleCleanupCycle();
+scheduleStaleMediaJobRecovery();
 schedulePushCycle();
 scheduleDataExportCycle();
 

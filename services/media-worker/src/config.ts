@@ -130,6 +130,7 @@ export const config = {
   maxConcurrentMediaJobs: readNumber("MAX_CONCURRENT_MEDIA_JOBS", 1),
   mediaReadyTtlSeconds: readNumber("MEDIA_READY_TTL_SECONDS", 21600),
   mediaJobTimeoutSeconds: readNumber("MEDIA_JOB_TIMEOUT_SECONDS", 1800),
+  staleJobRecoveryIntervalMs: readNumber("STALE_JOB_RECOVERY_INTERVAL_MS", 60_000),
   pushPollIntervalMs: readNumber("PUSH_POLL_INTERVAL_MS", 3000),
   pushIdlePollIntervalMs: readNumber("PUSH_IDLE_POLL_INTERVAL_MS", 60000),
   dataExportPollIntervalMs: readNumber("DATA_EXPORT_POLL_INTERVAL_MS", 10000),

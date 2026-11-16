@@ -55,6 +55,8 @@ export interface MediaJobRecord {
 
 type JobTask = () => Promise<void>;
 
+const HEARTBEAT_INTERVAL_MS = 60_000;
+
 const activeProcesses = new Map<string, ChildProcess>();
 const queuedTasks: JobTask[] = [];
 let activeJobs = 0;
@@ -322,10 +324,35 @@ async function ensureNotCancelled(jobId: string) {
 
 export async function processMediaJob(jobId: string) {
   const job = await getJobForOwner(jobId, (await getJobOwnerId(jobId)) ?? "");
-  if (!job) {
+  if (!job || isTerminalMediaJobStatus(job.status)) {
+    // A recovery pass or a cancel request may have already settled this job while
+    // it sat in the in-memory queue; never resurrect it.
     return;
   }
 
+  // Transcoding can take much longer than a single DB write, so keep the record's
+  // updated_at fresh while the job runs. Without the heartbeat, the periodic stale
+  // recovery pass could mistake a long but healthy transcode for a lost job.
+  const heartbeat = setInterval(() => {
+    void supabaseAdmin
+      .from("media_processing_jobs")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", jobId)
+      .then(() => undefined, () => undefined);
+  }, HEARTBEAT_INTERVAL_MS);
+
+  try {
+    await runMediaJobPipeline(jobId, job);
+  } finally {
+    clearInterval(heartbeat);
+  }
+}
+
+function isTerminalMediaJobStatus(status: string) {
+  return ["failed", "cancelled", "expired", "completed"].includes(status);
+}
+
+async function runMediaJobPipeline(jobId: string, job: MediaJobRecord) {
   const paths = await ensureJobDir(jobId);
   await updateJob(jobId, {
     status: "queued",
@@ -580,17 +607,41 @@ export async function markUploadingToDrive(jobId: string) {
 
 export async function recoverStaleMediaJobs() {
   const staleThreshold = new Date(Date.now() - config.mediaJobTimeoutSeconds * 1000).toISOString();
+
+  const { data: staleJobs, error: staleError } = await supabaseAdmin
+    .from("media_processing_jobs")
+    .select("id")
+    .in("status", ["uploading", "queued", "probing", "transcoding", "generating_waveform", "uploading_to_drive"])
+    .lt("updated_at", staleThreshold);
+
+  if (staleError) {
+    throw staleError;
+  }
+
+  for (const staleJob of staleJobs ?? []) {
+    const activeProcess = activeProcesses.get(staleJob.id);
+    if (activeProcess) {
+      activeProcess.kill("SIGTERM");
+      activeProcesses.delete(staleJob.id);
+    }
+  }
+
+  const staleJobIds = (staleJobs ?? []).map((staleJob) => staleJob.id);
+  if (staleJobIds.length === 0) {
+    return;
+  }
+
   const { error } = await supabaseAdmin
     .from("media_processing_jobs")
     .update({
       status: "failed",
-      stage: "Worker restarted before the job completed",
-      error_code: "worker_restart",
-      error_message: "The worker restarted before the job finished. Retry the conversion.",
+      stage: "Processing stalled",
+      error_code: "processing_stalled",
+      error_message:
+        "Processing stopped without finishing — the worker may have restarted or lost the job. Retry the conversion.",
       updated_at: new Date().toISOString(),
     })
-    .in("status", ["uploading", "queued", "probing", "transcoding", "generating_waveform", "uploading_to_drive"])
-    .lt("updated_at", staleThreshold);
+    .in("id", staleJobIds);
 
   if (error) {
     throw error;

@@ -6,10 +6,26 @@ import type { Asset, MediaProcessingJob } from "@/types/domain";
 
 const DRIVE_UPLOAD_THRESHOLD_BYTES = 20 * 1024 * 1024;
 const POLL_INTERVAL_MS = 1500;
+const POLL_MAX_INTERVAL_MS = 6000;
+// Transient poll failures (rate limits, restarts, flaky links) must not kill a lane
+// whose job is still being processed. Give each lane a bounded grace period.
+const POLL_MAX_CONSECUTIVE_FAILURES = 8;
+// Belt-and-braces deadline: a job that shows no change for this long is treated as
+// lost so the import can never freeze forever. The worker's own stale-job recovery
+// normally resolves stuck jobs long before this.
+const JOB_STALL_TIMEOUT_MS = 45 * 60 * 1000;
 
 function toProgress(min: number, max: number, progress: number) {
   const clamped = Math.max(0, Math.min(100, progress));
   return Math.round(min + ((max - min) * clamped) / 100);
+}
+
+function isSettledJobStatus(status: MediaProcessingJob["status"]) {
+  return status === "ready" || status === "uploading_to_drive" || status === "completed";
+}
+
+function isTerminalJobStatus(status: MediaProcessingJob["status"]) {
+  return status === "failed" || status === "cancelled" || status === "expired";
 }
 
 function derivePreviewFilename(filename: string) {
@@ -33,35 +49,73 @@ async function uploadFileToDrive(params: {
   return params.provider.uploadFile(params);
 }
 
-async function waitForJobToSettle(params: {
+export async function waitForJobToSettle(params: {
   jobId: string;
   signal?: AbortSignal;
   onJobChange?: (job: MediaProcessingJob | null) => void;
   onProgress?: (progress: number) => void;
 }) {
+  let intervalMs = POLL_INTERVAL_MS;
+  let consecutiveFailures = 0;
+  let lastChangeSignature: string | null = null;
+  let lastChangeAt = Date.now();
+
   while (true) {
     if (params.signal?.aborted) {
       throw new DOMException("Upload aborted.", "AbortError");
     }
 
-    const job = await getMediaProcessingJob(params.jobId);
+    let job: MediaProcessingJob | null;
+    try {
+      job = await getMediaProcessingJob(params.jobId);
+    } catch (error) {
+      // A missing job record can never recover, so fail fast on it. Everything
+      // else (429 rate limits, worker restarts, dropped connections) is worth
+      // retrying with backoff instead of aborting the whole lane.
+      if (error instanceof Error && /not found|could not be found/i.test(error.message)) {
+        throw new Error("The media processing job could not be found anymore. Retry the preview in the song workspace.");
+      }
+      consecutiveFailures += 1;
+      if (consecutiveFailures >= POLL_MAX_CONSECUTIVE_FAILURES) {
+        throw new Error(
+          `The media worker kept refusing status updates (${error instanceof Error ? error.message : "unknown error"}). The original is safe; retry the preview in the song workspace.`,
+        );
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, intervalMs));
+      intervalMs = Math.min(intervalMs * 1.5, POLL_MAX_INTERVAL_MS);
+      continue;
+    }
+
+    consecutiveFailures = 0;
+    intervalMs = POLL_INTERVAL_MS;
     params.onJobChange?.(job);
 
     if (!job) {
-      throw new Error("The media processing job could not be found anymore.");
+      throw new Error("The media processing job could not be found anymore. Retry the preview in the song workspace.");
+    }
+
+    const changeSignature = `${job.status}|${job.stage}|${job.progress}`;
+    if (changeSignature !== lastChangeSignature) {
+      lastChangeSignature = changeSignature;
+      lastChangeAt = Date.now();
+    } else if (Date.now() - lastChangeAt > JOB_STALL_TIMEOUT_MS) {
+      throw new Error(
+        "Preview processing has not reported progress for a very long time. The original is safe; retry the preview in the song workspace.",
+      );
     }
 
     params.onProgress?.(toProgress(56, 86, job.progress));
 
-    if (job.status === "ready" || job.status === "uploading_to_drive" || job.status === "completed") {
+    if (isSettledJobStatus(job.status)) {
       return job;
     }
 
-    if (job.status === "failed" || job.status === "cancelled" || job.status === "expired") {
+    if (isTerminalJobStatus(job.status)) {
       throw new Error(job.error_message || `Media processing ended with status "${job.status}".`);
     }
 
-    await new Promise((resolve) => window.setTimeout(resolve, POLL_INTERVAL_MS));
+    await new Promise((resolve) => window.setTimeout(resolve, intervalMs));
+    intervalMs = Math.min(intervalMs * 1.5, POLL_MAX_INTERVAL_MS);
   }
 }
 

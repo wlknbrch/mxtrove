@@ -1,6 +1,9 @@
 import { env } from "@/lib/env";
 import { createDemoDelay, isDemoModeEnabled, requireSupabase } from "@/lib/service-utils";
+import { watchXhrForStalls } from "@/lib/xhr-stall-guard";
 import type { MediaProcessingJob } from "@/types/domain";
+
+const WORKER_REQUEST_TIMEOUT_MS = 30_000;
 
 async function getAccessToken() {
   const client = requireSupabase();
@@ -40,6 +43,9 @@ async function workerRequest<T>(path: string, init?: RequestInit) {
   const accessToken = await getAccessToken();
   const response = await fetch(`${env.mediaWorkerUrl}${path}`, {
     ...init,
+    // Status calls are small JSON exchanges; a hard cap keeps a hung connection
+    // from freezing a whole import lane while it waits for a poll response.
+    signal: AbortSignal.timeout(WORKER_REQUEST_TIMEOUT_MS),
     headers: {
       Authorization: `Bearer ${accessToken}`,
       ...(init?.headers ?? {}),
@@ -92,6 +98,11 @@ export async function analyzeSongAudio(input: {
   const accessToken = await getAccessToken();
   return new Promise<SongAudioAnalysisResult>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    const stallGuard = watchXhrForStalls({
+      request: xhr,
+      reject,
+      stallMessage: "The audio analysis stalled while sending the file. Retry the analysis.",
+    });
     xhr.open("POST", `${env.mediaWorkerUrl}/v1/media/analyze-song`);
     xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
     xhr.setRequestHeader("Content-Type", input.file.type || "application/octet-stream");
@@ -99,12 +110,18 @@ export async function analyzeSongAudio(input: {
     xhr.setRequestHeader("X-MxShare-Source-Asset-Id", input.sourceAssetId);
 
     xhr.upload.onprogress = (event) => {
+      stallGuard.touch();
       if (event.lengthComputable) {
         input.onProgress?.(Math.round((event.loaded / event.total) * 100));
       }
     };
-    xhr.onerror = () => reject(new Error("The audio analysis could not reach the media worker."));
+    xhr.onerror = () => {
+      stallGuard.dispose();
+      reject(new Error("The audio analysis could not reach the media worker."));
+    };
+    xhr.onabort = () => stallGuard.dispose();
     xhr.onload = () => {
+      stallGuard.dispose();
       let payload: { error?: string } | SongAudioAnalysisResult | null = null;
       try {
         payload = xhr.responseText ? JSON.parse(xhr.responseText) : null;
@@ -123,6 +140,7 @@ export async function analyzeSongAudio(input: {
     };
 
     input.signal?.addEventListener("abort", () => {
+      stallGuard.dispose();
       xhr.abort();
       reject(new DOMException("Analysis aborted.", "AbortError"));
     }, { once: true });
@@ -251,25 +269,36 @@ export async function uploadMediaProcessingInput(input: {
 
   return new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    const stallGuard = watchXhrForStalls({
+      request: xhr,
+      reject,
+      stallMessage:
+        "Uploading the original to the media worker stalled. Check the worker connection and retry the upload.",
+    });
     xhr.open("PUT", `${env.mediaWorkerUrl}/v1/media/jobs/${input.jobId}/input`);
     xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
     xhr.setRequestHeader("Content-Type", input.file.type || "application/octet-stream");
 
     if (input.onProgress) {
       xhr.upload.onprogress = (event) => {
+        stallGuard.touch();
         if (event.lengthComputable) {
           input.onProgress?.(Math.round((event.loaded / event.total) * 100));
         }
       };
     }
 
-    xhr.onerror = () =>
+    xhr.onerror = () => {
+      stallGuard.dispose();
       reject(
         new Error(
           "Uploading the original to the media worker failed. Check that the worker is running and that its APP_ORIGIN allows your current frontend URL.",
         ),
       );
+    };
+    xhr.onabort = () => stallGuard.dispose();
     xhr.onload = () => {
+      stallGuard.dispose();
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve();
         return;
@@ -287,6 +316,7 @@ export async function uploadMediaProcessingInput(input: {
       input.signal.addEventListener(
         "abort",
         () => {
+          stallGuard.dispose();
           xhr.abort();
           reject(new DOMException("Upload aborted.", "AbortError"));
         },
@@ -317,12 +347,23 @@ export async function downloadMediaProcessingPreview(jobId: string) {
 
   return new Promise<Blob>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    const stallGuard = watchXhrForStalls({
+      request: xhr,
+      reject,
+      stallMessage: "Downloading the generated preview stalled. Retry the upload in the song workspace.",
+    });
     xhr.open("GET", `${env.mediaWorkerUrl}/v1/media/jobs/${jobId}/preview`);
     xhr.responseType = "blob";
     xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
 
-    xhr.onerror = () => reject(new Error("Downloading the generated preview from the media worker failed."));
+    xhr.onprogress = () => stallGuard.touch();
+    xhr.onerror = () => {
+      stallGuard.dispose();
+      reject(new Error("Downloading the generated preview from the media worker failed."));
+    };
+    xhr.onabort = () => stallGuard.dispose();
     xhr.onload = () => {
+      stallGuard.dispose();
       if (xhr.status < 200 || xhr.status >= 300) {
         reject(new Error(`Downloading the generated preview failed with status ${xhr.status}.`));
         return;

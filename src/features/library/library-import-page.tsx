@@ -37,6 +37,7 @@ import { queryClient } from "@/lib/query-client";
 import { cn, formatBytes } from "@/lib/utils";
 
 const maxParallelUploads = 3;
+const PERSIST_MIN_INTERVAL_MS = 1000;
 
 function isAcceptedAudio(file: File) {
   const filename = file.name.toLowerCase();
@@ -70,6 +71,8 @@ export function LibraryImportPage() {
   const abortRequestedRef = useRef(false);
   const navigationBypassRef = useRef(false);
   const uploadControllersRef = useRef(new Set<AbortController>());
+  const lastPersistAtRef = useRef<number | null>(null);
+  const persistTimerRef = useRef<number | null>(null);
   const initialFilesRef = useRef<File[]>(getInitialImportFiles(location.state));
   const batchIdRef = useRef(routeBatchId ?? "");
   const createdAtRef = useRef(new Date().toISOString());
@@ -117,16 +120,43 @@ export function LibraryImportPage() {
     const next = transform(itemsRef.current);
     itemsRef.current = next;
     startTransition(() => setItems(next));
+    persistItems();
+  }
 
-    if (batchIdRef.current) {
+  // Every progress tick used to rewrite the whole session synchronously. With
+  // three parallel lanes that is several writes per second; throttle to at most
+  // one per second with a trailing flush so recovery state stays fresh.
+  function persistItems() {
+    if (!batchIdRef.current) {
+      return;
+    }
+
+    lastPersistAtRef.current ??= 0;
+    const persist = () => {
+      lastPersistAtRef.current = Date.now();
+      persistTimerRef.current = null;
       writeLibraryImportSession({
         schemaVersion: 1,
         id: batchIdRef.current,
         provider: cloudUpload.providerId,
         createdAt: createdAtRef.current,
         updatedAt: new Date().toISOString(),
-        items: next,
+        items: itemsRef.current,
       });
+    };
+
+    const elapsed = Date.now() - lastPersistAtRef.current;
+    if (elapsed >= PERSIST_MIN_INTERVAL_MS) {
+      if (persistTimerRef.current) {
+        window.clearTimeout(persistTimerRef.current);
+        persistTimerRef.current = null;
+      }
+      persist();
+      return;
+    }
+
+    if (!persistTimerRef.current) {
+      persistTimerRef.current = window.setTimeout(persist, PERSIST_MIN_INTERVAL_MS - elapsed);
     }
   }
 
@@ -167,6 +197,11 @@ export function LibraryImportPage() {
           status: "uploading",
           progress: Math.max(5, progress),
         }),
+        onJobChange: (job) => {
+          if (job?.status === "queued") {
+            updateItem(item.id, { message: "Converted one track at a time — waiting for the media worker queue." });
+          }
+        },
       });
 
       updateItem(item.id, {

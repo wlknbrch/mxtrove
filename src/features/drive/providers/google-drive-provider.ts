@@ -1,4 +1,5 @@
 import { env } from "@/lib/env";
+import { watchXhrForStalls } from "@/lib/xhr-stall-guard";
 import { escapeDriveQueryLiteral } from "./drive-query";
 import {
   buildGoogleDriveFilePageUrl,
@@ -159,6 +160,11 @@ async function xhrUpload(params: {
 }) {
   return new Promise<string>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    const stallGuard = watchXhrForStalls({
+      request: xhr,
+      reject,
+      stallMessage: "Google Drive upload stalled mid-transfer. Check the connection and retry the upload.",
+    });
     xhr.open(params.method, params.url);
     xhr.responseType = "text";
     xhr.setRequestHeader("Authorization", `Bearer ${params.accessToken}`);
@@ -168,6 +174,7 @@ async function xhrUpload(params: {
     });
 
     xhr.upload.onprogress = (event) => {
+      stallGuard.touch();
       if (!event.lengthComputable || !params.onProgress) {
         return;
       }
@@ -175,8 +182,13 @@ async function xhrUpload(params: {
       params.onProgress(Math.round((event.loaded / event.total) * 100));
     };
 
-    xhr.onerror = () => reject(new Error("Google Drive upload failed."));
+    xhr.onerror = () => {
+      stallGuard.dispose();
+      reject(new Error("Google Drive upload failed."));
+    };
+    xhr.onabort = () => stallGuard.dispose();
     xhr.onload = () => {
+      stallGuard.dispose();
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve(xhr.responseText);
         return;
@@ -189,6 +201,7 @@ async function xhrUpload(params: {
       params.signal.addEventListener(
         "abort",
         () => {
+          stallGuard.dispose();
           xhr.abort();
           reject(new DOMException("Upload aborted.", "AbortError"));
         },

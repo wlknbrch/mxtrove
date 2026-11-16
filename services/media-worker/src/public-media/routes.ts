@@ -16,6 +16,24 @@ function buildGoogleDriveUrl(fileId: string, kind: "audio" | "image", size: stri
   return `https://drive.google.com/uc?export=download&id=${encodedFileId}`;
 }
 
+function buildGoogleDriveAlternateUrl(fileId: string, kind: "audio" | "image", size: string | null) {
+  const encodedFileId = encodeURIComponent(fileId);
+  if (kind === "image") {
+    const width = size?.trim().replace(/[^0-9]/g, "") || "1200";
+    return `https://lh3.googleusercontent.com/d/${encodedFileId}=w${width}`;
+  }
+
+  // The classic uc endpoint answers 410/403 for freshly shared or throttled
+  // files; the dedicated download host usually still serves them.
+  return `https://drive.usercontent.google.com/download?id=${encodedFileId}&export=download`;
+}
+
+// Google answers with these transient statuses while permissions propagate or
+// when it throttles a download host; retrying against the alternate host keeps
+// freshly imported previews playable instead of surfacing a bare 410.
+const TRANSIENT_GOOGLE_STATUSES = new Set([403, 410, 429]);
+const GOOGLE_RETRY_DELAY_MS = 750;
+
 function copyUpstreamHeaders(headers: Headers, reply: FastifyReply) {
   for (const headerName of [
     "accept-ranges",
@@ -61,8 +79,27 @@ export async function registerPublicMediaRoutes(app: FastifyInstance) {
           dropboxUrl ?? buildGoogleDriveUrl(fileId, kind, query.size ?? null),
           { method: request.method, headers },
         );
+
+        if (!dropboxUrl && TRANSIENT_GOOGLE_STATUSES.has(upstream.status)) {
+          await new Promise((resolve) => setTimeout(resolve, GOOGLE_RETRY_DELAY_MS));
+          const retry = await fetchPublicProviderMedia(
+            buildGoogleDriveAlternateUrl(fileId, kind, query.size ?? null),
+            { method: request.method, headers },
+          );
+          if (!TRANSIENT_GOOGLE_STATUSES.has(retry.status) && retry.status < 500) {
+            await upstream.body?.cancel().catch(() => undefined);
+            upstream = retry;
+          }
+        }
       } catch {
         return reply.code(502).send({ error: "The public media provider could not return a supported response." });
+      }
+
+      if (TRANSIENT_GOOGLE_STATUSES.has(upstream.status)) {
+        await upstream.body?.cancel().catch(() => undefined);
+        return reply.code(502).send({
+          error: "This media file is not publicly readable yet. Try again in a few moments.",
+        });
       }
 
       reply.code(upstream.status);

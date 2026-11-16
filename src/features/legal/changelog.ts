@@ -8,6 +8,18 @@ export interface AppRelease {
 // Keep the current package version first. Older entries automatically move into the archive UI.
 export const appReleases: AppRelease[] = [
   {
+    version: "1.2.2",
+    date: "November 2026",
+    title: "Reliable multi-file imports",
+    changes: [
+      "Fixed multi-file library imports stalling halfway through large batches: conversions keep running when the media worker is busy, briefly unreachable, or restarted, and stalled jobs now recover automatically.",
+      "Freshly uploaded previews no longer fail with a transient 410 from Google Drive; the media proxy retries against an alternate host before reporting an error.",
+      "Interrupted uploads and downloads are detected and reported with a clear message instead of hanging silently. Original files always stay safe in your connected cloud storage.",
+      "Queued conversions now show a waiting state instead of looking frozen, and import progress is stored more efficiently between page reloads.",
+      "Raised the media-worker request rate limit in the production compose recipe so parallel imports are no longer throttled mid-import.",
+    ],
+  },
+  {
     version: "1.2.1",
     date: "August 2026",
     title: "Cinematic playback and smoother continuity",
