@@ -1,3 +1,5 @@
+> 2026-11-17 update: contract 0.1.2 adds author-only release manifests and validated preview input. The containing source builds web 1.2.2 and worker 0.1.1; deploy both for this feature. No database migration was added. File downloads use the owner’s existing private provider OAuth and local ZIP creation. The original Phase 0 deployment snapshot below is historical, not the current runtime revision.
+
 # Compatibility, deployment assumptions, cache and sync
 
 Contract version **0.1.1** includes the local security-maintenance update to the original0.1.0 source audit; it is not a newly deployed API version. No backend version/capabilities endpoint exists. Worker package says0.1.0 while web says1.2.1; neither alone proves which migrations are installed.

@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "MxTrove existing media worker",
-    "version": "0.1.1",
-    "description": "Phase-0 contracts plus backward-compatible security maintenance. Worker package 0.1.0 is not protocol capability discovery. JSON syntax is valid YAML 1.2. No planned mobile endpoint is asserted as implemented."
+    "version": "0.1.2",
+    "description": "Phase-0 contracts with additive author downloads and validated preview input. Worker package versions are not protocol capability discovery. JSON syntax is valid YAML 1.2. No planned mobile endpoint is asserted as implemented."
   },
   "servers": [
     {
@@ -257,6 +257,152 @@
             }
           }
         }
+      }
+    },
+    "/v1/media/jobs/{jobId}/input": {
+      "put": {
+        "operationId": "put__v1_media_jobs_jobId_input",
+        "summary": "PUT /v1/media/jobs/:jobId/input",
+        "x-source": "services/media-worker/src/jobs/input-route.ts:11",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [
+          {
+            "userJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Current message-based JWT error classification; some verification errors can surface as 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Already processing; too large; interrupted/incomplete input; temporary worker/database unavailability; or insufficient temporary storage respectively.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Global size/quota exception classification where matched; not a stable quota code",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Already processing; too large; interrupted/incomplete input; temporary worker/database unavailability; or insufficient temporary storage respectively.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Already processing; too large; interrupted/incomplete input; temporary worker/database unavailability; or insufficient temporary storage respectively.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "507": {
+            "description": "Already processing; too large; interrupted/incomplete input; temporary worker/database unavailability; or insufficient temporary storage respectively.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "description": "Full raw stream only, MIME may be audio/*; no multipart/Content-Range. Exact stored source size is checked; complete input is persisted queued before acceptance. Only created/uploading jobs may accept input. Failed input becomes retryable via a new job."
       }
     },
     "/v1/protected-media/{assetId}": {
@@ -852,6 +998,166 @@
         "description": "No JWT. Drive fileId OR provider=dropbox + HTTPS URL on dropbox.com/www.dropbox.com/dl.dropboxusercontent.com, no credentials/nonstandard port. At most five redirects, each validated against trusted public provider hosts; unsupported destination/loop returns502. Invalid/non-audio kind defaults to image. Upstream status/type/ETag/Last-Modified/Content-Range forwarded. Public images max-age=86400/SWR604800; audio max-age=86400/SWR86400. Does not revoke external public links."
       }
     },
+    "/v1/releases/{postId}/download-manifest": {
+      "get": {
+        "operationId": "get__v1_releases_postId_download_manifest",
+        "summary": "GET /v1/releases/:postId/download-manifest",
+        "x-source": "services/media-worker/src/releases/download.ts:123",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [
+          {
+            "userJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleaseDownloadManifest"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid UUID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Current message-based JWT error classification; some verification errors can surface as 500",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Incomplete release or missing/foreign original or cover; no partial manifest",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            },
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          }
+        },
+        "description": "JWT post author only, independent of visibility; private no-store metadata. Album/EP: selected track originals in release order. Single: all saved author-owned versions. Every source and cover must belong to the author. Bytes are read directly through private provider OAuth; no media body traverses Supabase or this endpoint. Native clients can reuse the manifest and package files locally."
+      },
+      "head": {
+        "operationId": "head__v1_releases_postId_download_manifest",
+        "summary": "HEAD /v1/releases/:postId/download-manifest",
+        "x-source": "services/media-worker/src/releases/download.ts:123",
+        "x-contract-status": "existing-source-not-live-verified",
+        "security": [
+          {
+            "userJWT": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "postId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "400": {
+            "description": "Invalid UUID"
+          },
+          "401": {
+            "description": "Current message-based JWT error classification; some verification errors can surface as 500"
+          },
+          "404": {
+            "description": "Missing or authorization-hidden resource"
+          },
+          "409": {
+            "description": "Incomplete release or missing/foreign original or cover; no partial manifest"
+          },
+          "429": {
+            "description": "Rate limit, per worker instance and IP",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Current worker exception handler; status classification is message-based and incomplete."
+          }
+        },
+        "description": "Fastify automatic HEAD using GET handler; may retain GET side effects. JWT post author only, independent of visibility; private no-store metadata. Album/EP: selected track originals in release order. Single: all saved author-owned versions. Every source and cover must belong to the author. Bytes are read directly through private provider OAuth; no media body traverses Supabase or this endpoint. Native clients can reuse the manifest and package files locally.",
+        "x-fastify-implicit-head": true
+      }
+    },
     "/healthz": {
       "get": {
         "operationId": "get__healthz",
@@ -1193,117 +1499,11 @@
         "description": "sourceAssetId required (only truthiness at HTTP boundary); owner/mode/context checked in media-jobs. May reuse active job. No persistent Idempotency-Key."
       }
     },
-    "/v1/media/jobs/{jobId}/input": {
-      "put": {
-        "operationId": "put__v1_media_jobs_jobId_input",
-        "summary": "PUT /v1/media/jobs/:jobId/input",
-        "x-source": "services/media-worker/src/server.ts:138",
-        "x-contract-status": "existing-source-not-live-verified",
-        "security": [
-          {
-            "userJWT": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "jobId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "202": {
-            "description": "Successful response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/JobSummary"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Current message-based JWT error classification; some verification errors can surface as 500",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkerError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Missing or authorization-hidden resource",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkerError"
-                }
-              }
-            }
-          },
-          "413": {
-            "description": "Global size/quota exception classification where matched; not a stable quota code",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkerError"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Rate limit, per worker instance and IP",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkerError"
-                }
-              }
-            },
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "integer",
-                  "minimum": 1
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Current worker exception handler; status classification is message-based and incomplete.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkerError"
-                }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/octet-stream": {
-              "schema": {
-                "type": "string",
-                "format": "binary"
-              }
-            }
-          }
-        },
-        "description": "Full raw stream only, MIME may be audio/*; no multipart/Content-Range session protocol. Defaults max 524288000 bytes. Re-upload in active job not guaranteed safe."
-      }
-    },
     "/v1/media/jobs/{jobId}": {
       "get": {
         "operationId": "get__v1_media_jobs_jobId",
         "summary": "GET /v1/media/jobs/:jobId",
-        "x-source": "services/media-worker/src/server.ts:163",
+        "x-source": "services/media-worker/src/server.ts:141",
         "x-contract-status": "existing-source-not-live-verified",
         "security": [
           {
@@ -1385,7 +1585,7 @@
       "delete": {
         "operationId": "delete__v1_media_jobs_jobId",
         "summary": "DELETE /v1/media/jobs/:jobId",
-        "x-source": "services/media-worker/src/server.ts:217",
+        "x-source": "services/media-worker/src/server.ts:195",
         "x-contract-status": "existing-source-not-live-verified",
         "security": [
           {
@@ -1460,7 +1660,7 @@
       "head": {
         "operationId": "head__v1_media_jobs_jobId",
         "summary": "HEAD /v1/media/jobs/:jobId",
-        "x-source": "services/media-worker/src/server.ts:163",
+        "x-source": "services/media-worker/src/server.ts:141",
         "x-contract-status": "existing-source-not-live-verified",
         "security": [
           {
@@ -1511,7 +1711,7 @@
       "get": {
         "operationId": "get__v1_media_jobs_jobId_preview",
         "summary": "GET /v1/media/jobs/:jobId/preview",
-        "x-source": "services/media-worker/src/server.ts:175",
+        "x-source": "services/media-worker/src/server.ts:153",
         "x-contract-status": "existing-source-not-live-verified",
         "security": [
           {
@@ -1604,7 +1804,7 @@
       "head": {
         "operationId": "head__v1_media_jobs_jobId_preview",
         "summary": "HEAD /v1/media/jobs/:jobId/preview",
-        "x-source": "services/media-worker/src/server.ts:175",
+        "x-source": "services/media-worker/src/server.ts:153",
         "x-contract-status": "existing-source-not-live-verified",
         "security": [
           {
@@ -1658,7 +1858,7 @@
       "post": {
         "operationId": "post__v1_media_jobs_jobId_acknowledge",
         "summary": "POST /v1/media/jobs/:jobId/acknowledge",
-        "x-source": "services/media-worker/src/server.ts:204",
+        "x-source": "services/media-worker/src/server.ts:182",
         "x-contract-status": "existing-source-not-live-verified",
         "security": [
           {
@@ -1745,7 +1945,7 @@
       "post": {
         "operationId": "post__v1_media_analyze_song",
         "summary": "POST /v1/media/analyze-song",
-        "x-source": "services/media-worker/src/server.ts:230",
+        "x-source": "services/media-worker/src/server.ts:208",
         "x-contract-status": "existing-source-not-live-verified",
         "security": [
           {
@@ -1860,7 +2060,7 @@
       "post": {
         "operationId": "post__v1_push_test",
         "summary": "POST /v1/push/test",
-        "x-source": "services/media-worker/src/server.ts:248",
+        "x-source": "services/media-worker/src/server.ts:226",
         "x-contract-status": "existing-source-not-live-verified",
         "security": [
           {
@@ -7058,6 +7258,223 @@
           "kind",
           "retryable",
           "outcomeUnknown"
+        ],
+        "additionalProperties": true
+      },
+      "ReleaseDownloadAsset": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "google_drive",
+              "dropbox",
+              "onedrive"
+            ]
+          },
+          "remoteFileId": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "bytes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "remoteFileId",
+          "filename",
+          "mimeType",
+          "bytes"
+        ],
+        "additionalProperties": true
+      },
+      "ReleaseDownloadEntry": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "asset": {
+            "$ref": "#/components/schemas/ReleaseDownloadAsset"
+          }
+        },
+        "required": [
+          "path",
+          "asset"
+        ],
+        "additionalProperties": true
+      },
+      "ReleaseDownloadTrack": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "asset": {
+            "$ref": "#/components/schemas/ReleaseDownloadAsset"
+          },
+          "trackNumber": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string"
+          },
+          "songId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "versionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "versionLabel": {
+            "type": "string"
+          },
+          "versionNumber": {
+            "type": "number"
+          },
+          "productionStage": {
+            "type": "string"
+          },
+          "musicalKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tempoBpm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "path",
+          "asset",
+          "trackNumber",
+          "title",
+          "songId",
+          "versionId",
+          "versionLabel",
+          "versionNumber",
+          "productionStage",
+          "musicalKey",
+          "tempoBpm"
+        ],
+        "additionalProperties": true
+      },
+      "ReleaseDownloadManifest": {
+        "type": "object",
+        "properties": {
+          "formatVersion": {
+            "type": "number",
+            "const": 1
+          },
+          "generatedAt": {
+            "type": "string"
+          },
+          "archiveName": {
+            "type": "string"
+          },
+          "rootDirectory": {
+            "type": "string"
+          },
+          "post": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "title": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "description": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "releaseNotes": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "type",
+              "description",
+              "releaseNotes"
+            ],
+            "additionalProperties": true
+          },
+          "tracks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReleaseDownloadTrack"
+            },
+            "minItems": 1
+          },
+          "artwork": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReleaseDownloadEntry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "formatVersion",
+          "generatedAt",
+          "archiveName",
+          "rootDirectory",
+          "post",
+          "tracks",
+          "artwork"
         ],
         "additionalProperties": true
       }

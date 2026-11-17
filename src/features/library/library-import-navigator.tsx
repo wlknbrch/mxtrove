@@ -1,5 +1,6 @@
 import { AlertTriangle, Check, ChevronLeft, ChevronRight, LoaderCircle, Music2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useLayoutEffect, useRef } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,15 @@ export function LibraryImportNavigator({
   const session = readLibraryImportSession(batchId);
   const songs = session?.items.filter((item) => item.songId) ?? [];
   const currentIndex = songs.findIndex((item) => item.songId === currentSongId);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    const active = list?.querySelector<HTMLAnchorElement>('a[aria-current="step"]');
+    if (!list || !active) return;
+    const container = list.getBoundingClientRect();
+    const selected = active.getBoundingClientRect();
+    list.scrollLeft += selected.left - container.left - (container.width - selected.width) / 2;
+  }, [currentSongId]);
 
   if (!session || songs.length === 0 || currentIndex < 0) {
     return null;
@@ -51,7 +61,7 @@ export function LibraryImportNavigator({
         </div>
       </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:thin]">
+      <div ref={listRef} className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:thin]">
         {songs.map((item, index) => {
           const active = item.songId === currentSongId;
           const StatusIcon = item.status === "failed"

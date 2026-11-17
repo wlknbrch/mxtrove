@@ -594,13 +594,18 @@ export class GoogleDriveProvider implements CloudStorageProvider {
   }
 
   async getPrivateFileBlob(fileId: string): Promise<Blob> {
+    return (await this.getPrivateFileStream(fileId)).blob();
+  }
+
+  async getPrivateFileStream(fileId: string, signal?: AbortSignal): Promise<Response> {
     const accessToken = await this.ensureAuthenticated();
     const safeFileId = assertDriveId(fileId, "file");
     const response = await authorizedFetch(
       `https://www.googleapis.com/drive/v3/files/${safeFileId}?alt=media`,
       accessToken,
+      { signal },
     );
-    return response.blob();
+    return response;
   }
 
   async getFileMetadata(fileId: string): Promise<CloudFileMetadata> {

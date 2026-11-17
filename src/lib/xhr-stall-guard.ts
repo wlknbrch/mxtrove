@@ -20,8 +20,8 @@ export function watchXhrForStalls(params: {
   const timer = window.setInterval(() => {
     if (Date.now() - lastActivityAt >= (params.timeoutMs ?? DEFAULT_STALL_TIMEOUT_MS)) {
       window.clearInterval(timer);
-      params.request.abort();
       params.reject(new Error(params.stallMessage));
+      params.request.abort();
     }
   }, STALL_CHECK_INTERVAL_MS);
 

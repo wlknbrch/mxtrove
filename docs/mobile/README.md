@@ -1,14 +1,14 @@
 # Mobile contract baseline — Phase 0
 
-Contract baseline **0.1.1**, updated **2026-10-27**. This is a source audit and executable contract package for iOS and Android; no native app, migration, credential change or deployment is included.
+Contract baseline **0.1.2**, updated **2026-11-17**. This is a source audit and executable contract package for iOS and Android; no native app, migration, credential change or deployment is included.
 
 ## Evidence and scope
 
-- Original Phase0 checkout: `fc3ee23cf2182f5f8d2a4617183fe3207050eedf` (`v1.2.1`), clean before Phase0. Contract0.1.1 includes the subsequent local security-maintenance changes; generated hashes describe the current source, not the unmodified base commit. Pin the commit containing these artifacts when integrating a native client.
-- Masterplan / observed GitHub `main`: `c4afc05ba2cb614ca6e1d3be4838093877e854bc`. GitHub compare verified that the only intervening changes are README and eight real screenshots. Runtime source, migrations and worker are identical. The local checkout is deliberately not pulled/reset as part of this audit.
+- Original Phase0 checkout: `fc3ee23cf2182f5f8d2a4617183fe3207050eedf` (`v1.2.1`), clean before Phase0. Contract0.1.2 includes the subsequent local security-maintenance changes; generated hashes describe the current source, not the unmodified base commit. Pin the commit containing these artifacts when integrating a native client.
+- Current feature base: `1719263` (web1.2.2, worker0.1.1), plus the commit containing this additive contract0.1.2 update. The original Phase0 audit observed `c4afc05` on GitHub main; that historical comparison is not the current runtime source.
 - Input: `MxTrove_iOS_Masterplan.md`, dated 2026-10-27, SHA256 `e9ea0ce065460648b16a74bf6f40dc336bd3eb0b7b6f1a85266aa873abbe5d54`. Its roadmap is a target, not proof of implemented or deployed APIs. Current code takes precedence; discrepancies are in [compatibility](compatibility.md).
-- Production worker revision, applied database migrations, Supabase Auth redirect settings, signing algorithm and provider registrations: **unverified**. No production account, database, VPS or provider was accessed.
-- Machine inventory: **52 web routes, 173 exported feature API functions, 707 UI event/navigation/mutation sites, 51 public tables, 142 SQL function identities, 108 surviving named policies, 24 explicitly registered worker method/path pairs**. Fastify also supplies implicit HEAD for GET routes unless explicitly registered; see OpenAPI.
+- Production worker revision, applied database migrations, Supabase Auth redirect settings, signing algorithm and provider registrations: **unverified**. The original Phase0 audit accessed no production services. The 2026-11-17 diagnosis read processing-status/error summaries only; no production rows, settings, credentials or deployment were changed.
+- Machine inventory: **52 web routes, 173 exported feature API functions, 711 UI event/navigation/mutation sites, 51 public tables, 142 SQL function identities, 108 surviving named policies, 25 explicitly registered worker method/path pairs**. Fastify also supplies implicit HEAD for GET routes; see OpenAPI.
 
 ## Read in this order
 

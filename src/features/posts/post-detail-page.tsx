@@ -32,6 +32,7 @@ import { useAppViewer } from "@/hooks/use-app-viewer";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocalDraft } from "@/hooks/use-local-draft";
 import { getArtworkAssetUrls } from "@/lib/asset-urls";
+import { ReleaseDownloadButton } from "@/features/posts/release-download-button";
 import { shareWithSystemDialog } from "@/lib/native-share";
 import { queryClient } from "@/lib/query-client";
 import { cn, formatDuration, formatRelativeTime } from "@/lib/utils";
@@ -716,6 +717,8 @@ export function PostDetailPage() {
                 ) : null}
               </div>
               <div className="flex flex-wrap gap-2">
+                {isOwnPost ? <ReleaseDownloadButton key={item.post.id} postId={item.post.id} title={item.post.title}
+                  artist={item.owner?.display_name ?? item.owner?.username} single={item.post.post_type === "single"} /> : null}
                 {isOwnPost && editPath ? (
                   <Link to={editPath}><Button variant="ghost" size="sm">{item.post.post_type === "single" ? "Edit post" : "Edit release"}</Button></Link>
                 ) : null}

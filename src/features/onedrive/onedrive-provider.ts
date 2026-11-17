@@ -270,12 +270,17 @@ export class OneDriveProvider implements CloudStorageProvider {
   }
 
   async getPrivateFileBlob(fileId: string) {
+    return (await this.getPrivateFileStream(fileId)).blob();
+  }
+
+  async getPrivateFileStream(fileId: string, signal?: AbortSignal) {
     const token = await this.getToken();
     const response = await fetch(`${GRAPH}/me/drive/items/${encodeURIComponent(fileId)}/content`, {
+      signal,
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!response.ok) throw new Error(await response.text() || "OneDrive download failed.");
-    return response.blob();
+    return response;
   }
 
   async createPublicPreview(fileId: string): Promise<PublicAssetResult> {

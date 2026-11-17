@@ -10,18 +10,18 @@ import { analyzeSongSourceForOwner } from "./audio-analysis/analyze-song.js";
 import { verifySupabaseBearerToken } from "./auth/verify-jwt.js";
 import { runCleanupCycle } from "./cleanup/cleanup.js";
 import { config } from "./config.js";
-import { writeReadableStreamToFile } from "./media/io.js";
 import { ensureMediaTempDir, getJobPaths } from "./media/paths.js";
 import {
   acknowledgeMediaJob,
   cancelMediaJob,
   createMediaProcessingJobForOwner,
-  enqueueMediaJob,
   getJobForOwner,
   markUploadingToDrive,
   recoverStaleMediaJobs,
-  setJobUploading,
+  resumeQueuedMediaJobs,
 } from "./jobs/media-jobs.js";
+import { registerMediaJobInputRoute } from "./jobs/input-route.js";
+import { registerReleaseDownloadRoutes } from "./releases/download.js";
 import {
   ensureProtectedMediaStorage,
 } from "./protected-media/index.js";
@@ -135,30 +135,8 @@ app.post("/v1/media/jobs", async (request, reply) => {
   });
 });
 
-app.put("/v1/media/jobs/:jobId/input", async (request, reply) => {
-  const user = await verifySupabaseBearerToken(request.headers.authorization);
-  const params = request.params as { jobId: string };
-  const job = await getJobForOwner(params.jobId, user.id);
-
-  if (!job) {
-    return reply.code(404).send({ error: "Job not found." });
-  }
-
-  const paths = await ensureMediaTempDir().then(() => getJobPaths(params.jobId));
-  await fsPromises.mkdir(paths.dir, { recursive: true });
-  await setJobUploading(job.id);
-  await writeReadableStreamToFile(request.body as Readable, paths.inputPath, config.maxUploadBytes);
-
-  await recoverStaleMediaJobs();
-  enqueueMediaJob(params.jobId);
-
-  return reply.code(202).send({
-    id: job.id,
-    status: "queued",
-    stage: "Queued for processing",
-    progress: 5,
-  });
-});
+await registerMediaJobInputRoute(app);
+await registerReleaseDownloadRoutes(app);
 
 app.get("/v1/media/jobs/:jobId", async (request, reply) => {
   const user = await verifySupabaseBearerToken(request.headers.authorization);
@@ -266,7 +244,10 @@ await Promise.all([
   ensureMediaTempDir(),
   ensureProtectedMediaStorage(),
 ]);
-await recoverStaleMediaJobs();
+try {
+  await resumeQueuedMediaJobs();
+  await recoverStaleMediaJobs();
+} catch (error) { app.log.error(error); }
 
 function scheduleCleanupCycle() {
   setTimeout(async () => {
@@ -287,6 +268,7 @@ function scheduleStaleMediaJobRecovery() {
   setTimeout(async () => {
     try {
       await recoverStaleMediaJobs();
+      await resumeQueuedMediaJobs();
     } catch (error) {
       app.log.error(error);
     } finally {

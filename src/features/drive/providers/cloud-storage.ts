@@ -64,6 +64,7 @@ export interface CloudStorageProvider {
   uploadFile(input: UploadFileInput): Promise<CloudAssetResult>;
   uploadResumable(input: UploadFileInput): Promise<CloudAssetResult>;
   getPrivateFileBlob(fileId: string): Promise<Blob>;
+  getPrivateFileStream?(fileId: string, signal?: AbortSignal): Promise<Response>;
   getFileMetadata(fileId: string): Promise<CloudFileMetadata>;
   createPublicPreview(fileId: string): Promise<PublicAssetResult>;
   revokePublicPreview(fileId: string): Promise<void>;

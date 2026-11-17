@@ -334,6 +334,7 @@ export interface CloudStorageProvider {
   uploadFile(input: UploadFileInput): Promise<CloudAssetResult>;
   uploadResumable(input: UploadFileInput): Promise<CloudAssetResult>;
   getPrivateFileBlob(fileId: string): Promise<Blob>;
+  getPrivateFileStream?(fileId: string, signal?: AbortSignal): Promise<Response>;
   getFileMetadata(fileId: string): Promise<CloudFileMetadata>;
   createPublicPreview(fileId: string): Promise<PublicAssetResult>;
   revokePublicPreview(fileId: string): Promise<void>;
@@ -690,6 +691,61 @@ export interface ReleaseEditDraftPayload extends PostDraftPayloadBase {
 
 ```typescript
 export type PostDraftPayload = SinglePostDraftPayload | ReleasePostDraftPayload | ReleaseEditDraftPayload;
+```
+
+## ReleaseDownloadEntry
+
+[src/features/posts/release-download.ts:7](../../../src/features/posts/release-download.ts#L7)
+
+```typescript
+export interface ReleaseDownloadEntry {
+  path: string;
+  asset: { id: string; provider: CloudProvider; remoteFileId: string; filename: string; mimeType: string; bytes: number | null };
+}
+```
+
+## ReleaseDownloadManifest
+
+[src/features/posts/release-download.ts:11](../../../src/features/posts/release-download.ts#L11)
+
+```typescript
+export interface ReleaseDownloadManifest {
+  formatVersion: 1; generatedAt: string; archiveName: string; rootDirectory: string;
+  post: { id: string; title: string; type: string; description: string | null; releaseNotes: string | null };
+  tracks: Array<ReleaseDownloadEntry & {
+    trackNumber: number; title: string; songId: string; versionId: string; versionLabel: string;
+    versionNumber: number; productionStage: string; musicalKey: string | null; tempoBpm: number | null;
+  }>;
+  artwork: ReleaseDownloadEntry | null;
+}
+```
+
+## ArchiveSink
+
+[src/features/posts/release-download.ts:20](../../../src/features/posts/release-download.ts#L20)
+
+```typescript
+export interface ArchiveSink {
+  write(chunk: Uint8Array): Promise<void>;
+  close(): Promise<void>;
+  abort(): Promise<void>;
+}
+```
+
+## ArchiveFileHandle
+
+[src/features/posts/release-download.ts:25](../../../src/features/posts/release-download.ts#L25)
+
+```typescript
+export interface ArchiveFileHandle { createWritable(): Promise<ArchiveSink> }
+```
+
+## ReleaseDownloadProgress
+
+[src/features/posts/release-download.ts:26](../../../src/features/posts/release-download.ts#L26)
+
+```typescript
+export interface ReleaseDownloadProgress { completed: number; total: number; filename: string; bytes: number }
 ```
 
 ## ReleasePresentationField

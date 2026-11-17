@@ -33,7 +33,7 @@ import {
   updateSongVersionPreview,
 } from "@/features/library/api";
 import { LibraryImportNavigator } from "@/features/library/library-import-navigator";
-import { readLibraryImportSession } from "@/features/library/library-import-session";
+import { readLibraryImportSession, writeLibraryImportSession } from "@/features/library/library-import-session";
 import { MediaProcessingStatusCard } from "@/features/media-processing/media-processing-status-card";
 import {
   analyzeSongMetadataFromSourceAsset,
@@ -64,6 +64,11 @@ const privatePlaybackUrlCache = new Map<string, string>();
 
 export function SongDetailPage() {
   const { songId = "" } = useParams();
+  return <SongWorkspace key={songId} />;
+}
+
+function SongWorkspace() {
+  const { songId = "" } = useParams();
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -79,6 +84,7 @@ export function SongDetailPage() {
   const assignedImportAssetsRef = useRef("");
   const [mediaProcessingJob, setMediaProcessingJob] = useState<MediaProcessingJob | null>(null);
   const [mediaProcessingError, setMediaProcessingError] = useState<string | null>(null);
+  const [previewProgress, setPreviewProgress] = useState<number | null>(null);
   const [analysisProgress, setAnalysisProgress] = useState<number | null>(null);
 
   const songQuery = useQuery({
@@ -463,6 +469,7 @@ export function SongDetailPage() {
 
     setMediaProcessingError(null);
     setMediaProcessingJob(null);
+    setPreviewProgress(0);
     const assetProvider = getCloudStorageProvider(sourceAsset.provider);
     if (!(await assetProvider.restoreSession())) {
       throw new Error(`Reconnect ${sourceAsset.provider.replace("_", " ")} in Storage settings first.`);
@@ -478,10 +485,21 @@ export function SongDetailPage() {
       songId,
       previewFolderId,
       onJobChange: setMediaProcessingJob,
+      onProgress: setPreviewProgress,
     });
 
     versionForm.setValue("source_asset_id", sourceAsset.id, { shouldDirty: true, shouldValidate: true });
     versionForm.setValue("preview_asset_id", result.previewAsset.id, { shouldDirty: true, shouldValidate: true });
+    const batch = batchId ? readLibraryImportSession(batchId) : null;
+    if (batch) {
+      writeLibraryImportSession({
+        ...batch, updatedAt: new Date().toISOString(),
+        items: batch.items.map((entry) => entry.songId === songId ? {
+          ...entry, sourceAssetId: sourceAsset.id, previewAssetId: result.previewAsset.id,
+          status: "ready", progress: 100, message: "Playback preview is ready.",
+        } : entry),
+      });
+    }
     const impactedVersions = versions.filter(
       (version) => version.source_asset_id === sourceAsset.id && needsVersionPlaybackRepair(version, assetsById),
     );
@@ -502,6 +520,17 @@ export function SongDetailPage() {
         : "Playback preview and waveform generated from the selected source.",
     );
   }
+
+  const previewMutation = useMutation({
+    mutationFn: generatePreviewFromSourceAsset,
+    onSettled: () => setPreviewProgress(null),
+    onError: (error) => {
+      const message = error instanceof Error ? error.message : "Could not generate the playback preview from this source.";
+      setMediaProcessingError(message);
+      setMediaProcessingJob((job) => job ? { ...job, status: "failed", error_message: message } : null);
+      toast.error(message);
+    },
+  });
 
   const artworkUploadMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -631,6 +660,32 @@ export function SongDetailPage() {
         },
       ],
       `${version.id}-${mode}`,
+    );
+  }
+
+  if (songQuery.isPending) {
+    return (
+      <div className="space-y-6">
+        {batchId ? <LibraryImportNavigator batchId={batchId} currentSongId={songId} /> : null}
+        <Card className="p-6">
+          <div className="flex items-center gap-3" role="status">
+            <LoaderCircle className="size-5 animate-spin" />
+            Loading song…
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (songQuery.isError && !song) {
+    return (
+      <Card className="p-6"><div className="space-y-4" role="alert">
+        <CardTitle>Could not load this song</CardTitle>
+        <CardDescription>The connection failed. Your song is still in your library; try loading it again.</CardDescription>
+        <Button variant="secondary" onClick={() => void songQuery.refetch()} disabled={songQuery.isFetching}>
+          Try again
+        </Button>
+      </div></Card>
     );
   }
 
@@ -940,23 +995,17 @@ export function SongDetailPage() {
                 <div className="mt-4 flex flex-wrap gap-3">
                 <Button
                   variant="secondary"
-                  disabled={!storedFolders || !selectedSourceAsset}
+                  disabled={!selectedSourceAsset || previewMutation.isPending}
                   onClick={() => {
                     if (!selectedSourceAsset) {
                       return;
                     }
 
-                    void generatePreviewFromSourceAsset(selectedSourceAsset).catch((error) => {
-                      const message =
-                        error instanceof Error
-                          ? error.message
-                          : "Could not generate the playback preview from this source.";
-                      setMediaProcessingError(message);
-                      toast.error(message);
-                    });
+                    previewMutation.mutate(selectedSourceAsset);
                   }}
                 >
-                  {playbackAssets.length ? "Regenerate playback file" : "Generate playback file"}
+                  {previewMutation.isPending ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                  {previewMutation.isPending ? "Generating playback…" : playbackAssets.length ? "Regenerate playback file" : "Generate playback file"}
                 </Button>
                 {selectedSourceAsset ? (
                   <Badge variant="neutral" className="max-w-full truncate" title={selectedSourceAsset.id}>
@@ -969,6 +1018,8 @@ export function SongDetailPage() {
             <MediaProcessingStatusCard
               job={mediaProcessingJob}
               error={mediaProcessingError}
+              busy={previewMutation.isPending}
+              progress={previewProgress}
               title="Automatic playback preview"
               emptyMessage="Upload a private source here and the worker will generate the public MP3 preview plus waveform for you."
             />

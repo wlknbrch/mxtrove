@@ -265,6 +265,7 @@ export async function uploadMediaProcessingInput(input: {
   signal?: AbortSignal;
   onProgress?: (progress: number) => void;
 }) {
+  input.signal?.throwIfAborted();
   const accessToken = await getAccessToken();
 
   return new Promise<void>((resolve, reject) => {
@@ -279,14 +280,10 @@ export async function uploadMediaProcessingInput(input: {
     xhr.setRequestHeader("Authorization", `Bearer ${accessToken}`);
     xhr.setRequestHeader("Content-Type", input.file.type || "application/octet-stream");
 
-    if (input.onProgress) {
-      xhr.upload.onprogress = (event) => {
-        stallGuard.touch();
-        if (event.lengthComputable) {
-          input.onProgress?.(Math.round((event.loaded / event.total) * 100));
-        }
-      };
-    }
+    xhr.upload.onprogress = (event) => {
+      stallGuard.touch();
+      if (event.lengthComputable) input.onProgress?.(Math.round((event.loaded / event.total) * 100));
+    };
 
     xhr.onerror = () => {
       stallGuard.dispose();
@@ -296,7 +293,10 @@ export async function uploadMediaProcessingInput(input: {
         ),
       );
     };
-    xhr.onabort = () => stallGuard.dispose();
+    xhr.onabort = () => {
+      stallGuard.dispose();
+      reject(new DOMException("Upload aborted.", "AbortError"));
+    };
     xhr.onload = () => {
       stallGuard.dispose();
       if (xhr.status >= 200 && xhr.status < 300) {

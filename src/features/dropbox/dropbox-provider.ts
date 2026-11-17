@@ -328,16 +328,21 @@ export class DropboxProvider implements CloudStorageProvider {
   }
 
   async getPrivateFileBlob(fileId: string) {
+    return (await this.getPrivateFileStream(fileId)).blob();
+  }
+
+  async getPrivateFileStream(fileId: string, signal?: AbortSignal) {
     const token = await this.getToken();
     const response = await fetch(`${DROPBOX_CONTENT}/files/download`, {
       method: "POST",
+      signal,
       headers: {
         Authorization: `Bearer ${token}`,
         "Dropbox-API-Arg": JSON.stringify({ path: fileId }),
       },
     });
     if (!response.ok) throw new Error(await response.text() || "Dropbox download failed.");
-    return response.blob();
+    return response;
   }
 
   async getFileMetadata(fileId: string): Promise<CloudFileMetadata> {

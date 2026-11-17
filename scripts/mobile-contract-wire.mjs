@@ -67,6 +67,12 @@ export function domainSchemas(inventory) {
   schemas.SharedProjectDetail = object({ targetType: { type: "string", enum: ["collaboration_project", "song_version"] }, targetId: uuid, permission: { type: "string", enum: ["view", "review"] }, project: ref("CollaborationProject"), owner: ref("Profile"), tracks: { type: "array", items: object({ track: ref("CollaborationProjectTrack"), song: ref("Song"), version: nullable(ref("SongVersion")), protectedAsset: nullable(ref("ProtectedMediaAsset")) }) }, feedbackThreads: { type: "array", items: ref("FeedbackThread") } });
   schemas.LegacyWaveform = { type: "array", items: number };
   schemas.ClientError = object({ kind: { type: "string", enum: ["auth_required", "reauth_required", "forbidden", "unavailable", "share_unavailable", "quota_exceeded", "payload_too_large", "unsupported_media", "validation", "conflict", "rate_limited", "transient", "cancelled", "unknown"] }, retryable: { type: "boolean" }, outcomeUnknown: { type: "boolean" } });
+  schemas.ReleaseDownloadAsset = object({ id: uuid, provider: { type: "string", enum: ["google_drive", "dropbox", "onedrive"] }, remoteFileId: string, filename: string, mimeType: string, bytes: nullable(number) });
+  schemas.ReleaseDownloadEntry = object({ path: string, asset: ref("ReleaseDownloadAsset") });
+  schemas.ReleaseDownloadTrack = object({ ...schemas.ReleaseDownloadEntry.properties, trackNumber: number, title: string, songId: uuid, versionId: uuid, versionLabel: string, versionNumber: number, productionStage: string, musicalKey: nullable(string), tempoBpm: nullable(number) });
+  schemas.ReleaseDownloadManifest = object({ formatVersion: { type: "number", const: 1 }, generatedAt: string, archiveName: string, rootDirectory: string,
+    post: object({ id: uuid, title: string, type: string, description: nullable(string), releaseNotes: nullable(string) }),
+    tracks: { type: "array", items: ref("ReleaseDownloadTrack"), minItems: 1 }, artwork: nullable(ref("ReleaseDownloadEntry")) });
   return schemas;
 }
 
@@ -88,7 +94,7 @@ export function phaseForRoute(route) {
 const apiPhases = { admin: "0.9", appearance: "0.9", attachments: "0.8", auth: "0.2", drive: "0.5", feed: "0.3", follows: "0.4", legal: "0.2", library: "0.5", "media-processing": "0.5", messages: "0.8", notifications: "0.8", posts: "0.6", privacy: "0.9", profile: "0.4", projects: "0.7", search: "0.3" };
 export function buildParity(inventory) {
   return {
-    contractVersion: "0.1.1",
+    contractVersion: "0.1.2",
     routes: inventory.routes.map((route) => ({ path: route.path, source: `${route.file}:${route.line}`, gate: route.guard, release: phaseForRoute(route), status: "audited-native-not-implemented" })),
     apis: inventory.featureApis.filter((api) => api.apiFile).map((api) => {
       const feature = api.file.split("/")[2];
@@ -110,7 +116,7 @@ const param = (name, where, schema = string, required = false) => ({ name, in: w
 const response = (description, schema, mime = "application/json") => ({ description, ...(schema ? { content: { [mime]: { schema } } } : {}) });
 
 export function openapi(inventory, schemas) {
-  const doc = { openapi: "3.1.0", info: { title: "MxTrove existing media worker", version: "0.1.1", description: "Phase-0 contracts plus backward-compatible security maintenance. Worker package 0.1.0 is not protocol capability discovery. JSON syntax is valid YAML 1.2. No planned mobile endpoint is asserted as implemented." }, servers: [{ url: "{workerBase}", variables: { workerBase: { default: "http://127.0.0.1:8080", description: "Explicit staging base or deployed /worker URL; never auto-select production." } } }], paths: {}, components: { securitySchemes: { userJWT: { type: "http", scheme: "bearer", bearerFormat: "JWT", description: "Supabase user JWT; not service-role or provider access token." }, shareToken: { type: "apiKey", in: "header", name: "X-MxShare-Share-Token" }, mediaSignature: { type: "apiKey", in: "query", name: "signature", description: "HMAC plus required expires query; temporary bearer capability." } }, schemas } };
+  const doc = { openapi: "3.1.0", info: { title: "MxTrove existing media worker", version: "0.1.2", description: "Phase-0 contracts with additive author downloads and validated preview input. Worker package versions are not protocol capability discovery. JSON syntax is valid YAML 1.2. No planned mobile endpoint is asserted as implemented." }, servers: [{ url: "{workerBase}", variables: { workerBase: { default: "http://127.0.0.1:8080", description: "Explicit staging base or deployed /worker URL; never auto-select production." } } }], paths: {}, components: { securitySchemes: { userJWT: { type: "http", scheme: "bearer", bearerFormat: "JWT", description: "Supabase user JWT; not service-role or provider access token." }, shareToken: { type: "apiKey", in: "header", name: "X-MxShare-Share-Token" }, mediaSignature: { type: "apiKey", in: "query", name: "signature", description: "HMAC plus required expires query; temporary bearer capability." } }, schemas } };
   for (const endpoint of inventory.endpoints) {
     const p = endpoint.path, method = endpoint.method.toLowerCase();
     const pathname = p.replace(/:([A-Za-z0-9_]+)/g, "{$1}");
@@ -135,7 +141,12 @@ export function openapi(inventory, schemas) {
       operation.responses["200"] = response("Full file; HEAD no body", binary, "application/octet-stream"); operation.responses["206"] = response("Single byte range; HEAD no body", binary, "application/octet-stream"); operation.responses["416"] = { description: "Unsatisfiable/invalid single range; Content-Range bytes */size, no body" };
     }
     else if (p === "/v1/media/jobs" && method === "post") { operation.requestBody = { required: true, content: { "application/json": { schema: ref("CreateJob") } } }; json(ref("JobSummary")); operation.description = "sourceAssetId required (only truthiness at HTTP boundary); owner/mode/context checked in media-jobs. May reuse active job. No persistent Idempotency-Key."; }
-    else if (p.endsWith("/input")) { operation.requestBody = { required: true, content: { "application/octet-stream": { schema: binary } } }; json(ref("JobSummary"), "202"); operation.description = "Full raw stream only, MIME may be audio/*; no multipart/Content-Range session protocol. Defaults max 524288000 bytes. Re-upload in active job not guaranteed safe."; }
+    else if (p.endsWith("/input")) { operation.requestBody = { required: true, content: { "application/octet-stream": { schema: binary } } }; json(ref("JobSummary"), "202"); operation.description = "Full raw stream only, MIME may be audio/*; no multipart/Content-Range. Exact stored source size is checked; complete input is persisted queued before acceptance. Only created/uploading jobs may accept input. Failed input becomes retryable via a new job."; for (const code of [409, 413, 422, 503, 507]) operation.responses[code] = response("Already processing; too large; interrupted/incomplete input; temporary worker/database unavailability; or insufficient temporary storage respectively.", ref("WorkerError")); }
+    else if (p === "/v1/releases/:postId/download-manifest") {
+      json(ref("ReleaseDownloadManifest"));
+      operation.description = "JWT post author only, independent of visibility; private no-store metadata. Album/EP: selected track originals in release order. Single: all saved author-owned versions. Every source and cover must belong to the author. Bytes are read directly through private provider OAuth; no media body traverses Supabase or this endpoint. Native clients can reuse the manifest and package files locally.";
+      operation.responses["400"] = response("Invalid UUID", ref("WorkerError")); operation.responses["404"] = response("Missing post or caller is not author", ref("WorkerError")); operation.responses["409"] = response("Incomplete release or missing/foreign original or cover; no partial manifest", ref("WorkerError"));
+    }
     else if (p.endsWith("/preview")) { operation.responses["200"] = response("Temporary owner MP3 download; reading ready changes job to uploading_to_drive", binary, "audio/mpeg"); operation.responses["409"] = response("Not in ready/uploading_to_drive/completed", ref("WorkerError")); }
     else if (p.endsWith("/acknowledge") || method === "delete") { operation.responses["204"] = response(p.endsWith("/acknowledge") ? "Removes temporary job directory, does not finalize DB metadata" : "Cancels job or soft-deletes own attachment and releases storage"); }
     else if (p === "/v1/media/jobs/:jobId") json(ref("MediaProcessingJob"));

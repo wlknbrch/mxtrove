@@ -12,6 +12,9 @@ export const appReleases: AppRelease[] = [
     date: "November 2026",
     title: "Reliable multi-file imports",
     changes: [
+      "Download your own albums and EPs as a ZIP of original audio, artwork and release metadata; single posts include all of your saved versions. Files are retrieved privately from the connected cloud providers.",
+      "Imported songs now show a loading state while opening, keep editing state separate between tracks, and allow retrying connection errors without falsely reporting a missing song.",
+      "Preview uploads detect closed or incomplete streams immediately, persist accepted jobs for restart recovery, and keep later tracks running when an individual job fails. Preview retries cannot overwrite an active job.",
       "Fixed multi-file library imports stalling halfway through large batches: conversions keep running when the media worker is busy, briefly unreachable, or restarted, and stalled jobs now recover automatically.",
       "Freshly uploaded previews no longer fail with a transient 410 from Google Drive; the media proxy retries against an alternate host before reporting an error.",
       "Interrupted uploads and downloads are detected and reported with a clear message instead of hanging silently. Original files always stay safe in your connected cloud storage.",
