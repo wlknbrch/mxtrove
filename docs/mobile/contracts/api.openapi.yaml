@@ -332,6 +332,16 @@
               }
             }
           },
+          "415": {
+            "description": "Explicit handler validation/unavailable error; see source",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkerError"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Already processing; too large; interrupted/incomplete input; temporary worker/database unavailability; or insufficient temporary storage respectively.",
             "content": {

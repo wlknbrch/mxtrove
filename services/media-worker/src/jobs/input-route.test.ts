@@ -25,6 +25,13 @@ beforeEach(() => {
   mocks.failed.mockResolvedValue(undefined);
 });
 describe("accepting preview input", () => {
+  it("rejects JSON before creating a file or reserving an upload slot", async () => {
+    const server = await app();
+    const response = await server.inject({ method: "PUT", url: "/v1/media/jobs/job/input", payload: { file: "not raw audio" } });
+    expect(response.statusCode).toBe(415);
+    expect(mocks.uploading).not.toHaveBeenCalled(); expect(mocks.write).not.toHaveBeenCalled();
+    await server.close();
+  });
   it("persists a complete queued upload before dispatching it", async () => {
     const server = await app();
     const response = await server.inject({ method: "PUT", url: "/v1/media/jobs/job/input", headers: { "content-type": "audio/wav" }, payload: "data" });

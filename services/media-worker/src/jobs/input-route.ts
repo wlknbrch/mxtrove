@@ -1,4 +1,4 @@
-import type { Readable } from "node:stream";
+import { Readable } from "node:stream";
 import type { FastifyInstance } from "fastify";
 import { verifySupabaseBearerToken } from "../auth/verify-jwt.js";
 import { config } from "../config.js";
@@ -13,6 +13,9 @@ export async function registerMediaJobInputRoute(app: FastifyInstance) {
     const { jobId } = request.params as { jobId: string };
     const job = await getJobForOwner(jobId, user.id);
     if (!job) return reply.code(404).send({ error: "Job not found." });
+    if (!(request.body instanceof Readable)) {
+      return reply.code(415).send({ error: "Send the raw audio file, not JSON or multipart form data." });
+    }
     if (uploading.has(jobId) || !["created", "uploading"].includes(job.status)) {
       return reply.code(409).send({ error: "This job is already processing or has finished. Refresh its status before retrying." });
     }
