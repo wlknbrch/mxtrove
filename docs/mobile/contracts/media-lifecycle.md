@@ -30,7 +30,7 @@ Export path: RPC request_data_export → own data_export_requests → worker pol
 
 ## States, retries and deletion
 
-The actual 12 MediaProcessingJobStatus values and complete job schema are in wire-schemas.json. Intended sequence is created → uploading → queued → probing → transcoding → generating_waveform → ready → uploading_to_drive → completed; protected mode completes directly after derivative finalization. failed/cancelled/expired are terminal UI states, not permission to repeat destructive provider operations. Stale active jobs are marked failed/worker_restart after the configured timeout (default 30 min); queue is in-process, not a durable resume engine.
+The actual 12 MediaProcessingJobStatus values and complete job schema are in wire-schemas.json. Intended sequence is created → uploading → queued → probing → transcoding → generating_waveform → ready → uploading_to_drive → completed; protected mode completes directly after derivative finalization. failed/cancelled/expired are terminal UI states, not permission to repeat destructive provider operations. Stale active jobs are marked failed/worker_restart after the configured timeout (default 30 min); complete queued inputs are now persisted before acceptance and can be re-enqueued from the same volume after restart. Partial inputs are rejected and must be uploaded again; there is no cross-device resumable upload protocol.
 
 | Failure point | Preserve | Safe next step / current gap |
 |---|---|---|
@@ -49,3 +49,9 @@ Cloud deletion and DB cleanup are not one transaction. Record failed cleanup for
 ## Resource / egress assumptions
 
 Config defaults, not deployment evidence: input 500MiB, audio attachment 50MiB, image 15MiB, document 20MiB, max audio duration 5400s, concurrent media jobs 1, protected disk safety reserve 1GiB. Rate limits are per worker instance/IP. Never hardcode these as future account entitlements; there is no version/capabilities discovery endpoint today. Feed-card waveform ≤320 buckets; use lazily fetched full detail. Public media body travels via VPS `/worker/v1/public-media` (Drive/Dropbox) or direct supported provider public URL; the legacy Supabase Edge proxy remains a fallback in web configuration and must not be native's default.
+
+## Author release archives (2026-11-17)
+
+`GET /v1/releases/:postId/download-manifest` verifies JWT, exact post ownership and ownership of every original/cover. Visibility grants alone never authorize an archive. Album/EP manifests select the released track versions in track order; single manifests select all saved author-owned song versions. Missing or foreign originals fail the entire manifest with409. No file bytes, waveforms, public links or OAuth tokens are returned.
+
+Clients stream the files with private provider OAuth and create a ZIP locally with numbered track titles, the full cover and metadata.json. Web uses direct file saving where supported and a bounded1GiB Blob fallback elsewhere; ZIP32 archives are capped below3.5GB. Cancellation/incomplete files abort the archive. Supabase only serves small metadata; media bytes never use Supabase egress.

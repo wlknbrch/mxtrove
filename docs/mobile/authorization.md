@@ -76,3 +76,6 @@ Without a valid signature, GET requires JWT; a share-token header alone without 
 `create_shared_feedback_thread` requires an authenticated reviewer with an active review link and matching track/version. Current code **does not recheck max_uses** there; initial resolve and playback use other counter rules. Documented as an explicit policy decision/gap instead of silently strengthening it on paper.
 
 See [verification.md](verification.md) for the negative test matrix. Static role fixtures model helpers only, not production authorization.
+## Author release downloads — 2026-11-17
+
+`GET /v1/releases/:postId/download-manifest` requires a verified user JWT and exact ownership of the post. Public visibility, follower status, project membership, a share link or an admin role do not grant export access. Related versions, songs, private original assets and cover artwork are individually restricted to that same owner; missing or foreign data causes a409 rather than a partial archive. The manifest is private/no-store and contains no provider token or public file URL. Each provider also enforces its OAuth permissions when the native/web client streams the files. No new table, RPC or RLS policy is introduced.

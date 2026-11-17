@@ -1,6 +1,6 @@
 {
   "fixtureVersion": 1,
-  "contractVersion": "0.1.1",
+  "contractVersion": "0.1.2",
   "synthetic": true,
   "payloads": [
     {
@@ -1282,6 +1282,46 @@
       "payload": {
         "url": "https://media.example.invalid/worker/v1/protected-media/55555555-5555-4555-8555-555555555555?expires=1800000000&signature=EXAMPLE_INVALID",
         "expiresInSeconds": 300
+      }
+    },
+    {
+      "id": "release-download-author",
+      "schema": "ReleaseDownloadManifest",
+      "payload": {
+        "formatVersion": 1,
+        "generatedAt": "2026-11-17T12:00:00Z",
+        "archiveName": "Fixture release.zip",
+        "rootDirectory": "Fixture release",
+        "post": {
+          "id": "90000000-0000-4000-8000-000000000001",
+          "title": "Fixture release",
+          "type": "album",
+          "description": null,
+          "releaseNotes": null
+        },
+        "tracks": [
+          {
+            "path": "Fixture release/01 - Song.wav",
+            "asset": {
+              "id": "90000000-0000-4000-8000-000000000002",
+              "provider": "google_drive",
+              "remoteFileId": "synthetic-private-drive-id",
+              "filename": "original.wav",
+              "mimeType": "audio/wav",
+              "bytes": 4
+            },
+            "trackNumber": 1,
+            "title": "Song",
+            "songId": "90000000-0000-4000-8000-000000000003",
+            "versionId": "90000000-0000-4000-8000-000000000004",
+            "versionLabel": "Master",
+            "versionNumber": 1,
+            "productionStage": "Mastered",
+            "musicalKey": null,
+            "tempoBpm": null
+          }
+        ],
+        "artwork": null
       }
     }
   ]

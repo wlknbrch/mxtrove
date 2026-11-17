@@ -36,15 +36,20 @@ function formatState(job: MediaProcessingJob | null) {
 export function MediaProcessingStatusCard({
   job,
   error,
+  busy = false,
+  progress,
   title = "Automatic preview generation",
   emptyMessage = "Upload a private original and MxTrove will generate the browser-safe MP3 preview for you.",
 }: {
   job: MediaProcessingJob | null;
   error?: string | null;
+  busy?: boolean;
+  progress?: number | null;
   title?: string;
   emptyMessage?: string;
 }) {
-  const state = formatState(job);
+  const state = formatState(job) ?? (busy ? { label: "Preparing preview", tone: "accent" as const, icon: LoaderCircle } : null);
+  const displayedProgress = Math.max(0, Math.min(100, progress ?? job?.progress ?? 0));
   const Icon = state?.icon ?? Wand2;
 
   return (
@@ -62,21 +67,21 @@ export function MediaProcessingStatusCard({
         ) : null}
       </div>
 
-      {job ? (
+      {job || busy ? (
         <div className="space-y-3">
-          <p className="text-sm leading-7 text-muted-foreground">{job.stage}</p>
+          <p className="text-sm leading-7 text-muted-foreground">{job?.stage ?? "Reading your private source from the connected cloud provider…"}</p>
           <div className="h-2 overflow-hidden rounded-full bg-white/6">
             <div
               className="h-full rounded-full bg-gradient-to-r from-accent to-accent-secondary"
-              style={{ width: `${Math.max(4, job.progress)}%` }}
+              style={{ width: `${Math.max(4, displayedProgress)}%` }}
             />
           </div>
           <div className="flex flex-wrap gap-3 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-            <span>{job.progress}%</span>
-            {job.duration_seconds ? <span>{Math.round(job.duration_seconds)}s</span> : null}
-            {job.detected_codec ? <span>{job.detected_codec}</span> : null}
-            {job.detected_tempo_bpm ? <span>{job.detected_tempo_bpm} BPM</span> : null}
-            {job.detected_musical_key ? <span>{job.detected_musical_key}</span> : null}
+            <span>{displayedProgress}%</span>
+            {job?.duration_seconds ? <span>{Math.round(job.duration_seconds)}s</span> : null}
+            {job?.detected_codec ? <span>{job.detected_codec}</span> : null}
+            {job?.detected_tempo_bpm ? <span>{job.detected_tempo_bpm} BPM</span> : null}
+            {job?.detected_musical_key ? <span>{job.detected_musical_key}</span> : null}
           </div>
         </div>
       ) : (

@@ -4393,6 +4393,223 @@
           "outcomeUnknown"
         ],
         "additionalProperties": true
+      },
+      "ReleaseDownloadAsset": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "google_drive",
+              "dropbox",
+              "onedrive"
+            ]
+          },
+          "remoteFileId": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "bytes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "remoteFileId",
+          "filename",
+          "mimeType",
+          "bytes"
+        ],
+        "additionalProperties": true
+      },
+      "ReleaseDownloadEntry": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "asset": {
+            "$ref": "#/components/schemas/ReleaseDownloadAsset"
+          }
+        },
+        "required": [
+          "path",
+          "asset"
+        ],
+        "additionalProperties": true
+      },
+      "ReleaseDownloadTrack": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "asset": {
+            "$ref": "#/components/schemas/ReleaseDownloadAsset"
+          },
+          "trackNumber": {
+            "type": "number"
+          },
+          "title": {
+            "type": "string"
+          },
+          "songId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "versionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "versionLabel": {
+            "type": "string"
+          },
+          "versionNumber": {
+            "type": "number"
+          },
+          "productionStage": {
+            "type": "string"
+          },
+          "musicalKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tempoBpm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "path",
+          "asset",
+          "trackNumber",
+          "title",
+          "songId",
+          "versionId",
+          "versionLabel",
+          "versionNumber",
+          "productionStage",
+          "musicalKey",
+          "tempoBpm"
+        ],
+        "additionalProperties": true
+      },
+      "ReleaseDownloadManifest": {
+        "type": "object",
+        "properties": {
+          "formatVersion": {
+            "type": "number",
+            "const": 1
+          },
+          "generatedAt": {
+            "type": "string"
+          },
+          "archiveName": {
+            "type": "string"
+          },
+          "rootDirectory": {
+            "type": "string"
+          },
+          "post": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "title": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "description": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "releaseNotes": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "type",
+              "description",
+              "releaseNotes"
+            ],
+            "additionalProperties": true
+          },
+          "tracks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReleaseDownloadTrack"
+            },
+            "minItems": 1
+          },
+          "artwork": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReleaseDownloadEntry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "formatVersion",
+          "generatedAt",
+          "archiveName",
+          "rootDirectory",
+          "post",
+          "tracks",
+          "artwork"
+        ],
+        "additionalProperties": true
       }
     }
   }

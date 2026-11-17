@@ -9,6 +9,7 @@ import { ensureJobDir, getJobPaths, removeJobDir } from "../media/paths.js";
 import { protectedMediaStorage } from "../protected-media/index.js";
 import { supabaseAdmin } from "../supabase/service.js";
 import { generateWaveformFromPcm } from "../waveform/generate-waveform.js";
+import { MediaJobQueue } from "./queue.js";
 
 export interface MediaJobRecord {
   id: string;
@@ -53,13 +54,10 @@ export interface MediaJobRecord {
   updated_at: string;
 }
 
-type JobTask = () => Promise<void>;
-
 const HEARTBEAT_INTERVAL_MS = 60_000;
 
 const activeProcesses = new Map<string, ChildProcess>();
-const queuedTasks: JobTask[] = [];
-let activeJobs = 0;
+const jobQueue = new MediaJobQueue(config.maxConcurrentMediaJobs, processMediaJob, failMediaJobInput);
 
 async function updateJob(jobId: string, payload: Partial<MediaJobRecord>) {
   const { error } = await supabaseAdmin.from("media_processing_jobs").update(payload).eq("id", jobId);
@@ -75,6 +73,35 @@ export async function setJobUploading(jobId: string) {
     progress: 0,
     updated_at: new Date().toISOString(),
   });
+}
+
+export async function setJobQueued(jobId: string) {
+  await updateJob(jobId, { status: "queued", stage: "Queued for processing", progress: 5, updated_at: new Date().toISOString() });
+}
+
+export async function touchMediaJob(jobId: string) {
+  await updateJob(jobId, { updated_at: new Date().toISOString() });
+}
+
+export async function failMediaJobInput(jobId: string, error: unknown) {
+  await updateJob(jobId, {
+    status: "failed", stage: "Preview input failed", error_code: "input_failed",
+    error_message: error instanceof Error ? error.message : "The source upload was interrupted. Retry the preview generation.",
+    updated_at: new Date().toISOString(), expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+  });
+}
+
+export async function resumeQueuedMediaJobs() {
+  const { data, error } = await supabaseAdmin.from("media_processing_jobs")
+    .select("id, input_bytes").eq("status", "queued").order("created_at", { ascending: true }).limit(100);
+  if (error) throw error;
+  for (const job of data ?? []) {
+    if (jobQueue.has(job.id)) continue;
+    const input = await fs.stat(getJobPaths(job.id).inputPath).catch(() => null);
+    if (input?.isFile() && input.size > 0 && (job.input_bytes == null || input.size === job.input_bytes)) {
+      enqueueMediaJob(job.id);
+    }
+  }
 }
 
 export async function getJobForOwner(jobId: string, ownerId: string) {
@@ -259,31 +286,8 @@ export async function createMediaProcessingJobForOwner(input: {
   return data as MediaJobRecord;
 }
 
-async function runNextQueuedTask() {
-  if (activeJobs >= config.maxConcurrentMediaJobs) {
-    return;
-  }
-
-  const nextTask = queuedTasks.shift();
-  if (!nextTask) {
-    return;
-  }
-
-  activeJobs += 1;
-  try {
-    await nextTask();
-  } finally {
-    activeJobs -= 1;
-    void runNextQueuedTask();
-  }
-}
-
 export function enqueueMediaJob(jobId: string) {
-  queuedTasks.push(async () => {
-    await processMediaJob(jobId);
-  });
-
-  void runNextQueuedTask();
+  jobQueue.add(jobId);
 }
 
 export async function cancelMediaJob(jobId: string) {
@@ -359,6 +363,7 @@ async function runMediaJobPipeline(jobId: string, job: MediaJobRecord) {
     stage: "Queued for processing",
     progress: 5,
     worker_instance_id: config.workerInstanceId,
+    attempt_count: (job.attempt_count ?? 0) + 1,
     started_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   });
@@ -618,7 +623,8 @@ export async function recoverStaleMediaJobs() {
     throw staleError;
   }
 
-  for (const staleJob of staleJobs ?? []) {
+  const abandonedJobs = (staleJobs ?? []).filter(job => !jobQueue.has(job.id));
+  for (const staleJob of abandonedJobs) {
     const activeProcess = activeProcesses.get(staleJob.id);
     if (activeProcess) {
       activeProcess.kill("SIGTERM");
@@ -626,7 +632,7 @@ export async function recoverStaleMediaJobs() {
     }
   }
 
-  const staleJobIds = (staleJobs ?? []).map((staleJob) => staleJob.id);
+  const staleJobIds = abandonedJobs.map((staleJob) => staleJob.id);
   if (staleJobIds.length === 0) {
     return;
   }

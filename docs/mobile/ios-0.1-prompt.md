@@ -9,7 +9,7 @@ First inspect this repository, its instructions and git status; preserve existin
 work. Read the MxTrove backend's docs/mobile/README.md, feature-parity.md,
 compatibility.md, authorization.md, decisions.md, contracts/schema-map.md,
 contracts/errors.md, contracts/api.openapi.yaml, contracts/parity.json and fixtures.
-Use contract baseline 0.1.1. Original runtime base is backend commit
+Use contract baseline 0.1.2. Original runtime base is backend commit
 fc3ee23cf2182f5f8d2a4617183fe3207050eedf (web v1.2.1), with subsequent local
 security maintenance in the current contract artifacts. Pin the commit containing
 these artifacts; do not treat the unmodified base as the security-patched build.

@@ -1,5 +1,5 @@
 {
-  "contractVersion": "0.1.1",
+  "contractVersion": "0.1.2",
   "scope": "UI capability projections of accepted membership helpers; not a substitute for RLS or operation-specific resource checks",
   "roles": [
     "owner",

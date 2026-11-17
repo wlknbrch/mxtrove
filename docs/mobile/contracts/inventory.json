@@ -1639,7 +1639,7 @@
       "apiFile": false,
       "calls": [],
       "file": "src/features/legal/changelog.ts",
-      "line": 106
+      "line": 109
     },
     {
       "name": "getArchivedAppReleases",
@@ -1647,7 +1647,7 @@
       "apiFile": false,
       "calls": [],
       "file": "src/features/legal/changelog.ts",
-      "line": 110
+      "line": 113
     },
     {
       "name": "validateAppFeedback",
@@ -2036,7 +2036,7 @@
       "apiFile": false,
       "calls": [],
       "file": "src/features/library/library-import-navigator.tsx",
-      "line": 9
+      "line": 10
     },
     {
       "name": "LibraryImportPage",
@@ -2364,7 +2364,7 @@
     },
     {
       "name": "MediaProcessingStatusCard",
-      "signature": "export function MediaProcessingStatusCard({\n  job,\n  error,\n  title = \"Automatic preview generation\",\n  emptyMessage = \"Upload a private original and MxTrove will generate the browser-safe MP3 preview for you.\",\n}: {\n  job: MediaProcessingJob | null;\n  error?: string | null;\n  title?: string;\n  emptyMessage?: string;\n})",
+      "signature": "export function MediaProcessingStatusCard({\n  job,\n  error,\n  busy = false,\n  progress,\n  title = \"Automatic preview generation\",\n  emptyMessage = \"Upload a private original and MxTrove will generate the browser-safe MP3 preview for you.\",\n}: {\n  job: MediaProcessingJob | null;\n  error?: string | null;\n  busy?: boolean;\n  progress?: number | null;\n  title?: string;\n  emptyMessage?: string;\n})",
       "apiFile": false,
       "calls": [],
       "file": "src/features/media-processing/media-processing-status-card.tsx",
@@ -3846,7 +3846,7 @@
       "apiFile": false,
       "calls": [],
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 199
+      "line": 200
     },
     {
       "name": "getReleaseTrackVersionId",
@@ -3911,6 +3911,71 @@
       "calls": [],
       "file": "src/features/posts/release-credits-input.tsx",
       "line": 63
+    },
+    {
+      "name": "ReleaseDownloadButton",
+      "signature": "export function ReleaseDownloadButton({ postId, title, artist, single }: {\n  postId: string; title: string; artist?: string; single?: boolean;\n})",
+      "apiFile": false,
+      "calls": [],
+      "file": "src/features/posts/release-download-button.tsx",
+      "line": 8
+    },
+    {
+      "name": "getReleaseDownloadManifest",
+      "signature": "export async function getReleaseDownloadManifest(postId: string, signal?: AbortSignal): Promise<ReleaseDownloadManifest>",
+      "apiFile": false,
+      "calls": [
+        {
+          "kind": "getSession",
+          "target": null,
+          "targets": [],
+          "expression": "requireSupabase().auth.getSession()",
+          "file": "src/features/posts/release-download.ts",
+          "line": 31
+        },
+        {
+          "kind": "fetch",
+          "target": "`${env.mediaWorkerUrl}/v1/releases/${encodeURIComponent(postId)}/download-manifest`",
+          "targets": [],
+          "expression": "fetch(`${env.mediaWorkerUrl}/v1/releases/${encodeURIComponent(postId)}/download-manifest`, {\n    headers: { Authorization: `Bearer ${data.session.access_token}` },\n    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(30_000)]) : AbortSignal.timeout(30_000),\n    cache: \"no-store\",\n  })",
+          "file": "src/features/posts/release-download.ts",
+          "line": 34
+        }
+      ],
+      "file": "src/features/posts/release-download.ts",
+      "line": 30
+    },
+    {
+      "name": "chooseArchiveFile",
+      "signature": "export async function chooseArchiveFile(title: string): Promise<ArchiveFileHandle | null>",
+      "apiFile": false,
+      "calls": [],
+      "file": "src/features/posts/release-download.ts",
+      "line": 47
+    },
+    {
+      "name": "releaseArchiveMetadata",
+      "signature": "export function releaseArchiveMetadata(manifest: ReleaseDownloadManifest, artist?: string)",
+      "apiFile": false,
+      "calls": [],
+      "file": "src/features/posts/release-download.ts",
+      "line": 54
+    },
+    {
+      "name": "writeReleaseArchive",
+      "signature": "export async function writeReleaseArchive(params: {\n  manifest: ReleaseDownloadManifest; sink: ArchiveSink; artist?: string; signal?: AbortSignal;\n  onProgress?: (progress: ReleaseDownloadProgress) => void;\n  getProvider?: (provider: CloudProvider) => CloudStorageProvider;\n  maxBytes?: number;\n})",
+      "apiFile": false,
+      "calls": [],
+      "file": "src/features/posts/release-download.ts",
+      "line": 61
+    },
+    {
+      "name": "createBrowserArchiveSink",
+      "signature": "export function createBrowserArchiveSink(filename: string): ArchiveSink",
+      "apiFile": false,
+      "calls": [],
+      "file": "src/features/posts/release-download.ts",
+      "line": 162
     },
     {
       "name": "ReleaseEditLeaveDialog",
@@ -7031,28 +7096,28 @@
       "label": "",
       "handler": "{previous?.songId ? `/library/songs/${previous.songId}?batch=${batchId}` : \"#\"}",
       "file": "src/features/library/library-import-navigator.tsx",
-      "line": 38
+      "line": 48
     },
     {
       "event": "to",
       "label": "",
       "handler": "{`/library/import/${batchId}`}",
       "file": "src/features/library/library-import-navigator.tsx",
-      "line": 43
+      "line": 53
     },
     {
       "event": "to",
       "label": "",
       "handler": "{next?.songId ? `/library/songs/${next.songId}?batch=${batchId}` : \"#\"}",
       "file": "src/features/library/library-import-navigator.tsx",
-      "line": 46
+      "line": 56
     },
     {
       "event": "to",
       "label": "",
       "handler": "{`/library/songs/${item.songId}?batch=${batchId}`}",
       "file": "src/features/library/library-import-navigator.tsx",
-      "line": 66
+      "line": 76
     },
     {
       "event": "to",
@@ -8188,375 +8253,375 @@
       "event": "useMutation",
       "handler": "{\n    mutationFn: async () => {\n      if (!viewer.userId) {\n        throw new Error(\"Please sign in first.\");\n      }\n      if (!versionId) {\n        throw new Error(\"This track is not linked to a shareable song version yet.\");\n      }\n\n      return toggleVersionHeart({\n        versionId,\n        profileId: viewer.userId,\n        active: !active,\n      });\n    },\n    onSuccess: async () => {\n      await Promise.all([\n        queryClient.invalidateQueries({ queryKey: [\"post\", postId] }),\n        queryClient.invalidateQueries({ queryKey: [\"home-feed\"] }),\n        queryClient.invalidateQueries({ queryKey: [\"explore-feed\"] }),\n        ownerId ? queryClient.invalidateQueries({ queryKey: [\"profile-posts\", ownerId] }) : Promise.resolve(),\n      ]);\n      toast.success(active ? \"Song heart removed.\" : \"Song heart sent.\");\n    },\n    onError: (error) => {\n      toast.error(error instanceof Error ? error.message : \"Could not update this song heart.\");\n    },\n  }",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 144
+      "line": 145
     },
     {
       "event": "onClick",
       "label": "",
       "handler": "{() => void heartMutation.mutateAsync()}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 182
+      "line": 183
     },
     {
       "event": "useMutation",
       "handler": "{\n    mutationFn: () => createPostShareLink({ postId }),\n    onSuccess: async ({ share_token: token }) => {\n      const url = `${window.location.origin}/share/${token}`;\n      setFreshShareUrl(url);\n      const shareResult = await shareWithSystemDialog({\n        title: postQuery.data?.post.title ?? \"Private MxTrove release\",\n        text: \"Listen to this private MxTrove release.\",\n        url,\n      });\n      await queryClient.invalidateQueries({ queryKey: [\"post-share-links\", postId] });\n      if (shareResult !== \"cancelled\") {\n        toast.success(\n          shareResult === \"shared\"\n            ? \"Private release shared.\"\n            : \"Native sharing is unavailable here, so the private link was copied.\",\n        );\n      }\n    },\n    onError: (error) => toast.error(error instanceof Error ? error.message : \"Could not create a share link.\"),\n  }",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 241
+      "line": 242
     },
     {
       "event": "useMutation",
       "handler": "{\n    mutationFn: revokePostShareLink,\n    onSuccess: async () => {\n      await queryClient.invalidateQueries({ queryKey: [\"post-share-links\", postId] });\n      toast.success(\"Share link revoked.\");\n    },\n    onError: (error) => toast.error(error instanceof Error ? error.message : \"Could not revoke the share link.\"),\n  }",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 262
+      "line": 263
     },
     {
       "event": "useMutation",
       "handler": "{\n    mutationFn: async (input: { body: string; parentCommentId?: string | null }) => {\n      if (!viewer.userId) {\n        throw new Error(\"Please sign in first.\");\n      }\n\n      return addCommentToPost({\n        postId,\n        authorId: viewer.userId,\n        values: { body: input.body, parent_comment_id: input.parentCommentId ?? null },\n      });\n    },\n    onSuccess: async (_result, input) => {\n      if (input.parentCommentId) {\n        setReplyDrafts((current) => {\n          const next = { ...current };\n          delete next[input.parentCommentId!];\n          return next;\n        });\n      } else {\n        clearCommentDraft();\n      }\n      setReplyTargetId(null);\n      await queryClient.invalidateQueries({ queryKey: [\"post\", postId] });\n      await Promise.all([\n        queryClient.invalidateQueries({ queryKey: [\"home-feed\"] }),\n        queryClient.invalidateQueries({ queryKey: [\"explore-feed\"] }),\n      ]);\n      toast.success(\"Comment added.\");\n    },\n    onError: (error) => {\n      toast.error(error instanceof Error ? error.message : \"Could not add comment.\");\n    },\n  }",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 271
+      "line": 272
     },
     {
       "event": "useMutation",
       "handler": "{\n    mutationFn: async (input: { commentId: string; body: string }) => {\n      if (!viewer.userId) {\n        throw new Error(\"Please sign in first.\");\n      }\n\n      return updateCommentOnPost({\n        commentId: input.commentId,\n        authorId: viewer.userId,\n        body: input.body,\n      });\n    },\n    onSuccess: async () => {\n      setEditingCommentId(null);\n      setEditingBody(\"\");\n      await Promise.all([\n        queryClient.invalidateQueries({ queryKey: [\"post\", postId] }),\n        queryClient.invalidateQueries({ queryKey: [\"home-feed\"] }),\n        queryClient.invalidateQueries({ queryKey: [\"explore-feed\"] }),\n      ]);\n      toast.success(\"Comment updated.\");\n    },\n    onError: (error) => {\n      toast.error(error instanceof Error ? error.message : \"Could not update comment.\");\n    },\n  }",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 306
+      "line": 307
     },
     {
       "event": "useMutation",
       "handler": "{\n    mutationFn: async (commentId: string) => {\n      if (!viewer.userId) {\n        throw new Error(\"Please sign in first.\");\n      }\n\n      return deleteCommentOnPost({\n        commentId,\n        authorId: viewer.userId,\n      });\n    },\n    onSuccess: async () => {\n      await Promise.all([\n        queryClient.invalidateQueries({ queryKey: [\"post\", postId] }),\n        queryClient.invalidateQueries({ queryKey: [\"home-feed\"] }),\n        queryClient.invalidateQueries({ queryKey: [\"explore-feed\"] }),\n      ]);\n      toast.success(\"Comment removed.\");\n    },\n    onError: (error) => {\n      toast.error(error instanceof Error ? error.message : \"Could not remove comment.\");\n    },\n  }",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 333
+      "line": 334
     },
     {
       "event": "useMutation",
       "handler": "{\n    mutationFn: async (comment: ResolvedComment) => {\n      if (!viewer.userId) {\n        throw new Error(\"Please sign in first.\");\n      }\n      if (comment.author_id === viewer.userId) {\n        throw new Error(\"You cannot heart your own comment.\");\n      }\n\n      return toggleCommentHeart({\n        commentId: comment.id,\n        profileId: viewer.userId,\n        active: !comment.viewerHasHearted,\n      });\n    },\n    onSuccess: async (_result, comment) => {\n      await queryClient.invalidateQueries({ queryKey: [\"post\", postId] });\n      toast.success(comment.viewerHasHearted ? \"Comment heart removed.\" : \"Comment hearted.\");\n    },\n    onError: (error) => {\n      toast.error(error instanceof Error ? error.message : \"Could not update this comment heart.\");\n    },\n  }",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 357
+      "line": 358
     },
     {
       "event": "useMutation",
       "handler": "{\n    mutationFn: async () => {\n      if (!viewer.userId) {\n        throw new Error(\"Please sign in first.\");\n      }\n      if (!item) {\n        throw new Error(\"This post is unavailable.\");\n      }\n\n      return togglePostHeart({\n        postId,\n        profileId: viewer.userId,\n        active: !item.viewerHasHearted,\n      });\n    },\n    onSuccess: async () => {\n      await Promise.all([\n        queryClient.invalidateQueries({ queryKey: [\"post\", postId] }),\n        queryClient.invalidateQueries({ queryKey: [\"player-post\", postId] }),\n        queryClient.invalidateQueries({ queryKey: [\"home-feed\"] }),\n        queryClient.invalidateQueries({ queryKey: [\"explore-feed\"] }),\n        item?.owner?.id\n          ? queryClient.invalidateQueries({ queryKey: [\"profile-posts\", item.owner.id] })\n          : Promise.resolve(),\n      ]);\n      toast.success(item?.viewerHasHearted ? \"Heart removed.\" : \"Heart sent.\");\n    },\n    onError: (error) => {\n      toast.error(error instanceof Error ? error.message : \"Could not heart this post.\");\n    },\n  }",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 381
+      "line": 382
     },
     {
       "event": "useMutation",
       "handler": "{\n    mutationFn: async () => {\n      if (!postQuery.data?.owner?.id || postQuery.data.owner.id !== viewer.userId) {\n        throw new Error(\"Only the owner can delete this post.\");\n      }\n\n      await deletePost(postId);\n    },\n    onSuccess: async () => {\n      await Promise.all([\n        queryClient.invalidateQueries({ queryKey: [\"post\", postId] }),\n        queryClient.invalidateQueries({ queryKey: [\"library-posts\", viewer.userId] }),\n        queryClient.invalidateQueries({ queryKey: [\"home-feed\"] }),\n        queryClient.invalidateQueries({ queryKey: [\"explore-feed\"] }),\n        queryClient.invalidateQueries({ queryKey: [\"profile-posts\"] }),\n      ]);\n      toast.success(\"Post deleted.\");\n      navigate(\"/library\");\n    },\n    onError: (error) => {\n      toast.error(error instanceof Error ? error.message : \"Could not delete this post.\");\n    },\n  }",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 412
+      "line": 413
     },
     {
       "event": "useMutation",
       "handler": "{\n    mutationFn: ({ target, reason }: { target: AdminRemovalTarget; reason: AdminRemovalReason }) =>\n      removePublicContent({ targetType: target.type, targetId: target.id, reason }),\n    onSuccess: async (_, variables) => {\n      setAdminRemovalTarget(null);\n      await Promise.all([\n        queryClient.invalidateQueries({ queryKey: [\"post\", postId] }),\n        queryClient.invalidateQueries({ queryKey: [\"admin-dashboard\"] }),\n        queryClient.invalidateQueries({ queryKey: [\"admin-reports\"] }),\n        queryClient.invalidateQueries({ queryKey: [\"home-feed\"] }),\n        queryClient.invalidateQueries({ queryKey: [\"explore-feed\"] }),\n        queryClient.invalidateQueries({ queryKey: [\"profile-posts\"] }),\n      ]);\n      toast.success(`${variables.target.type === \"post\" ? \"Release\" : \"Comment\"} removed from MxTrove.`);\n      if (variables.target.type === \"post\") navigate(\"/admin\");\n    },\n    onError: (error) => toast.error(error instanceof Error ? error.message : \"The content could not be removed.\"),\n  }",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 435
+      "line": 436
     },
     {
       "event": "useMutation",
       "handler": "{\n    mutationFn: async () => {\n      if (!postQuery.data?.owner?.id || postQuery.data.owner.id !== viewer.userId) {\n        throw new Error(\"Only the release owner can change lyrics visibility.\");\n      }\n      await updateSingleLyricsVisibility({ postId, showLyrics: true });\n    },\n    onSuccess: async () => {\n      await Promise.all([\n        queryClient.invalidateQueries({ queryKey: [\"post\", postId] }),\n        queryClient.invalidateQueries({ queryKey: [\"player-post\", postId] }),\n        queryClient.invalidateQueries({ queryKey: [\"home-feed\"] }),\n        queryClient.invalidateQueries({ queryKey: [\"explore-feed\"] }),\n      ]);\n      toast.success(\"Lyrics are now visible on this release.\");\n    },\n    onError: (error) => {\n      toast.error(error instanceof Error ? error.message : \"Could not enable lyrics.\");\n    },\n  }",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 453
+      "line": 454
     },
     {
       "event": "onClick",
       "label": "Back to",
       "handler": "{() => {\n              if (returnDestination.path) {\n                navigate(returnDestination.path);\n                return;\n              }\n              navigate(-1);\n            }}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 562
+      "line": 563
     },
     {
       "event": "to",
       "label": "@",
       "handler": "{`/@${item.owner.username}`}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 615
+      "line": 616
     },
     {
       "event": "onClick",
       "label": "",
       "handler": "{() => {\n                    if (isCurrentReleaseActive) {\n                      setPlayerPlaying(!playerIsPlaying);\n                      return;\n                    }\n                    if (playbackSelection.initialTrackId) {\n                      enqueue(playbackTracks, playbackSelection.initialTrackId);\n                    }\n                  }}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 642
+      "line": 643
     },
     {
       "event": "onClick",
       "label": "Queue all tracks",
       "handler": "{() => enqueue(playbackTracks, playbackTracks[0].id)}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 662
+      "line": 663
     },
     {
       "event": "onClick",
       "label": "",
       "handler": "{async () => {\n                    if (item.post.visibility === \"unlisted\" && isOwnPost) {\n                      createShareMutation.mutate();\n                      return;\n                    }\n                    const shareUrl = item.post.visibility === \"public\" ? publicReleaseShareUrl : window.location.href;\n                    const shareResult = await shareWithSystemDialog({\n                      title: item.post.title,\n                      text: item.post.description ?? `Listen to ${item.post.title} on MxTrove.`,\n                      url: shareUrl,\n                    });\n                    if (shareResult === \"copied\") toast.success(\"Native sharing is unavailable here, so the release link was copied.\");\n                  }}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 672
+      "line": 673
     },
     {
       "event": "onClick",
       "label": "",
       "handler": "{() => setIsMoreInfoOpen(true)}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 693
+      "line": 694
     },
     {
       "event": "onClick",
       "label": "",
       "handler": "{() => void heartMutation.mutateAsync()}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 702
+      "line": 703
     },
     {
       "event": "to",
       "label": "",
       "handler": "{`/library/songs/${item.single!.song!.id}`}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 710
+      "line": 711
     },
     {
       "event": "to",
       "label": "",
       "handler": "{editPath}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 720
+      "line": 723
     },
     {
       "event": "onClick",
       "label": "Delete post",
       "handler": "{() => {\n                      if (window.confirm(`Delete the post \"${item.post.title}\"?`)) void deletePostMutation.mutateAsync();\n                    }}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 726
+      "line": 729
     },
     {
       "event": "onClick",
       "label": "Remove from MxTrove",
       "handler": "{() => setAdminRemovalTarget({ type: \"post\", id: item.post.id, label: item.post.title })}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 739
+      "line": 742
     },
     {
       "event": "onClick",
       "label": "Enable lyrics",
       "handler": "{() => void singleLyricsVisibilityMutation.mutateAsync()}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 784
+      "line": 787
     },
     {
       "event": "onClick",
       "label": "",
       "handler": "{() => void shareReleaseTrack(track)}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 911
+      "line": 914
     },
     {
       "event": "onClick",
       "label": "",
       "handler": "{() => {\n                            if (!canPlayFromThisView || !playbackTrack) {\n                              return;\n                            }\n                            if (isActiveTrack) {\n                              setPlayerPlaying(!playerIsPlaying);\n                              return;\n                            }\n                            enqueue(allPlaybackTracks, playbackTrack.id);\n                          }}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 922
+      "line": 925
     },
     {
       "event": "onClick",
       "label": "",
       "handler": "{() => setShowAllReleaseTracks((current) => !current)}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 946
+      "line": 949
     },
     {
       "event": "onValueChange",
       "label": "",
       "handler": "{(value) => setCommentSort(value as CommentSortMode)}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 967
+      "line": 970
     },
     {
       "event": "to",
       "label": "",
       "handler": "{authorPath}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 988
+      "line": 991
     },
     {
       "event": "onClick",
       "label": "",
       "handler": "{() => void commentHeartMutation.mutateAsync(comment)}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1004
+      "line": 1007
     },
     {
       "event": "onClick",
       "label": "Reply",
       "handler": "{() => {\n                            setReplyTargetId(replyTargetId === comment.id ? null : comment.id);\n                          }}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1015
+      "line": 1018
     },
     {
       "event": "onClick",
       "label": "Edit",
       "handler": "{() => {\n                                setEditingCommentId(editingCommentId === comment.id ? null : comment.id);\n                                setEditingBody(comment.body);\n                              }}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1030
+      "line": 1033
     },
     {
       "event": "onClick",
       "label": "Delete",
       "handler": "{() => void deleteCommentMutation.mutateAsync(comment.id)}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1042
+      "line": 1045
     },
     {
       "event": "onClick",
       "label": "Moderate",
       "handler": "{() => setAdminRemovalTarget({\n                              type: \"comment\",\n                              id: comment.id,\n                              label: comment.body,\n                            })}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1055
+      "line": 1058
     },
     {
       "event": "onSubmit",
       "label": "",
       "handler": "{async (event) => {\n                        event.preventDefault();\n                        await updateCommentMutation.mutateAsync({\n                          commentId: comment.id,\n                          body: editingBody,\n                        });\n                      }}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1074
+      "line": 1077
     },
     {
       "event": "onChange",
       "label": "",
       "handler": "{(event) => setEditingBody(event.currentTarget.value)}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1082
+      "line": 1085
     },
     {
       "event": "onClick",
       "label": "Cancel",
       "handler": "{() => {\n                            setEditingCommentId(null);\n                            setEditingBody(\"\");\n                          }}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1087
+      "line": 1090
     },
     {
       "event": "onSubmit",
       "label": "",
       "handler": "{async (event) => {\n                        event.preventDefault();\n                        await commentMutation.mutateAsync({\n                          body: replyDrafts[comment.id] ?? \"\",\n                          parentCommentId: comment.id,\n                        });\n                      }}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1108
+      "line": 1111
     },
     {
       "event": "onChange",
       "label": "",
       "handler": "{(event) => {\n                          const body = event.currentTarget.value;\n                          setReplyDrafts((current) => ({\n                            ...current,\n                            [comment.id]: body,\n                          }));\n                        }}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1119
+      "line": 1122
     },
     {
       "event": "onClick",
       "label": "Cancel",
       "handler": "{() => {\n                            setReplyTargetId(null);\n                          }}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1131
+      "line": 1134
     },
     {
       "event": "to",
       "label": "",
       "handler": "{replyPath}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1160
+      "line": 1163
     },
     {
       "event": "onClick",
       "label": "",
       "handler": "{() => void commentHeartMutation.mutateAsync(reply)}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1174
+      "line": 1177
     },
     {
       "event": "onClick",
       "label": "Edit",
       "handler": "{() => {\n                                          setEditingCommentId(editingCommentId === reply.id ? null : reply.id);\n                                          setEditingBody(reply.body);\n                                        }}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1189
+      "line": 1192
     },
     {
       "event": "onClick",
       "label": "Delete",
       "handler": "{() => void deleteCommentMutation.mutateAsync(reply.id)}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1201
+      "line": 1204
     },
     {
       "event": "onClick",
       "label": "Moderate",
       "handler": "{() => setAdminRemovalTarget({\n                                        type: \"comment\",\n                                        id: reply.id,\n                                        label: reply.body,\n                                      })}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1214
+      "line": 1217
     },
     {
       "event": "onSubmit",
       "label": "",
       "handler": "{async (event) => {\n                                    event.preventDefault();\n                                    await updateCommentMutation.mutateAsync({\n                                      commentId: reply.id,\n                                      body: editingBody,\n                                    });\n                                  }}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1232
+      "line": 1235
     },
     {
       "event": "onChange",
       "label": "",
       "handler": "{(event) => setEditingBody(event.currentTarget.value)}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1240
+      "line": 1243
     },
     {
       "event": "onClick",
       "label": "Cancel",
       "handler": "{() => {\n                                        setEditingCommentId(null);\n                                        setEditingBody(\"\");\n                                      }}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1245
+      "line": 1248
     },
     {
       "event": "onClick",
       "label": "",
       "handler": "{() => setShowAllComments((current) => !current)}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1276
+      "line": 1279
     },
     {
       "event": "onSubmit",
       "label": "",
       "handler": "{async (event) => {\n              event.preventDefault();\n              await commentMutation.mutateAsync({ body: commentDraft });\n            }}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1286
+      "line": 1289
     },
     {
       "event": "onChange",
       "label": "",
       "handler": "{(event) => setCommentDraft(event.currentTarget.value)}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1294
+      "line": 1297
     },
     {
       "event": "to",
       "label": "",
       "handler": "\"/login\"",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1302
+      "line": 1305
     },
     {
       "event": "onOpenChange",
       "label": "",
       "handler": "{setIsMoreInfoOpen}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1323
+      "line": 1326
     },
     {
       "event": "onClose",
       "label": "",
       "handler": "{() => {\n          if (!adminRemovalMutation.isPending) setAdminRemovalTarget(null);\n        }}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1328
+      "line": 1331
     },
     {
       "event": "onConfirm",
       "label": "",
       "handler": "{(reason) => {\n          if (adminRemovalTarget) adminRemovalMutation.mutate({ target: adminRemovalTarget, reason });\n        }}",
       "file": "src/features/posts/post-detail-page.tsx",
-      "line": 1331
+      "line": 1334
     },
     {
       "event": "onBlur",
@@ -8620,6 +8685,20 @@
       "handler": "{() => selectRole(role)}",
       "file": "src/features/posts/release-credits-input.tsx",
       "line": 187
+    },
+    {
+      "event": "onClick",
+      "label": "",
+      "handler": "{() => void download()}",
+      "file": "src/features/posts/release-download-button.tsx",
+      "line": 45
+    },
+    {
+      "event": "onClick",
+      "label": "Cancel",
+      "handler": "{() => active.current?.abort()}",
+      "file": "src/features/posts/release-download-button.tsx",
+      "line": 50
     },
     {
       "event": "onClick",
@@ -10229,170 +10308,183 @@
       "event": "useMutation",
       "handler": "{\n    mutationFn: async (values: SongFormValues) => persistSong(values),\n    onSuccess: (updatedSong) => {\n      songForm.reset(getSongFormValues(updatedSong));\n      toast.success(\"Song details saved.\");\n    },\n    onError: (error) => {\n      toast.error(error instanceof Error ? error.message : \"Could not update this song.\");\n    },\n  }",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 257
+      "line": 263
     },
     {
       "event": "useMutation",
       "handler": "{\n    mutationFn: async (values: VersionFormValues) => {\n      const version = await createSongVersion(\n        songId,\n        {\n          ...values,\n          preview_asset_id: isProjectVersionFlow ? null : values.preview_asset_id,\n        },\n        projectId && projectTrackId\n          ? { projectId, trackId: projectTrackId }\n          : undefined,\n      );\n\n      if (projectId && projectTrackId) {\n        const sourceAsset = assetsById.get(values.source_asset_id);\n        if (!sourceAsset) {\n          throw new Error(\"The private source asset could not be found after creating the version.\");\n        }\n        const sourceProvider = getCloudStorageProvider(sourceAsset.provider);\n        if (!(await sourceProvider.restoreSession())) {\n          throw new Error(\n            `Reconnect ${sourceAsset.provider.replace(\"_\", \" \")} in Storage settings before generating the protected collaboration preview.`,\n          );\n        }\n        await generateProtectedPreviewFromSourceAsset({\n          provider: sourceProvider,\n          sourceAsset,\n          songVersionId: version.id,\n          purpose: \"collaboration_preview\",\n          projectId,\n          onJobChange: setMediaProcessingJob,\n        });\n      }\n\n      return version;\n    },\n    onSuccess: async () => {\n      await refreshSongQueries();\n      if (projectId) {\n        await queryClient.invalidateQueries({ queryKey: [\"project\", projectId] });\n      }\n      versionForm.reset({\n        version_label: \"\",\n        production_stage: versionForm.getValues(\"production_stage\") || \"Demo\",\n        changelog: \"\",\n        source_asset_id: \"\",\n        preview_asset_id: null,\n      });\n      toast.success(\"Version added.\");\n    },\n    onError: (error) => {\n      toast.error(error instanceof Error ? error.message : \"Could not create version.\");\n    },\n  }",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 268
+      "line": 274
     },
     {
       "event": "useMutation",
       "handler": "{\n    mutationFn: async (versionId: string) => deleteSongVersion(versionId),\n    onSuccess: async () => {\n      await Promise.all([\n        refreshSongQueries(),\n        queryClient.invalidateQueries({ queryKey: [\"home-feed\"] }),\n        queryClient.invalidateQueries({ queryKey: [\"explore-feed\"] }),\n        queryClient.invalidateQueries({ queryKey: [\"profile-posts\"] }),\n        queryClient.invalidateQueries({ queryKey: [\"post\"] }),\n      ]);\n      toast.success(\"Version deleted.\");\n    },\n    onError: (error) => {\n      toast.error(error instanceof Error ? error.message : \"Could not delete this version.\");\n    },\n  }",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 322
+      "line": 328
     },
     {
       "event": "useMutation",
       "handler": "{\n    mutationFn: async () => deleteSong(songId),\n    onSuccess: async () => {\n      await Promise.all([\n        queryClient.invalidateQueries({ queryKey: [\"library\", viewer.userId] }),\n        queryClient.invalidateQueries({ queryKey: [\"song-detail\", songId] }),\n      ]);\n      toast.success(\"Song deleted.\");\n      navigate(\"/library\");\n    },\n    onError: (error) => {\n      toast.error(error instanceof Error ? error.message : \"Could not delete this song.\");\n    },\n  }",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 338
+      "line": 344
     },
     {
       "event": "useMutation",
       "handler": "{\n    mutationFn: async (sourceAsset: Asset) => {\n      const sourceProvider = getCloudStorageProvider(sourceAsset.provider);\n      if (!(await sourceProvider.restoreSession())) {\n        throw new Error(`Reconnect ${sourceAsset.provider.replace(\"_\", \" \")} in Storage settings first.`);\n      }\n      setAnalysisProgress(0);\n      return analyzeSongMetadataFromSourceAsset({\n        provider: sourceProvider,\n        sourceAsset,\n        songId,\n        onProgress: setAnalysisProgress,\n      });\n    },\n    onSuccess: async (analysis) => {\n      if (analysis.musicalKey) {\n        songForm.setValue(\"musical_key\", analysis.musicalKey, { shouldDirty: false });\n      }\n      if (analysis.tempoBpm != null) {\n        songForm.setValue(\"tempo_bpm\", analysis.tempoBpm, { shouldDirty: false });\n      }\n      await Promise.all([\n        refreshSongQueries(),\n        queryClient.invalidateQueries({ queryKey: [\"post\"] }),\n        queryClient.invalidateQueries({ queryKey: [\"home-feed\"] }),\n        queryClient.invalidateQueries({ queryKey: [\"explore-feed\"] }),\n        queryClient.invalidateQueries({ queryKey: [\"profile-posts\"] }),\n      ]);\n      setAnalysisProgress(null);\n      toast.success(\n        `Analysis complete${analysis.tempoBpm != null ? ` · ${analysis.tempoBpm} BPM` : \"\"}${analysis.musicalKey ? ` · ${analysis.musicalKey}` : \"\"}.`,\n      );\n    },\n    onError: (error) => {\n      setAnalysisProgress(null);\n      toast.error(error instanceof Error ? error.message : \"Could not analyze this song.\");\n    },\n  }",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 353
+      "line": 359
+    },
+    {
+      "event": "useMutation",
+      "handler": "{\n    mutationFn: generatePreviewFromSourceAsset,\n    onSettled: () => setPreviewProgress(null),\n    onError: (error) => {\n      const message = error instanceof Error ? error.message : \"Could not generate the playback preview from this source.\";\n      setMediaProcessingError(message);\n      setMediaProcessingJob((job) => job ? { ...job, status: \"failed\", error_message: message } : null);\n      toast.error(message);\n    },\n  }",
+      "file": "src/features/songs/song-detail-page.tsx",
+      "line": 524
     },
     {
       "event": "useMutation",
       "handler": "{\n    mutationFn: async (file: File) => {\n      if (!viewer.userId) {\n        throw new Error(\"Please sign in first.\");\n      }\n\n      const artworkFolderId = await resolveCloudFolder(\"artwork\");\n      const upload =\n        file.size > 20 * 1024 * 1024\n          ? await provider.uploadResumable({ file, parentFolderId: artworkFolderId })\n          : await provider.uploadFile({ file, parentFolderId: artworkFolderId });\n      const publicArtwork = await provider.createPublicPreview(upload.fileId);\n      const asset = await createAssetRecord({\n        ownerId: viewer.userId,\n        assetType: \"cover_artwork\",\n        accessMode: \"public\",\n        upload: {\n          ...upload,\n          shareUrl: publicArtwork.shareUrl,\n          viewUrl: publicArtwork.viewUrl,\n        },\n      });\n      await updateAssetPublicLinks({\n        assetId: asset.id,\n        accessMode: \"public\",\n        shareUrl: publicArtwork.shareUrl,\n        viewUrl: publicArtwork.viewUrl,\n      });\n\n      const nextValues = songSchema.parse({\n        ...songForm.getValues(),\n        default_artwork_asset_id: asset.id,\n      });\n\n      syncSongArtwork(asset.id);\n      await persistSong(nextValues);\n      return asset;\n    },\n    onSuccess: () => {\n      toast.success(\"Artwork uploaded.\");\n    },\n    onError: (error) => {\n      toast.error(error instanceof Error ? error.message : \"Could not upload artwork.\");\n    },\n  }",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 506
+      "line": 535
+    },
+    {
+      "event": "onClick",
+      "label": "Try again",
+      "handler": "{() => void songQuery.refetch()}",
+      "file": "src/features/songs/song-detail-page.tsx",
+      "line": 685
     },
     {
       "event": "to",
       "label": "",
       "handler": "\"/library\"",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 657
+      "line": 712
     },
     {
       "event": "onClick",
       "label": "Delete song",
       "handler": "{() => {\n                if (!window.confirm(`Delete the song \"${song.title}\" and its private workspace?`)) {\n                  return;\n                }\n\n                void deleteSongMutation.mutateAsync();\n              }}",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 665
+      "line": 720
     },
     {
       "event": "onSubmit",
       "label": "",
       "handler": "{songForm.handleSubmit(async (values) => {\n              await saveSongMutation.mutateAsync(values);\n            })}",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 694
+      "line": 749
     },
     {
       "event": "onChange",
       "label": "",
       "handler": "{(event) => {\n                    const file = event.currentTarget.files?.[0];\n                    event.currentTarget.value = \"\";\n                    if (file) {\n                      void artworkUploadMutation.mutateAsync(file);\n                    }\n                  }}",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 716
+      "line": 771
     },
     {
       "event": "onKeyDown",
       "label": "",
       "handler": "{handleArtworkPickerKeyDown}",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 729
+      "line": 784
     },
     {
       "event": "onChange",
       "label": "",
       "handler": "{(event) => versionForm.setValue(\"source_asset_id\", event.currentTarget.value, {\n                        shouldDirty: true,\n                        shouldValidate: true,\n                      })}",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 807
+      "line": 862
     },
     {
       "event": "onClick",
       "label": "",
       "handler": "{() => {\n                        if (analysisSourceAsset) {\n                          analyzeMetadataMutation.mutate(analysisSourceAsset);\n                        }\n                      }}",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 824
+      "line": 879
     },
     {
       "event": "onChange",
       "label": "",
       "handler": "{(event) => syncSongArtwork(event.currentTarget.value || null)}",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 862
+      "line": 917
     },
     {
       "event": "to",
       "label": "",
       "handler": "\"/settings/storage\"",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 880
+      "line": 935
     },
     {
       "event": "to",
       "label": "",
       "handler": "\"/settings/storage\"",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 908
+      "line": 963
     },
     {
       "event": "onClick",
       "label": "Refresh status",
       "handler": "{() => void connectionsQuery.refetch()}",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 911
+      "line": 966
     },
     {
       "event": "onUpload",
       "label": "",
       "handler": "{(input) => uploadOriginalWithAutomation(input.file, input.signal, input.onProgress)}",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 927
+      "line": 982
     },
     {
       "event": "onClick",
       "label": "",
-      "handler": "{() => {\n                    if (!selectedSourceAsset) {\n                      return;\n                    }\n\n                    void generatePreviewFromSourceAsset(selectedSourceAsset).catch((error) => {\n                      const message =\n                        error instanceof Error\n                          ? error.message\n                          : \"Could not generate the playback preview from this source.\";\n                      setMediaProcessingError(message);\n                      toast.error(message);\n                    });\n                  }}",
+      "handler": "{() => {\n                    if (!selectedSourceAsset) {\n                      return;\n                    }\n\n                    previewMutation.mutate(selectedSourceAsset);\n                  }}",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 944
+      "line": 999
     },
     {
       "event": "onClick",
       "label": "Play private source",
       "handler": "{() => {\n                          void playVersion(version.id, \"source\").catch((error) => {\n                            toast.error(error instanceof Error ? error.message : \"Could not play this source version.\");\n                          });\n                        }}",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 1034
+      "line": 1085
     },
     {
       "event": "onClick",
       "label": "Play public file",
       "handler": "{() => {\n                          void playVersion(version.id, \"playback\").catch((error) => {\n                            toast.error(error instanceof Error ? error.message : \"Could not play this public playback file.\");\n                          });\n                        }}",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 1046
+      "line": 1097
     },
     {
       "event": "onClick",
       "label": "Delete version",
       "handler": "{() => {\n                          if (!window.confirm(`Delete the version \"${version.version_label}\"?`)) {\n                            return;\n                          }\n\n                          void deleteVersionMutation.mutateAsync(version.id);\n                        }}",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 1057
+      "line": 1108
     },
     {
       "event": "onSubmit",
       "label": "",
       "handler": "{versionForm.handleSubmit(async (values) => {\n              await createVersionMutation.mutateAsync(values);\n            })}",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 1093
+      "line": 1144
     },
     {
       "event": "onChange",
       "label": "",
       "handler": "{(event) => versionForm.setValue(\"source_asset_id\", event.currentTarget.value, { shouldDirty: true, shouldValidate: true })}",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 1120
+      "line": 1171
     },
     {
       "event": "onChange",
       "label": "",
       "handler": "{(event) =>\n                  versionForm.setValue(\"preview_asset_id\", event.currentTarget.value || null, {\n                    shouldDirty: true,\n                    shouldValidate: true,\n                  })\n                }",
       "file": "src/features/songs/song-detail-page.tsx",
-      "line": 1138
+      "line": 1189
     },
     {
       "event": "to",
@@ -10881,9 +10973,9 @@
       "kind": "fetch",
       "target": "`${DROPBOX_CONTENT}/files/download`",
       "targets": [],
-      "expression": "fetch(`${DROPBOX_CONTENT}/files/download`, {\n      method: \"POST\",\n      headers: {\n        Authorization: `Bearer ${token}`,\n        \"Dropbox-API-Arg\": JSON.stringify({ path: fileId }),\n      },\n    })",
+      "expression": "fetch(`${DROPBOX_CONTENT}/files/download`, {\n      method: \"POST\",\n      signal,\n      headers: {\n        Authorization: `Bearer ${token}`,\n        \"Dropbox-API-Arg\": JSON.stringify({ path: fileId }),\n      },\n    })",
       "file": "src/features/dropbox/dropbox-provider.ts",
-      "line": 332
+      "line": 336
     },
     {
       "kind": "rpc",
@@ -11703,9 +11795,9 @@
       "kind": "fetch",
       "target": "`${GRAPH}/me/drive/items/${encodeURIComponent(fileId)}/content`",
       "targets": [],
-      "expression": "fetch(`${GRAPH}/me/drive/items/${encodeURIComponent(fileId)}/content`, {\n      headers: { Authorization: `Bearer ${token}` },\n    })",
+      "expression": "fetch(`${GRAPH}/me/drive/items/${encodeURIComponent(fileId)}/content`, {\n      signal,\n      headers: { Authorization: `Bearer ${token}` },\n    })",
       "file": "src/features/onedrive/onedrive-provider.ts",
-      "line": 274
+      "line": 278
     },
     {
       "kind": "fetch",
@@ -11713,7 +11805,7 @@
       "targets": [],
       "expression": "fetch(`${GRAPH}/me/drive/items/${encodeURIComponent(fileId)}`, {\n      method: \"DELETE\",\n      headers: { Authorization: `Bearer ${token}` },\n    })",
       "file": "src/features/onedrive/onedrive-provider.ts",
-      "line": 311
+      "line": 316
     },
     {
       "kind": "from",
@@ -12584,6 +12676,22 @@
       "expression": "client\n          .from(\"posts\")",
       "file": "src/features/posts/edit-release-page.tsx",
       "line": 427
+    },
+    {
+      "kind": "getSession",
+      "target": null,
+      "targets": [],
+      "expression": "requireSupabase().auth.getSession()",
+      "file": "src/features/posts/release-download.ts",
+      "line": 31
+    },
+    {
+      "kind": "fetch",
+      "target": "`${env.mediaWorkerUrl}/v1/releases/${encodeURIComponent(postId)}/download-manifest`",
+      "targets": [],
+      "expression": "fetch(`${env.mediaWorkerUrl}/v1/releases/${encodeURIComponent(postId)}/download-manifest`, {\n    headers: { Authorization: `Bearer ${data.session.access_token}` },\n    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(30_000)]) : AbortSignal.timeout(30_000),\n    cache: \"no-store\",\n  })",
+      "file": "src/features/posts/release-download.ts",
+      "line": 34
     },
     {
       "kind": "updateUser",
@@ -13766,7 +13874,17 @@
       ],
       "expression": "supabaseAdmin.from(\"media_processing_jobs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 65
+      "line": 63
+    },
+    {
+      "kind": "from",
+      "target": "media_processing_jobs",
+      "targets": [
+        "media_processing_jobs"
+      ],
+      "expression": "supabaseAdmin.from(\"media_processing_jobs\")",
+      "file": "services/media-worker/src/jobs/media-jobs.ts",
+      "line": 95
     },
     {
       "kind": "from",
@@ -13776,7 +13894,7 @@
       ],
       "expression": "supabaseAdmin\n    .from(\"media_processing_jobs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 81
+      "line": 108
     },
     {
       "kind": "from",
@@ -13786,7 +13904,7 @@
       ],
       "expression": "supabaseAdmin\n    .from(\"assets\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 105
+      "line": 132
     },
     {
       "kind": "from",
@@ -13796,7 +13914,7 @@
       ],
       "expression": "supabaseAdmin\n      .from(\"song_versions\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 121
+      "line": 148
     },
     {
       "kind": "from",
@@ -13806,7 +13924,7 @@
       ],
       "expression": "supabaseAdmin\n      .from(\"songs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 137
+      "line": 164
     },
     {
       "kind": "rpc",
@@ -13816,7 +13934,7 @@
       ],
       "expression": "supabaseAdmin.rpc(\n      \"can_upload_project_version\",\n      {\n        target_project_id: input.projectId,\n        target_profile_id: input.ownerId,\n      },\n    )",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 157
+      "line": 184
     },
     {
       "kind": "from",
@@ -13826,7 +13944,7 @@
       ],
       "expression": "supabaseAdmin\n      .from(\"posts\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 176
+      "line": 203
     },
     {
       "kind": "from",
@@ -13836,7 +13954,7 @@
       ],
       "expression": "supabaseAdmin\n    .from(\"media_processing_jobs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 190
+      "line": 217
     },
     {
       "kind": "from",
@@ -13846,7 +13964,7 @@
       ],
       "expression": "supabaseAdmin\n        .from(\"media_processing_jobs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 216
+      "line": 243
     },
     {
       "kind": "from",
@@ -13856,7 +13974,7 @@
       ],
       "expression": "supabaseAdmin\n    .from(\"media_processing_jobs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 233
+      "line": 260
     },
     {
       "kind": "from",
@@ -13866,7 +13984,7 @@
       ],
       "expression": "supabaseAdmin\n    .from(\"media_processing_jobs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 310
+      "line": 314
     },
     {
       "kind": "from",
@@ -13876,7 +13994,7 @@
       ],
       "expression": "supabaseAdmin\n      .from(\"media_processing_jobs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 337
+      "line": 341
     },
     {
       "kind": "from",
@@ -13886,7 +14004,7 @@
       ],
       "expression": "supabaseAdmin\n          .from(\"song_versions\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 450
+      "line": 455
     },
     {
       "kind": "rpc",
@@ -13896,7 +14014,7 @@
       ],
       "expression": "supabaseAdmin.rpc(\"release_protected_media_asset\", {\n        target_asset_id: reservedProtectedAssetId,\n      })",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 498
+      "line": 503
     },
     {
       "kind": "rpc",
@@ -13906,7 +14024,7 @@
       ],
       "expression": "supabaseAdmin.rpc(\"reserve_protected_media_asset\", {\n    target_owner_id: input.job.owner_id,\n    target_purpose: input.job.protected_purpose ?? \"collaboration_preview\",\n    target_filename: `${input.job.id}.mp3`,\n    target_mime_type: \"audio/mpeg\",\n    expected_bytes: input.outputBytes,\n    target_source_asset_id: input.job.source_asset_id,\n    target_post_id: input.job.target_post_id,\n    target_project_id: input.job.target_project_id,\n    target_song_version_id: input.job.song_version_id,\n    target_expires_at: null,\n  })",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 537
+      "line": 542
     },
     {
       "kind": "rpc",
@@ -13916,7 +14034,7 @@
       ],
       "expression": "supabaseAdmin.rpc(\"finalize_protected_media_asset\", {\n    target_asset_id: input.assetId,\n    actual_bytes: input.bytes,\n    target_checksum: input.checksum,\n    target_duration_seconds: input.durationSeconds,\n    target_width: null,\n    target_height: null,\n    target_waveform_data: input.waveform,\n  })",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 567
+      "line": 572
     },
     {
       "kind": "from",
@@ -13926,7 +14044,7 @@
       ],
       "expression": "supabaseAdmin\n    .from(\"media_processing_jobs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 582
+      "line": 587
     },
     {
       "kind": "from",
@@ -13936,7 +14054,7 @@
       ],
       "expression": "supabaseAdmin\n    .from(\"media_processing_jobs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 611
+      "line": 616
     },
     {
       "kind": "from",
@@ -13946,7 +14064,7 @@
       ],
       "expression": "supabaseAdmin\n    .from(\"media_processing_jobs\")",
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 634
+      "line": 640
     },
     {
       "kind": "on",
@@ -14027,46 +14145,6 @@
       "expression": "child.on(\"close\", (code) => {\n      if (code !== 0) {\n        reject(new Error(stderr || \"ffprobe failed.\"));\n        return;\n      }\n\n      const payload = JSON.parse(stdout) as FfprobeJson;\n      const audioStream = payload.streams?.find((stream) => stream.codec_type === \"audio\");\n      if (!audioStream) {\n        reject(new Error(\"The uploaded file does not contain an audio stream.\"));\n        return;\n      }\n\n      resolve({\n        codec: audioStream.codec_name ?? null,\n        sampleRate: audioStream.sample_rate ? Number(audioStream.sample_rate) : null,\n        channels: audioStream.channels ?? null,\n        bitRate: audioStream.bit_rate ? Number(audioStream.bit_rate) : payload.format?.bit_rate ? Number(payload.format.bit_rate) : null,\n        durationSeconds: audioStream.duration ? Number(audioStream.duration) : payload.format?.duration ? Number(payload.format.duration) : null,\n      });\n    })",
       "file": "services/media-worker/src/media/ffprobe.ts",
       "line": 54
-    },
-    {
-      "kind": "on",
-      "target": "data",
-      "targets": [
-        "data"
-      ],
-      "expression": "input.on(\"data\", (chunk: Buffer) => {\n      writtenBytes += chunk.length;\n      if (writtenBytes > maxBytes) {\n        fail(new Error(\"Upload exceeds the configured size limit.\"));\n      }\n    })",
-      "file": "services/media-worker/src/media/io.ts",
-      "line": 34
-    },
-    {
-      "kind": "on",
-      "target": "error",
-      "targets": [
-        "error"
-      ],
-      "expression": "input.on(\"error\", (error) => fail(error instanceof Error ? error : new Error(String(error))))",
-      "file": "services/media-worker/src/media/io.ts",
-      "line": 41
-    },
-    {
-      "kind": "on",
-      "target": "error",
-      "targets": [
-        "error"
-      ],
-      "expression": "output.on(\"error\", (error) => fail(error instanceof Error ? error : new Error(String(error))))",
-      "file": "services/media-worker/src/media/io.ts",
-      "line": 42
-    },
-    {
-      "kind": "on",
-      "target": "finish",
-      "targets": [
-        "finish"
-      ],
-      "expression": "output.on(\"finish\", () => {\n      if (!rejected) {\n        resolve(writtenBytes);\n      }\n    })",
-      "file": "services/media-worker/src/media/io.ts",
-      "line": 43
     },
     {
       "kind": "from",
@@ -14193,6 +14271,76 @@
       "expression": "supabaseAdmin\n    .from(\"push_subscriptions\")",
       "file": "services/media-worker/src/push/dispatcher.ts",
       "line": 269
+    },
+    {
+      "kind": "from",
+      "target": "posts",
+      "targets": [
+        "posts"
+      ],
+      "expression": "supabaseAdmin.from(\"posts\")",
+      "file": "services/media-worker/src/releases/download.ts",
+      "line": 27
+    },
+    {
+      "kind": "from",
+      "target": "single_posts",
+      "targets": [
+        "single_posts"
+      ],
+      "expression": "supabaseAdmin.from(\"single_posts\")",
+      "file": "services/media-worker/src/releases/download.ts",
+      "line": 37
+    },
+    {
+      "kind": "from",
+      "target": "song_versions",
+      "targets": [
+        "song_versions"
+      ],
+      "expression": "supabaseAdmin.from(\"song_versions\")",
+      "file": "services/media-worker/src/releases/download.ts",
+      "line": 41
+    },
+    {
+      "kind": "from",
+      "target": "release_tracks",
+      "targets": [
+        "release_tracks"
+      ],
+      "expression": "supabaseAdmin.from(\"release_tracks\")",
+      "file": "services/media-worker/src/releases/download.ts",
+      "line": 50
+    },
+    {
+      "kind": "from",
+      "target": "song_versions",
+      "targets": [
+        "song_versions"
+      ],
+      "expression": "supabaseAdmin.from(\"song_versions\")",
+      "file": "services/media-worker/src/releases/download.ts",
+      "line": 60
+    },
+    {
+      "kind": "from",
+      "target": "assets",
+      "targets": [
+        "assets"
+      ],
+      "expression": "supabaseAdmin.from(\"assets\")",
+      "file": "services/media-worker/src/releases/download.ts",
+      "line": 70
+    },
+    {
+      "kind": "from",
+      "target": "songs",
+      "targets": [
+        "songs"
+      ],
+      "expression": "supabaseAdmin.from(\"songs\")",
+      "file": "services/media-worker/src/releases/download.ts",
+      "line": 72
     },
     {
       "kind": "from",
@@ -14947,7 +15095,7 @@
     },
     {
       "name": "CloudStorageProvider",
-      "declaration": "export interface CloudStorageProvider {\n  provider: CloudProvider;\n  connect(profileId?: string): Promise<CloudConnectionResult>;\n  disconnect(): Promise<void>;\n  restoreSession(): Promise<boolean>;\n  ensureRootStructure(profileId?: string): Promise<CloudFolderStructure>;\n  uploadFile(input: UploadFileInput): Promise<CloudAssetResult>;\n  uploadResumable(input: UploadFileInput): Promise<CloudAssetResult>;\n  getPrivateFileBlob(fileId: string): Promise<Blob>;\n  getFileMetadata(fileId: string): Promise<CloudFileMetadata>;\n  createPublicPreview(fileId: string): Promise<PublicAssetResult>;\n  revokePublicPreview(fileId: string): Promise<void>;\n  getPublicPreviewUrl(fileId: string): Promise<string | null>;\n  getViewUrl(fileId: string): Promise<string | null>;\n  deleteFile(fileId: string): Promise<void>;\n}",
+      "declaration": "export interface CloudStorageProvider {\n  provider: CloudProvider;\n  connect(profileId?: string): Promise<CloudConnectionResult>;\n  disconnect(): Promise<void>;\n  restoreSession(): Promise<boolean>;\n  ensureRootStructure(profileId?: string): Promise<CloudFolderStructure>;\n  uploadFile(input: UploadFileInput): Promise<CloudAssetResult>;\n  uploadResumable(input: UploadFileInput): Promise<CloudAssetResult>;\n  getPrivateFileBlob(fileId: string): Promise<Blob>;\n  getPrivateFileStream?(fileId: string, signal?: AbortSignal): Promise<Response>;\n  getFileMetadata(fileId: string): Promise<CloudFileMetadata>;\n  createPublicPreview(fileId: string): Promise<PublicAssetResult>;\n  revokePublicPreview(fileId: string): Promise<void>;\n  getPublicPreviewUrl(fileId: string): Promise<string | null>;\n  getViewUrl(fileId: string): Promise<string | null>;\n  deleteFile(fileId: string): Promise<void>;\n}",
       "properties": [
         {
           "name": "provider",
@@ -15778,6 +15926,114 @@
       "enumValues": null,
       "file": "src/features/posts/drafts.ts",
       "line": 65
+    },
+    {
+      "name": "ReleaseDownloadEntry",
+      "declaration": "export interface ReleaseDownloadEntry {\n  path: string;\n  asset: { id: string; provider: CloudProvider; remoteFileId: string; filename: string; mimeType: string; bytes: number | null };\n}",
+      "properties": [
+        {
+          "name": "path",
+          "optional": false,
+          "type": "string"
+        },
+        {
+          "name": "asset",
+          "optional": false,
+          "type": "{ id: string; provider: CloudProvider; remoteFileId: string; filename: string; mimeType: string; bytes: number | null }"
+        }
+      ],
+      "enumValues": null,
+      "file": "src/features/posts/release-download.ts",
+      "line": 7
+    },
+    {
+      "name": "ReleaseDownloadManifest",
+      "declaration": "export interface ReleaseDownloadManifest {\n  formatVersion: 1; generatedAt: string; archiveName: string; rootDirectory: string;\n  post: { id: string; title: string; type: string; description: string | null; releaseNotes: string | null };\n  tracks: Array<ReleaseDownloadEntry & {\n    trackNumber: number; title: string; songId: string; versionId: string; versionLabel: string;\n    versionNumber: number; productionStage: string; musicalKey: string | null; tempoBpm: number | null;\n  }>;\n  artwork: ReleaseDownloadEntry | null;\n}",
+      "properties": [
+        {
+          "name": "formatVersion",
+          "optional": false,
+          "type": "1"
+        },
+        {
+          "name": "generatedAt",
+          "optional": false,
+          "type": "string"
+        },
+        {
+          "name": "archiveName",
+          "optional": false,
+          "type": "string"
+        },
+        {
+          "name": "rootDirectory",
+          "optional": false,
+          "type": "string"
+        },
+        {
+          "name": "post",
+          "optional": false,
+          "type": "{ id: string; title: string; type: string; description: string | null; releaseNotes: string | null }"
+        },
+        {
+          "name": "tracks",
+          "optional": false,
+          "type": "Array<ReleaseDownloadEntry & {\n    trackNumber: number; title: string; songId: string; versionId: string; versionLabel: string;\n    versionNumber: number; productionStage: string; musicalKey: string | null; tempoBpm: number | null;\n  }>"
+        },
+        {
+          "name": "artwork",
+          "optional": false,
+          "type": "ReleaseDownloadEntry | null"
+        }
+      ],
+      "enumValues": null,
+      "file": "src/features/posts/release-download.ts",
+      "line": 11
+    },
+    {
+      "name": "ArchiveSink",
+      "declaration": "export interface ArchiveSink {\n  write(chunk: Uint8Array): Promise<void>;\n  close(): Promise<void>;\n  abort(): Promise<void>;\n}",
+      "properties": [],
+      "enumValues": null,
+      "file": "src/features/posts/release-download.ts",
+      "line": 20
+    },
+    {
+      "name": "ArchiveFileHandle",
+      "declaration": "export interface ArchiveFileHandle { createWritable(): Promise<ArchiveSink> }",
+      "properties": [],
+      "enumValues": null,
+      "file": "src/features/posts/release-download.ts",
+      "line": 25
+    },
+    {
+      "name": "ReleaseDownloadProgress",
+      "declaration": "export interface ReleaseDownloadProgress { completed: number; total: number; filename: string; bytes: number }",
+      "properties": [
+        {
+          "name": "completed",
+          "optional": false,
+          "type": "number"
+        },
+        {
+          "name": "total",
+          "optional": false,
+          "type": "number"
+        },
+        {
+          "name": "filename",
+          "optional": false,
+          "type": "string"
+        },
+        {
+          "name": "bytes",
+          "optional": false,
+          "type": "number"
+        }
+      ],
+      "enumValues": null,
+      "file": "src/features/posts/release-download.ts",
+      "line": 26
     },
     {
       "name": "ReleasePresentationField",
@@ -19572,7 +19828,7 @@
       ],
       "enumValues": null,
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "line": 13
+      "line": 14
     },
     {
       "name": "ProbedAudioFile",
@@ -19802,6 +20058,13 @@
       "line": 275
     },
     {
+      "method": "PUT",
+      "path": "/v1/media/jobs/:jobId/input",
+      "handler": "app.put(\"/v1/media/jobs/:jobId/input\", async (request, reply) => {\n    const user = await verifySupabaseBearerToken(request.headers.authorization);\n    const { jobId } = request.params as { jobId: string };\n    const job = await getJobForOwner(jobId, user.id);\n    if (!job) return reply.code(404).send({ error: \"Job not found.\" });\n    if (!(request.body instanceof Readable)) {\n      return reply.code(415).send({ error: \"Send the raw audio file, not JSON or multipart form data.\" });\n    }\n    if (uploading.has(jobId) || ![\"created\", \"uploading\"].includes(job.status)) {\n      return reply.code(409).send({ error: \"This job is already processing or has finished. Refresh its status before retrying.\" });\n    }\n    uploading.add(jobId);\n    let heartbeat: ReturnType<typeof setInterval> | undefined;\n    try {\n      const paths = await ensureJobDir(jobId);\n      await setJobUploading(jobId);\n      heartbeat = setInterval(() => { void touchMediaJob(jobId).catch(() => undefined); }, 60_000);\n      await writeReadableStreamToFile(request.body as Readable, paths.inputPath, config.maxUploadBytes, job.input_bytes);\n      await setJobQueued(jobId);\n      enqueueMediaJob(jobId);\n      return reply.code(202).send({ id: jobId, status: \"queued\", stage: \"Queued for processing\", progress: 5 });\n    } catch (error) {\n      await failMediaJobInput(jobId, error).catch((persistError) => app.log.error(persistError));\n      app.log.warn({ err: error, jobId }, \"Media input did not finish\");\n      const message = error instanceof Error ? error.message : \"\";\n      const code = error && typeof error === \"object\" && \"code\" in error ? error.code : \"\";\n      const status = message.includes(\"disk space\") || code === \"ENOSPC\" ? 507\n        : message.includes(\"size limit\") ? 413\n          : /incomplete|premature close/i.test(message) || code === \"ECONNRESET\" || code === \"ERR_STREAM_PREMATURE_CLOSE\" ? 422 : 503;\n      return reply.code(status).send({\n        error: status === 507 ? \"The media worker has insufficient temporary disk space. Free worker storage, then retry the preview.\"\n          : status === 413 ? \"This source exceeds the media worker upload size limit.\"\n            : status === 422 ? \"The source upload did not finish correctly. Your cloud original is safe; retry the preview generation.\"\n              : \"The media worker could not accept the source right now. Your cloud original is safe; retry shortly.\",\n      });\n    } finally {\n      if (heartbeat) clearInterval(heartbeat);\n      uploading.delete(jobId);\n    }\n  })",
+      "file": "services/media-worker/src/jobs/input-route.ts",
+      "line": 11
+    },
+    {
       "method": "GET",
       "path": "/v1/protected-media/:assetId",
       "handler": "app.route({\n    method: [\"GET\", \"HEAD\"],\n    url: \"/v1/protected-media/:assetId\",\n    handler: async (request, reply) => {\n      const params = request.params as { assetId: string };\n      const query = request.query as { expires?: string; signature?: string };\n      const expiresAt = Number(query.expires ?? 0);\n      const hasValidSignature = Boolean(\n        query.signature\n        && verifyProtectedAssetSignature(params.assetId, expiresAt, query.signature),\n      );\n      let canAccess = hasValidSignature;\n\n      if (!canAccess) {\n        const user = await verifySupabaseBearerToken(request.headers.authorization);\n        const shareToken = getHeaderValue(request.headers[\"x-mxshare-share-token\"]);\n        canAccess = await ensureProtectedMediaAccess({\n          assetId: params.assetId,\n          profileId: user.id,\n          shareToken,\n        });\n      }\n\n      if (!canAccess) {\n        return reply.code(404).send({ error: \"Protected media not found.\" });\n      }\n\n      const asset = await getProtectedMediaRecord(params.assetId);\n      if (!asset || asset.status !== \"ready\" || asset.deleted_at) {\n        return reply.code(404).send({ error: \"Protected media not found.\" });\n      }\n\n      let readPath: string;\n      try {\n        readPath = await protectedMediaStorage.getReadPath(params.assetId);\n      } catch {\n        return reply.code(410).send({\n          error: \"This protected media file is no longer available. Ask the sender to upload it again.\",\n        });\n      }\n      const stats = await fsPromises.stat(readPath);\n      const size = stats.size;\n      let range = null;\n      try {\n        range = parseByteRange(request.headers.range, size);\n      } catch {\n        return reply\n          .code(416)\n          .header(\"Content-Range\", `bytes */${size}`)\n          .send();\n      }\n\n      reply\n        .header(\"Accept-Ranges\", \"bytes\")\n        .header(\"Cache-Control\", \"private, no-store, max-age=0\")\n        .header(\"Content-Type\", asset.mime_type)\n        .header(\"X-Content-Type-Options\", \"nosniff\")\n        .header(\n          \"Content-Disposition\",\n          `inline; filename=\"${safeContentDispositionFilename(asset.filename)}\"`,\n        );\n\n      if (range) {\n        const contentLength = range.end - range.start + 1;\n        reply\n          .code(206)\n          .header(\"Content-Length\", contentLength)\n          .header(\"Content-Range\", `bytes ${range.start}-${range.end}/${size}`);\n        if (request.method === \"HEAD\") {\n          return reply.send();\n        }\n        return reply.send(fs.createReadStream(readPath, range));\n      }\n\n      reply.header(\"Content-Length\", size);\n      if (request.method === \"HEAD\") {\n        return reply.send();\n      }\n      return reply.send(fs.createReadStream(readPath));\n    },\n  })",
@@ -19838,6 +20101,13 @@
     },
     {
       "method": "GET",
+      "path": "/v1/releases/:postId/download-manifest",
+      "handler": "app.get(\"/v1/releases/:postId/download-manifest\", async (request, reply) => {\n    const user = await verifySupabaseBearerToken(request.headers.authorization);\n    const { postId } = request.params as { postId: string };\n    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId)) {\n      return reply.code(400).send({ error: \"Invalid release ID.\" });\n    }\n    try {\n      const manifest = await getReleaseDownloadManifest(postId, user.id);\n      return reply.header(\"Cache-Control\", \"private, no-store\").send(manifest);\n    } catch (error) {\n      if (error instanceof ReleaseDownloadError) return reply.code(error.statusCode).send({ error: error.message });\n      throw error;\n    }\n  })",
+      "file": "services/media-worker/src/releases/download.ts",
+      "line": 123
+    },
+    {
+      "method": "GET",
       "path": "/healthz",
       "handler": "app.get(\"/healthz\", async () => ({ ok: true, worker: config.workerInstanceId }))",
       "file": "services/media-worker/src/server.ts",
@@ -19865,53 +20135,46 @@
       "line": 103
     },
     {
-      "method": "PUT",
-      "path": "/v1/media/jobs/:jobId/input",
-      "handler": "app.put(\"/v1/media/jobs/:jobId/input\", async (request, reply) => {\n  const user = await verifySupabaseBearerToken(request.headers.authorization);\n  const params = request.params as { jobId: string };\n  const job = await getJobForOwner(params.jobId, user.id);\n\n  if (!job) {\n    return reply.code(404).send({ error: \"Job not found.\" });\n  }\n\n  const paths = await ensureMediaTempDir().then(() => getJobPaths(params.jobId));\n  await fsPromises.mkdir(paths.dir, { recursive: true });\n  await setJobUploading(job.id);\n  await writeReadableStreamToFile(request.body as Readable, paths.inputPath, config.maxUploadBytes);\n\n  await recoverStaleMediaJobs();\n  enqueueMediaJob(params.jobId);\n\n  return reply.code(202).send({\n    id: job.id,\n    status: \"queued\",\n    stage: \"Queued for processing\",\n    progress: 5,\n  });\n})",
-      "file": "services/media-worker/src/server.ts",
-      "line": 138
-    },
-    {
       "method": "GET",
       "path": "/v1/media/jobs/:jobId",
       "handler": "app.get(\"/v1/media/jobs/:jobId\", async (request, reply) => {\n  const user = await verifySupabaseBearerToken(request.headers.authorization);\n  const params = request.params as { jobId: string };\n  const job = await getJobForOwner(params.jobId, user.id);\n\n  if (!job) {\n    return reply.code(404).send({ error: \"Job not found.\" });\n  }\n\n  return reply.send(job);\n})",
       "file": "services/media-worker/src/server.ts",
-      "line": 163
+      "line": 141
     },
     {
       "method": "GET",
       "path": "/v1/media/jobs/:jobId/preview",
       "handler": "app.get(\"/v1/media/jobs/:jobId/preview\", async (request, reply) => {\n  const user = await verifySupabaseBearerToken(request.headers.authorization);\n  const params = request.params as { jobId: string };\n  const job = await getJobForOwner(params.jobId, user.id);\n\n  if (!job) {\n    return reply.code(404).send({ error: \"Job not found.\" });\n  }\n\n  if (![\"ready\", \"uploading_to_drive\", \"completed\"].includes(job.status)) {\n    return reply.code(409).send({ error: \"Preview is not ready yet.\" });\n  }\n\n  const paths = getJobPaths(params.jobId);\n  const exists = await fsPromises.stat(paths.previewPath).catch(() => null);\n  if (!exists) {\n    return reply.code(404).send({ error: \"Preview file has already been cleaned up.\" });\n  }\n\n  if (job.status === \"ready\") {\n    await markUploadingToDrive(job.id);\n  }\n\n  return reply\n    .type(\"audio/mpeg\")\n    .header(\"Content-Disposition\", `inline; filename=\"${job.id}.mp3\"`)\n    .send(fs.createReadStream(paths.previewPath));\n})",
       "file": "services/media-worker/src/server.ts",
-      "line": 175
+      "line": 153
     },
     {
       "method": "POST",
       "path": "/v1/media/jobs/:jobId/acknowledge",
       "handler": "app.post(\"/v1/media/jobs/:jobId/acknowledge\", async (request, reply) => {\n  const user = await verifySupabaseBearerToken(request.headers.authorization);\n  const params = request.params as { jobId: string };\n  const job = await getJobForOwner(params.jobId, user.id);\n\n  if (!job) {\n    return reply.code(404).send({ error: \"Job not found.\" });\n  }\n\n  await acknowledgeMediaJob(job.id);\n  return reply.code(204).send();\n})",
       "file": "services/media-worker/src/server.ts",
-      "line": 204
+      "line": 182
     },
     {
       "method": "DELETE",
       "path": "/v1/media/jobs/:jobId",
       "handler": "app.delete(\"/v1/media/jobs/:jobId\", async (request, reply) => {\n  const user = await verifySupabaseBearerToken(request.headers.authorization);\n  const params = request.params as { jobId: string };\n  const job = await getJobForOwner(params.jobId, user.id);\n\n  if (!job) {\n    return reply.code(404).send({ error: \"Job not found.\" });\n  }\n\n  await cancelMediaJob(job.id);\n  return reply.code(204).send();\n})",
       "file": "services/media-worker/src/server.ts",
-      "line": 217
+      "line": 195
     },
     {
       "method": "POST",
       "path": "/v1/media/analyze-song",
       "handler": "app.post(\"/v1/media/analyze-song\", async (request, reply) => {\n  const user = await verifySupabaseBearerToken(request.headers.authorization);\n  const songId = request.headers[\"x-mxshare-song-id\"];\n  const sourceAssetId = request.headers[\"x-mxshare-source-asset-id\"];\n\n  if (typeof songId !== \"string\" || typeof sourceAssetId !== \"string\") {\n    return reply.code(400).send({ error: \"Song and source asset headers are required.\" });\n  }\n\n  const analysis = await analyzeSongSourceForOwner({\n    ownerId: user.id,\n    songId,\n    sourceAssetId,\n    source: request.body as Readable,\n  });\n  return reply.send(analysis);\n})",
       "file": "services/media-worker/src/server.ts",
-      "line": 230
+      "line": 208
     },
     {
       "method": "POST",
       "path": "/v1/push/test",
       "handler": "app.post(\"/v1/push/test\", async (request, reply) => {\n  const user = await verifySupabaseBearerToken(request.headers.authorization);\n  await sendImmediateTestPush(user.id);\n  return reply.send({ ok: true });\n})",
       "file": "services/media-worker/src/server.ts",
-      "line": 248
+      "line": 226
     },
     {
       "method": "GET",
@@ -24864,7 +25127,7 @@
     },
     {
       "file": "src/features/drive/providers/cloud-storage.ts",
-      "sha256": "2f790b56e94cc812e9a5e2c27c797d01a494b5feffb51f2992a7fb0d22c44eaa"
+      "sha256": "fe900930fd673c737aedeccfd12e100050f9553d397af58bf68aee194516c321"
     },
     {
       "file": "src/features/drive/providers/drive-query.ts",
@@ -24872,7 +25135,7 @@
     },
     {
       "file": "src/features/drive/providers/google-drive-provider.ts",
-      "sha256": "0572c37a2992cad15ca0b47d39947d03412c95efd4ec4685822e1e760e4cb866"
+      "sha256": "b9c822fd216bfb5027a1ffc960555a3a6f8c3ace23347c279c0b3c77812828ea"
     },
     {
       "file": "src/features/drive/use-google-drive-provider.ts",
@@ -24880,7 +25143,7 @@
     },
     {
       "file": "src/features/dropbox/dropbox-provider.ts",
-      "sha256": "b0fb1b41c10ca7d1e5767aa4f60433271ad3cf3be74b90f606e753e8e5af380f"
+      "sha256": "cc861250339b97cd10e9120e18dcc3e07f5685f945dae06fbee65cb871428eeb"
     },
     {
       "file": "src/features/feed/api.ts",
@@ -24928,7 +25191,7 @@
     },
     {
       "file": "src/features/legal/changelog.ts",
-      "sha256": "8d495fd6a310160d3f3956480eebd8844be8daab2e8a6ac7d15c1a490630cc92"
+      "sha256": "8716308043663e984633cc39cd7a24b212ac69d5da625bc6d5fc0b35da095361"
     },
     {
       "file": "src/features/legal/feedback-api.ts",
@@ -24976,7 +25239,7 @@
     },
     {
       "file": "src/features/library/library-import-navigator.tsx",
-      "sha256": "f783e6906cf191759219d1e68edec65c1e6270992a6b611f7cd6dc856fb1d1fc"
+      "sha256": "f8470bb0991ef5e5bfc9b1e9f0867fe1354fa9a3e777bdc6dc257cc971de9e00"
     },
     {
       "file": "src/features/library/library-import-page.tsx",
@@ -24996,7 +25259,7 @@
     },
     {
       "file": "src/features/media-processing/api.ts",
-      "sha256": "218c5f5c5c291ff8ed57e75d1c6230ad60f1fff98648cd7bbd9ecce8ac33c3f0"
+      "sha256": "f6ebd048a03c8579537190475a8633df95f408a72ce4366c11e14b068218af04"
     },
     {
       "file": "src/features/media-processing/automatic-preview.ts",
@@ -25004,7 +25267,7 @@
     },
     {
       "file": "src/features/media-processing/media-processing-status-card.tsx",
-      "sha256": "abaded38cb13ddabf66a4b2d7d5b64642351a54a126c4b5a29986d11e1b5c835"
+      "sha256": "da13f8b0d0dc5bc4b3f60d16bb07fbed2b735bbabc1e546b858e1404d8eafc96"
     },
     {
       "file": "src/features/messages/api.ts",
@@ -25044,7 +25307,7 @@
     },
     {
       "file": "src/features/onedrive/onedrive-provider.ts",
-      "sha256": "aae1d5c56f4312fe73b120db97419838b2d98d6c336bd8cb1e4af01dc78bb7f6"
+      "sha256": "96a04b4a329e9add8e3ffc25f3b583712a4480604b127410bd338660e529fa9f"
     },
     {
       "file": "src/features/posts/api.ts",
@@ -25088,7 +25351,7 @@
     },
     {
       "file": "src/features/posts/post-detail-page.tsx",
-      "sha256": "2696b92d6633f95a022f99b03cc730fcc50d007044633f9211305468b5512487"
+      "sha256": "b03739d9d4b76663d78d6b42d1fdc3fdf719a1c4eadeda76706b2f4ca5b3f032"
     },
     {
       "file": "src/features/posts/post-playback.ts",
@@ -25101,6 +25364,14 @@
     {
       "file": "src/features/posts/release-credits-input.tsx",
       "sha256": "cc6d5f0f07649fa3abda4fde0d4e3ca2b00f3634c07dc97f049a56b8acd658c9"
+    },
+    {
+      "file": "src/features/posts/release-download-button.tsx",
+      "sha256": "815ee3eec1843b4e6996caf037d77bc1d4f1dfd5232e9e1d23ab667171941b6d"
+    },
+    {
+      "file": "src/features/posts/release-download.ts",
+      "sha256": "4413f60de4003e6edbd25eca7e8707ae85b7325ebc3962159df6977c3d228e9f"
     },
     {
       "file": "src/features/posts/release-edit-leave-dialog.tsx",
@@ -25256,7 +25527,7 @@
     },
     {
       "file": "src/features/songs/song-detail-page.tsx",
-      "sha256": "f6e28df52856fee858084f8ced6637f5a7d44e6d41082771e100a024850533e4"
+      "sha256": "b54dd40e8e45ae9bc0cb5d3bba6b333539b9ebe70c5461d19d87dcfad55034fc"
     },
     {
       "file": "src/features/songs/song-metadata.tsx",
@@ -25364,7 +25635,7 @@
     },
     {
       "file": "src/lib/xhr-stall-guard.ts",
-      "sha256": "d1c86f578995df499957e9fd000c776b170b53ec37e087f8450f68a888a4f3e8"
+      "sha256": "899d45896f02b57d128f7d691815c56466f4384204a5a0e3f629c63fa6325c1c"
     },
     {
       "file": "src/main.tsx",
@@ -25423,8 +25694,16 @@
       "sha256": "380ac3edaed04c9f67f29db108509e5510ef929e37a2c1445e9b4688100876df"
     },
     {
+      "file": "services/media-worker/src/jobs/input-route.ts",
+      "sha256": "14a6f564ce5f13c931b7e1b4ea0a8a4243831c8932b3c5510ca7a88fb1c4385c"
+    },
+    {
       "file": "services/media-worker/src/jobs/media-jobs.ts",
-      "sha256": "d228dd3030a59a554dcea15473216f48db88f641b0a657633b2b86bff209e828"
+      "sha256": "63a1aeae6aff63f3aef2a9182c61fd40a59c75bfbe0ea73d76148d2c19485f7e"
+    },
+    {
+      "file": "services/media-worker/src/jobs/queue.ts",
+      "sha256": "c16308c37c9da68fd9ce86a939c5a6539f76ebed23c03fca21d66e8cde758106"
     },
     {
       "file": "services/media-worker/src/media/ffmpeg.ts",
@@ -25436,7 +25715,7 @@
     },
     {
       "file": "services/media-worker/src/media/io.ts",
-      "sha256": "5b193831c9a76ae251c08f35bbf0c00f8ef6f8d1c5885bd43cabe4ff69070c98"
+      "sha256": "5ab14b52779b70368c09370eebe05e6f7fab7dcd02d4c67acb91264ec0eff6e3"
     },
     {
       "file": "services/media-worker/src/media/paths.ts",
@@ -25483,6 +25762,10 @@
       "sha256": "e3b42b7743fd9e3ab142ae90ea424dd33cd974595c3feeca645467fadf3c195b"
     },
     {
+      "file": "services/media-worker/src/releases/download.ts",
+      "sha256": "68e40735a20b14a81c8f9ce0e01d8b73230be12108f5571a6fed6b65d3b4599d"
+    },
+    {
       "file": "services/media-worker/src/security/http-errors.ts",
       "sha256": "1abdc66d1f10805c7a4a1153e7938b8a58d446123fd2aeb951dc86993c90c070"
     },
@@ -25500,7 +25783,7 @@
     },
     {
       "file": "services/media-worker/src/server.ts",
-      "sha256": "6dcf2bcb4e2c3bf769295f2108e45cee47aa7ac2e30b26e9b0afc7e4a0311400"
+      "sha256": "72fd01a1a24d18aa802bbf814497ef348fd95d7fcf4c918689ffab7212779580"
     },
     {
       "file": "services/media-worker/src/social-preview/routes.ts",
@@ -25530,19 +25813,19 @@
   "configurationFiles": [
     {
       "file": "package.json",
-      "sha256": "77b32bb64308e1a94cf28c40ffc5affc1f901fbfc46cc20dcd610a5fc00be4ec"
+      "sha256": "0f7e14f5074d4cc94f806da6ffd423d80db4610d1aa48c00b3ebe41004554829"
     },
     {
       "file": "package-lock.json",
-      "sha256": "14042e9436e79768a03490bd0d5138556cd7025060742d88b8f2a0d8851d3bd3"
+      "sha256": "6566273f93f97631dca797aa85f2a8dae666df5465ce631790ef4a9abcd398f2"
     },
     {
       "file": "services/media-worker/package.json",
-      "sha256": "c4c17842778f4da515aaeb0f01228ec9b05f0c913fcf2f06318e46701fa045cd"
+      "sha256": "b1311e95591ee7ffea44542d8aad1598a8b7e47125cf25e2586aa918d0fd0c94"
     },
     {
       "file": "services/media-worker/package-lock.json",
-      "sha256": "1ff46c0c1e1008a7fc9201a20998d33f7833a063b401862d0f2369b45a023851"
+      "sha256": "75b3fa3f699994cd4f78b80aaf5690a560c7600fa863c0a10bd3e6855c5f589f"
     },
     {
       "file": ".nvmrc",
